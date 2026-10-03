@@ -1,0 +1,86 @@
+// Copyright 2026 Daher Alfawares
+// SPDX-License-Identifier: AGPL-3.0-only
+
+// Issues, numbered within their project: issue 12 of uione is uione-12. Every
+// change to one is kept, and shown as its history.
+
+namespace projects {
+
+	entity issue history {
+		project    project       required  key
+		number     serial        per project  key
+		title      text          required
+		body       markdown
+		labels     list of text
+		assignees  list of user
+		author     user          = me
+		status     open | closed = open
+	}
+
+	entity comment {
+		issue   issue     required
+		body    markdown  required
+		author  user      = me
+	}
+
+	command issue::create
+	command issue::update
+
+	command issue::close {
+		require status == open  "that issue is already closed"
+		status = closed
+	}
+
+	command issue::reopen {
+		require status == closed  "that issue is already open"
+		status = open
+	}
+
+	command comment::create
+
+	view issue_page per issue {
+		readers member
+		public when issue.project.visibility == public
+		title = issue.title
+		body = issue.body
+		labels = issue.labels
+		status = issue.status
+		comments = each comment where issue == issue.id {
+			order created_at
+			author.picture  author.name  body  created_at
+		}
+		history = each change of issue where issue == issue.id {
+			order created_at
+			field  before  after  created_by.name  created_at
+		}
+	}
+
+	screen "Issue" /:project/issues/:issue {
+		text "{issue_page.title}"
+		markdown "{issue_page.body}"
+		issue::update
+		form issue::update {
+			title  body  labels
+		}
+		issue::close
+		issue::reopen
+		table issue_page.comments {
+			author.picture ""
+			author.name "Author"
+			body
+			created_at "Written"
+		}
+		comment::create
+		form comment::create {
+			body
+		}
+		table issue_page.history {
+			field "Changed"
+			before "From"
+			after "To"
+			created_by.name "By"
+			created_at "When"
+		}
+	}
+
+} // namespace projects

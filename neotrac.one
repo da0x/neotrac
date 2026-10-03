@@ -1,0 +1,20 @@
+// Copyright 2026 Daher Alfawares
+// SPDX-License-Identifier: AGPL-3.0-only
+
+// neotrac: open project tracking for everyone. Projects, their people, and the
+// issues they work on, with every change kept.
+
+project neotrac {
+	domain "neotrac.org"
+	firebase "neotrac"
+	region "us-east4"
+	ui radix
+	signin google
+}
+
+screen "neotrac" / {
+	hero "Open project tracking for everyone" {
+		text "Projects, issues, and the history of every change, in the open."
+		link namespace projects "See the projects"
+	}
+}

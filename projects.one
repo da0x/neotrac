@@ -1,0 +1,128 @@
+// Copyright 2026 Daher Alfawares
+// SPDX-License-Identifier: AGPL-3.0-only
+
+// Projects and the people in them. Whoever makes a project maintains it, and
+// maintainers bring in others. A public project can be read by anyone; a private
+// one only by its people.
+
+namespace projects {
+
+	entity project {
+		slug        text  required  unique  key
+		name        text  required
+		summary     markdown
+		visibility  public | private = public
+		// Whether anyone signed in may report a problem privately, as in reports.one.
+		takes_reports  boolean = false
+	}
+
+	// A person's place in a project, and what they may do there.
+	entity member {
+		project  project  required  key
+		person   user     required  key
+		role     maintainer | reporter = reporter
+	}
+
+	command project::create {
+		permission signed_in
+		create member {
+			project = id  person = me  role = maintainer
+		}
+	}
+
+	command project::update
+	command member::create
+
+	role maintainer per project from member  project::update  member::create  issue::create  issue::update  issue::close  issue::reopen  comment::create  report::resolve  reply::create
+	role reporter per project from member  issue::create  comment::create
+
+	// Every public project, newest first. A private project is listed nowhere.
+	view all public {
+		each project where visibility == public {
+			order -created_at
+			slug  name
+		}
+	}
+
+	// The projects a person belongs to, public or private.
+	view mine per user {
+		each member where person == user.id {
+			order project
+			project  project.name  role
+		}
+	}
+
+	view project_page per project {
+		readers member
+		public when project.visibility == public
+		name = project.name
+		summary = project.summary
+		visibility = project.visibility
+		takes_reports = project.takes_reports
+		issues = each issue where project == project.id {
+			order -status  -number
+			number  title  status  assignees.name  author.picture  author.name
+		}
+		members = each member where project == project.id {
+			order role
+			person.picture  person.name  role
+		}
+	}
+
+	screen "Projects" / {
+		table all link /:project {
+			slug "Project"
+			name
+		}
+		table mine link /:project {
+			project.name "Yours"
+			role
+		}
+		table my_reports link /:project/reports/:report {
+			project
+			title "Your reports"
+			status
+		}
+		project::create
+		form project::create {
+			slug  name  summary  visibility  takes_reports
+		}
+	}
+
+	screen "Project" /:project {
+		text "{project_page.name}"
+		markdown "{project_page.summary}"
+		link /:project/people "People"
+		link /:project/report "Report a problem privately"
+		link /:project/reports "Reports, for its people"
+		table project_page.issues link /:project/issues/:issue {
+			number "#"
+			title
+			status
+			assignees.name "Assigned"
+			author.picture ""
+			author.name "Opened by"
+		}
+		issue::create
+		form issue::create {
+			title  body  labels
+		}
+		project::update
+		form project::update {
+			name  summary  visibility  takes_reports
+		}
+	}
+
+	screen "People" /:project/people {
+		table project_page.members {
+			person.picture ""
+			person.name "Name"
+			role
+		}
+		member::create
+		form member::create {
+			person  role
+		}
+	}
+
+} // namespace projects

@@ -1,0 +1,100 @@
+// Copyright 2026 Daher Alfawares
+// SPDX-License-Identifier: AGPL-3.0-only
+
+// Reports: problems sent to a project privately, like a security hole. Anyone signed
+// in can file one with a project that takes them, and it's read by the project's
+// people and by whoever filed it, never by anyone else, even when the project is
+// public. The project's maintainers answer and resolve it.
+
+namespace projects {
+
+	entity report {
+		project  project       required
+		title    text          required
+		body     markdown      required
+		author   user          = me
+		status   open | resolved = open
+	}
+
+	entity reply {
+		report  report    required
+		body    markdown  required
+		author  user      = me
+	}
+
+	command report::create {
+		permission signed_in
+		require project.takes_reports  "this project doesn't take reports"
+	}
+
+	command report::resolve {
+		require status == open  "that report is already resolved"
+		status = resolved
+	}
+
+	command reply::create
+
+	view report_page per report {
+		readers member
+		readers report.author
+		title = report.title
+		body = report.body
+		status = report.status
+		replies = each reply where report == report.id {
+			order created_at
+			author.picture  author.name  body  created_at
+		}
+	}
+
+	// Every report a project was sent, for its people.
+	view project_reports per project {
+		readers member
+		each report where project == project.id {
+			order -status  -created_at
+			title  status  author.picture  author.name  created_at
+		}
+	}
+
+	// The reports a person filed, wherever they filed them.
+	view my_reports per user {
+		each report where author == user.id {
+			order -created_at
+			project  title  status
+		}
+	}
+
+	screen "Report a problem" /:project/report {
+		text "Tell the project's maintainers about a problem privately. Only they and you can read it."
+		report::create
+		form report::create {
+			title  body
+		}
+	}
+
+	screen "Reports" /:project/reports {
+		table project_reports link /:project/reports/:report {
+			title
+			status
+			author.picture ""
+			author.name "Filed by"
+			created_at "Filed"
+		}
+	}
+
+	screen "Report" /:project/reports/:report {
+		text "{report_page.title}"
+		markdown "{report_page.body}"
+		report::resolve
+		table report_page.replies {
+			author.picture ""
+			author.name "From"
+			body
+			created_at "Written"
+		}
+		reply::create
+		form reply::create {
+			body
+		}
+	}
+
+} // namespace projects
