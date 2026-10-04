@@ -14,7 +14,7 @@ namespace projects {
 		labels     list of text
 		assignees  list of user
 		author     user          = me
-		status     enum open | closed = status::open
+		status     enum          open | closed = status::open
 	}
 
 	entity comment {

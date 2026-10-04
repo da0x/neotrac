@@ -13,7 +13,7 @@ namespace projects {
 		title    text          required
 		body     markdown      required
 		author   user          = me
-		status   enum open | resolved = status::open
+		status   enum          open | resolved = status::open
 	}
 
 	entity reply {

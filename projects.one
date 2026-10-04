@@ -11,7 +11,7 @@ namespace projects {
 		slug        text  required  unique  key
 		name        text  required
 		summary     markdown
-		visibility  enum public | private = visibility::public
+		visibility  enum  public | private = visibility::public
 		// Whether anyone signed in may report a problem privately, as in reports.one.
 		takes_reports  boolean = false
 	}
@@ -20,7 +20,7 @@ namespace projects {
 	entity member {
 		project  project  required  key
 		person   user     required  key
-		role     enum maintainer | reporter = role::reporter
+		role     enum     maintainer | reporter = role::reporter
 	}
 
 	command project::create {
