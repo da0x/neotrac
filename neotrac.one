@@ -5,6 +5,7 @@
 // issues they work on, with every change kept.
 
 project neotrac {
+	one    "0.4.0"
 	domain "neotrac.org"
 	firebase "neotrac"
 	region "us-east4"
