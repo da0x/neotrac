@@ -13,7 +13,7 @@ namespace projects {
 		title    text          required
 		body     markdown      required
 		author   user          = me
-		status   open | resolved = open
+		status   enum open | resolved = status::open
 	}
 
 	entity reply {
@@ -28,8 +28,8 @@ namespace projects {
 	}
 
 	command report::resolve {
-		require status == open  "that report is already resolved"
-		status = resolved
+		require status == status::open  "that report is already resolved"
+		status = status::resolved
 	}
 
 	command reply::create

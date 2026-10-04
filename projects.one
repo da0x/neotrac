@@ -11,7 +11,7 @@ namespace projects {
 		slug        text  required  unique  key
 		name        text  required
 		summary     markdown
-		visibility  public | private = public
+		visibility  enum public | private = visibility::public
 		// Whether anyone signed in may report a problem privately, as in reports.one.
 		takes_reports  boolean = false
 	}
@@ -20,25 +20,30 @@ namespace projects {
 	entity member {
 		project  project  required  key
 		person   user     required  key
-		role     maintainer | reporter = reporter
+		role     enum maintainer | reporter = role::reporter
 	}
 
 	command project::create {
 		permission signed_in
 		create member {
-			project = id  person = me  role = maintainer
+			project = id  person = me  role = role::maintainer
 		}
 	}
 
 	command project::update
 	command member::create
 
-	role maintainer per project from member  project::update  member::create  issue::create  issue::update  issue::close  issue::reopen  comment::create  report::resolve  reply::create
+	role maintainer per project from member {
+		project::update  member::create
+		issue::create  issue::update  issue::close  issue::reopen
+		comment::create
+		report::resolve  reply::create
+	}
 	role reporter per project from member  issue::create  comment::create
 
 	// Every public project, newest first. A private project is listed nowhere.
 	view all public {
-		each project where visibility == public {
+		each project where visibility == visibility::public {
 			order -created_at
 			slug  name
 		}
@@ -54,7 +59,7 @@ namespace projects {
 
 	view project_page per project {
 		readers member
-		public when project.visibility == public
+		public when project.visibility == visibility::public
 		name = project.name
 		summary = project.summary
 		visibility = project.visibility

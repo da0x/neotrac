@@ -14,7 +14,7 @@ namespace projects {
 		labels     list of text
 		assignees  list of user
 		author     user          = me
-		status     open | closed = open
+		status     enum open | closed = status::open
 	}
 
 	entity comment {
@@ -27,20 +27,20 @@ namespace projects {
 	command issue::update
 
 	command issue::close {
-		require status == open  "that issue is already closed"
-		status = closed
+		require status == status::open  "that issue is already closed"
+		status = status::closed
 	}
 
 	command issue::reopen {
-		require status == closed  "that issue is already open"
-		status = open
+		require status == status::closed  "that issue is already open"
+		status = status::open
 	}
 
 	command comment::create
 
 	view issue_page per issue {
 		readers member
-		public when issue.project.visibility == public
+		public when issue.project.visibility == visibility::public
 		title = issue.title
 		body = issue.body
 		labels = issue.labels
