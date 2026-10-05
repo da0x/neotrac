@@ -9,7 +9,7 @@ project neotrac {
 	region "us-east4"
 	ui radix
 	signin google
-	environment neotrac {
+	environment production {
 		domain    "neotrac.org"
 		firebase  "neotrac"
 	}
