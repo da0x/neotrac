@@ -8,11 +8,10 @@
 namespace projects {
 
 	entity project {
-		slug        text  required  unique  key
-		name        text  required
-		summary     markdown
-		visibility  enum  public | private = visibility::public
-		// Whether anyone signed in may report a problem privately, as in reports.one.
+		slug           text  required  unique  key
+		name           text  required
+		summary        markdown
+		visibility     enum  public | private = visibility::public
 		takes_reports  boolean = false
 	}
 
