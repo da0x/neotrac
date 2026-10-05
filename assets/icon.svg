@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="neotrac">
+  <!-- Copyright 2026 Daher Alfawares. SPDX-License-Identifier: AGPL-3.0-only -->
+  <!-- An n, drawn as a track with a ticket at its end: what neotrac follows. -->
+  <rect width="64" height="64" rx="15" fill="#0f766e"/>
+  <path d="M20 46V29a12 12 0 0 1 24 0v8" fill="none" stroke="#ffffff" stroke-width="7" stroke-linecap="round"/>
+  <circle cx="44" cy="46" r="4.5" fill="#99f6e4"/>
+</svg>

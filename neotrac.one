@@ -9,6 +9,7 @@ project neotrac {
 	region    "us-east4"
 	ui        radix
 	signin    google
+	icon      "assets/icon.svg"
 	analytics google
 	
 	environment production {
