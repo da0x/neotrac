@@ -5,10 +5,11 @@
 // issues they work on, with every change kept.
 
 project neotrac {
-	one    "0.5.4"
-	region "us-east4"
-	ui radix
-	signin google
+	one     "0.5.4"
+	region  "us-east4"
+	ui      radix
+	signin  google
+	
 	environment production {
 		domain    "neotrac.org"
 		firebase  "neotrac"
