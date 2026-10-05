@@ -5,12 +5,14 @@
 // issues they work on, with every change kept.
 
 project neotrac {
-	one       "0.5.10"
-	region    "us-east4"
-	ui        radix
-	signin    google
-	icon      "assets/icon.svg"
-	analytics google
+	one             "0.6.0"
+	region          "us-east4"
+	ui              radix
+	authentication  google
+	authentication  github
+	authentication  microsoft
+	icon            "assets/icon.svg"
+	analytics       google
 	
 	environment production {
 		domain    "neotrac.org"

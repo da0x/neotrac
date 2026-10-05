@@ -23,7 +23,7 @@ namespace projects {
 	}
 
 	command project::create {
-		permission signed_in
+		permission authenticated
 		create member {
 			project = id  person = me  role = role::maintainer
 		}
