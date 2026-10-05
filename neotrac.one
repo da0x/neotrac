@@ -5,7 +5,7 @@
 // issues they work on, with every change kept.
 
 project neotrac {
-	one    "0.5.0"
+	one    "0.5.4"
 	region "us-east4"
 	ui radix
 	signin google
