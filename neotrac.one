@@ -10,7 +10,6 @@ project neotrac {
 	ui              radix
 	authentication  google
 	authentication  github
-	authentication  microsoft
 	icon            "assets/icon.svg"
 	analytics       google
 	
