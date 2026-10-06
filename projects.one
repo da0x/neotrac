@@ -65,7 +65,7 @@ namespace projects {
 		takes_reports = project.takes_reports
 		issues = each issue where project == project.id {
 			order -status  -number
-			number  title  status  assignees.name  author.picture  author.name
+			number  title  labels  status  assignees.name  author.picture  author.name
 		}
 		members = each member where project == project.id {
 			order role
@@ -87,34 +87,34 @@ namespace projects {
 			title "Your reports"
 			status
 		}
-		project::create
-		form project::create {
+		project::create "New project"
+		form project::create "Create project" {
 			slug  name  summary  visibility  takes_reports
 		}
 	}
 
-	screen "Project" /:project {
-		text "{project_page.name}"
+	screen "{project_page.name}" /:project {
 		markdown "{project_page.summary}"
-		link /:project/people "People"
-		link /:project/report "Report a problem privately"
-		link /:project/reports "Reports, for its people"
-		table project_page.issues link /:project/issues/:issue {
+		issue::create "New issue"
+		form issue::create "Open issue" {
+			title  body  labels
+		}
+		project::update "Edit project"
+		form project::update "Save" {
+			name  summary  visibility  takes_reports
+		}
+		table project_page.issues by status link /:project/issues/:issue {
 			number "#"
 			title
+			labels
 			status
 			assignees.name "Assigned"
 			author.picture ""
 			author.name "Opened by"
 		}
-		issue::create
-		form issue::create {
-			title  body  labels
-		}
-		project::update
-		form project::update {
-			name  summary  visibility  takes_reports
-		}
+		link /:project/people "People"
+		link /:project/report "Report a problem privately"
+		link /:project/reports "Reports, for its people"
 	}
 
 	screen "People" /:project/people {
@@ -123,8 +123,8 @@ namespace projects {
 			person.name "Name"
 			role
 		}
-		member::create
-		form member::create {
+		member::create "Add someone"
+		form member::create "Add" {
 			person  role
 		}
 	}

@@ -41,6 +41,7 @@ namespace projects {
 	view issue_page per issue {
 		readers member
 		public when issue.project.visibility == visibility::public
+		number = issue.number
 		title = issue.title
 		body = issue.body
 		labels = issue.labels
@@ -55,31 +56,18 @@ namespace projects {
 		}
 	}
 
-	screen "Issue" /:project/issues/:issue {
-		text "{issue_page.title}"
+	screen "#{issue_page.number} {issue_page.title}" /:project/issues/:issue {
 		markdown "{issue_page.body}"
-		issue::update
-		form issue::update {
+		issue::update "Edit"
+		form issue::update "Save" {
 			title  body  labels
 		}
-		issue::close
-		issue::reopen
-		table issue_page.comments {
-			author.picture ""
-			author.name "Author"
+		issue::close "Close issue" when issue_page.status == status::open
+		issue::reopen "Reopen issue" when issue_page.status == status::closed
+		timeline issue_page.history
+		thread issue_page.comments
+		form comment::create "Comment" {
 			body
-			created_at "Written"
-		}
-		comment::create
-		form comment::create {
-			body
-		}
-		table issue_page.history {
-			field "Changed"
-			before "From"
-			after "To"
-			created_by.name "By"
-			created_at "When"
 		}
 	}
 
