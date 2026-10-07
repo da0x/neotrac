@@ -1,0 +1,139 @@
+// Copyright 2026 Daher Alfawares
+// SPDX-License-Identifier: AGPL-3.0-only
+
+// A project's workflow: the phases its issues go through, its board's columns, and
+// the steps between them, each naming the roles that may take it. A project starts
+// from a preset and changes any of it in its settings, with no deploy.
+
+namespace projects {
+
+	enum workflow {
+		basic      "Basic task management"
+		agile      "Agile / Scrum sprint"
+		editorial  "Editorial & content planning"
+		bugs       "Bug & issue tracker"
+	}
+
+	// A phase of a project's issues, in its place among the others.
+	entity phase {
+		project   project  required  key
+		name      text     required  key
+		title     text     required
+		position  number
+	}
+
+	// From one phase to another, for the roles it names. A step back is a step of
+	// its own.
+	entity step {
+		project  project  required  key
+		from     phase    required  key
+		to       phase    required  key
+		title    text
+		roles    list of role
+	}
+
+	// Every project made before workflows takes the delivery workflow, once.
+	backend workflow
+
+	command phase::create
+	command phase::update
+	command step::create
+	command step::delete
+
+	// Whoever makes a project maintains it, and it starts from the preset they pick.
+	command project::create {
+		permission authenticated
+		create member {
+			project = id  person = me  role = role::maintainer
+		}
+		// To do, in progress, done; anyone in the project moves an issue between any two.
+		if workflow == workflow::basic {
+			create phase { project = id  name = "to_do"  title = "To Do"  position = 1 }
+			create phase { project = id  name = "in_progress"  title = "In Progress"  position = 2 }
+			create phase { project = id  name = "done"  title = "Done"  position = 3 }
+			create step { project = id  from = phase::to_do  to = phase::in_progress  roles = [role::maintainer, role::member] }
+			create step { project = id  from = phase::to_do  to = phase::done  roles = [role::maintainer, role::member] }
+			create step { project = id  from = phase::in_progress  to = phase::to_do  roles = [role::maintainer, role::member] }
+			create step { project = id  from = phase::in_progress  to = phase::done  roles = [role::maintainer, role::member] }
+			create step { project = id  from = phase::done  to = phase::to_do  roles = [role::maintainer, role::member] }
+			create step { project = id  from = phase::done  to = phase::in_progress  roles = [role::maintainer, role::member] }
+			start = phase::to_do
+		}
+		// A sprint's backlog to completed, a step forward or back at a time.
+		if workflow == workflow::agile {
+			create phase { project = id  name = "backlog"  title = "Backlog"  position = 1 }
+			create phase { project = id  name = "to_do"  title = "To Do"  position = 2 }
+			create phase { project = id  name = "in_progress"  title = "In Progress"  position = 3 }
+			create phase { project = id  name = "review"  title = "Testing / Review"  position = 4 }
+			create phase { project = id  name = "completed"  title = "Completed"  position = 5 }
+			create step { project = id  from = phase::backlog  to = phase::to_do  roles = [role::maintainer, role::member] }
+			create step { project = id  from = phase::to_do  to = phase::backlog  roles = [role::maintainer, role::member] }
+			create step { project = id  from = phase::to_do  to = phase::in_progress  roles = [role::maintainer, role::member] }
+			create step { project = id  from = phase::in_progress  to = phase::to_do  roles = [role::maintainer, role::member] }
+			create step { project = id  from = phase::in_progress  to = phase::review  roles = [role::maintainer, role::member] }
+			create step { project = id  from = phase::review  to = phase::in_progress  roles = [role::maintainer, role::member] }
+			create step { project = id  from = phase::review  to = phase::completed  roles = [role::maintainer, role::member] }
+			create step { project = id  from = phase::completed  to = phase::review  roles = [role::maintainer, role::member] }
+			start = phase::backlog
+		}
+		// An idea to what's published, a step forward or back at a time.
+		if workflow == workflow::editorial {
+			create phase { project = id  name = "idea"  title = "Idea / Intake"  position = 1 }
+			create phase { project = id  name = "writing"  title = "Writing"  position = 2 }
+			create phase { project = id  name = "editing"  title = "Editing"  position = 3 }
+			create phase { project = id  name = "scheduled"  title = "Scheduled"  position = 4 }
+			create phase { project = id  name = "published"  title = "Published"  position = 5 }
+			create step { project = id  from = phase::idea  to = phase::writing  roles = [role::maintainer, role::member] }
+			create step { project = id  from = phase::writing  to = phase::idea  roles = [role::maintainer, role::member] }
+			create step { project = id  from = phase::writing  to = phase::editing  roles = [role::maintainer, role::member] }
+			create step { project = id  from = phase::editing  to = phase::writing  roles = [role::maintainer, role::member] }
+			create step { project = id  from = phase::editing  to = phase::scheduled  roles = [role::maintainer, role::member] }
+			create step { project = id  from = phase::scheduled  to = phase::editing  roles = [role::maintainer, role::member] }
+			create step { project = id  from = phase::scheduled  to = phase::published  roles = [role::maintainer, role::member] }
+			create step { project = id  from = phase::published  to = phase::scheduled  roles = [role::maintainer, role::member] }
+			start = phase::idea
+		}
+		// Reported to closed, a step forward at a time; a fix that doesn't hold goes
+		// back from verifying, and anything can be closed.
+		if workflow == workflow::bugs {
+			create phase { project = id  name = "reported"  title = "Reported"  position = 1 }
+			create phase { project = id  name = "triaged"  title = "Triaged"  position = 2 }
+			create phase { project = id  name = "in_fixing"  title = "In Fixing"  position = 3 }
+			create phase { project = id  name = "verifying"  title = "Verifying"  position = 4 }
+			create phase { project = id  name = "closed"  title = "Closed"  position = 5 }
+			create step { project = id  from = phase::reported  to = phase::triaged  roles = [role::maintainer, role::member] }
+			create step { project = id  from = phase::triaged  to = phase::in_fixing  roles = [role::maintainer, role::member] }
+			create step { project = id  from = phase::in_fixing  to = phase::verifying  roles = [role::maintainer, role::member] }
+			create step { project = id  from = phase::verifying  to = phase::in_fixing  roles = [role::maintainer, role::member] }
+			create step { project = id  from = phase::verifying  to = phase::closed  roles = [role::maintainer, role::member] }
+			create step { project = id  from = phase::reported  to = phase::closed  roles = [role::maintainer, role::member] }
+			create step { project = id  from = phase::triaged  to = phase::closed  roles = [role::maintainer, role::member] }
+			create step { project = id  from = phase::in_fixing  to = phase::closed  roles = [role::maintainer, role::member] }
+			start = phase::reported
+		}
+	}
+
+	screen "Workflow" /:project/workflow {
+		table project_page.phases {
+			position "Order"
+			title "Phase"
+		}
+		phase::create "New phase"
+		form phase::create "Add" {
+			name  title  position "Order"
+		}
+		table project_page.steps {
+			from.title "From"
+			to.title "To"
+			title "Says"
+			roles.title "Taken by"
+			delete "Remove"
+		}
+		confirm step::delete "Remove this step? Issues can't move along it any more."
+		step::create "New step"
+		form step::create "Add" {
+			from  to  title "Says"  roles "Taken by"
+		}
+	}
+
+} // namespace projects

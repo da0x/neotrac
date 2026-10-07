@@ -7,24 +7,20 @@
 
 namespace projects {
 
-	enum lifecycle {
-		full      "Implement, verify, approve"
-		reviewed  "Implement, verify"
-		simple    "Start, finish"
-	}
-
 	entity project {
 		slug           text  required  unique  key
 		name           text  required
 		summary        markdown
 		visibility     enum  public | private = visibility::public
 		takes_reports  boolean = false
-		// How many steps an issue takes before it's done (issues.one).
-		lifecycle      lifecycle = lifecycle::full
+		// The preset its phases and steps started from, and the phase new issues
+		// start in (workflow.one).
+		workflow       workflow = workflow::basic
+		start          phase
 	}
 
 	// A project's role: what it's called, and the commands it allows. Each project
-	// starts with the five below and changes them, or adds its own, in its settings,
+	// starts with the two below and changes them, or adds its own, in its settings,
 	// with no deploy.
 	entity role {
 		project  project  required  key
@@ -34,36 +30,23 @@ namespace projects {
 	}
 
 	// A person's place in a project, and what they may do there: one record for each
-	// role they hold, so someone can both implement and verify, though never the same
-	// issue.
+	// role they hold.
 	entity member {
 		project  project  required  key
 		person   user     required  key
 		role     role     required  key
 	}
 
-	// Maintainers run the project and may take any step; the others take their own.
-	// Whoever holds several roles still never signs off on their own work, which
-	// issues.one's commands make sure of.
+	// Maintainers run the project and its settings; members work on its issues.
+	// Which steps between phases each role may take is the project's to say.
 	roles role per project from member {
 		maintainer "Maintainer" {
 			project::update  member::create  member::delete  role::create  role::update
-			issue::create  issue::update  issue::close  issue::reopen
-			issue::start  issue::implement  issue::finish  issue::verify  issue::sign_off  issue::approve  issue::send_back
-			comment::create
+			phase::create  phase::update  step::create  step::delete
+			issue::create  issue::update  issue::move  comment::create
 			report::resolve  reply::create
 		}
-		developer "Developer"  issue::create  issue::update  issue::start  issue::implement  issue::finish  comment::create
-		tester "Tester"  issue::create  issue::verify  issue::sign_off  issue::send_back  comment::create
-		approver "Approver"  issue::create  issue::approve  issue::send_back  comment::create
-		reporter "Reporter"  issue::create  comment::create
-	}
-
-	command project::create {
-		permission authenticated
-		create member {
-			project = id  person = me  role = role::maintainer
-		}
+		member "Member"  issue::create  issue::update  issue::move  comment::create
 	}
 
 	command project::update
@@ -101,10 +84,17 @@ namespace projects {
 		summary = project.summary
 		visibility = project.visibility
 		takes_reports = project.takes_reports
-		lifecycle = project.lifecycle
 		issues = each issue where project == project.id {
-			order by status descending  number descending
-			number  title  labels  status  priority  implemented_by.name  author.picture  author.name
+			order by number descending
+			number  title  labels  phase.title  priority  author.picture  author.name
+		}
+		phases = each phase where project == project.id {
+			order by position
+			name  title  position
+		}
+		steps = each step where project == project.id {
+			order by from.position  to.position
+			from  to  from.title  from.position  to.title  to.position  title  roles  roles.title
 		}
 		members = each member where project == project.id {
 			order by role
@@ -137,7 +127,7 @@ namespace projects {
 		}
 		project::create "New project"
 		form project::create "Create project" {
-			slug  name  summary  visibility  takes_reports
+			slug  name  summary  visibility  takes_reports  workflow "Start from"
 		}
 	}
 
@@ -149,23 +139,23 @@ namespace projects {
 		}
 		project::update "Edit project"
 		form project::update "Save" {
-			name  summary  visibility  takes_reports  lifecycle
+			name  summary  visibility  takes_reports
 		}
-		table project_page.issues by status link /:project/issues/:issue {
-			search title labels priority
+		table project_page.issues link /:project/issues/:issue {
+			search title labels phase.title priority
 			sort by number descending
 			page 25
 			number "#"
 			title
 			labels
-			status
+			phase.title "Phase"
 			priority
-			implemented_by.name "Implementing"
 			author.picture ""
 			author.name "Opened by"
 		}
 		link /:project/timeline "Timeline"
 		link /:project/people "People"
+		link /:project/workflow "Workflow"
 		link /:project/report "Report a problem privately"
 		link /:project/reports "Reports, for its people"
 	}
