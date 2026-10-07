@@ -5,13 +5,14 @@
 // issues they work on, with every change kept.
 
 project neotrac {
-	one             "0.6.11"
+	one             "0.6.12"
 	region          "us-east4"
 	ui              radix
 	authentication  google
 	authentication  github
 	icon            "assets/icon.svg"
-	color           "#0f766e"
+	theme           papercolor
+	corners         square
 	analytics       google
 	
 	environment production {

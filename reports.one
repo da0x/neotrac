@@ -50,7 +50,7 @@ namespace projects {
 	view project_reports per project {
 		readers member
 		each report where project == project.id {
-			order -status  -created_at
+			order status descending  created_at descending
 			title  status  author.picture  author.name  created_at
 		}
 	}
@@ -58,7 +58,7 @@ namespace projects {
 	// The reports a person filed, wherever they filed them.
 	view my_reports per user {
 		each report where author == user.id {
-			order -created_at
+			order created_at descending
 			project  title  status
 		}
 	}

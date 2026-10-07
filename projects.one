@@ -17,13 +17,40 @@ namespace projects {
 		lifecycle      enum  full "Implement, verify, approve" | reviewed "Implement, verify" | simple "Start, finish" = lifecycle::full
 	}
 
+	// A project's role: what it's called, and the commands it allows. Each project
+	// starts with the five below and changes them, or adds its own, in its settings,
+	// with no deploy.
+	entity role {
+		project  project  required  key
+		name     slug     required  key
+		title    text     required
+		may      list of permission
+	}
+
 	// A person's place in a project, and what they may do there: one record for each
 	// role they hold, so someone can both implement and verify, though never the same
 	// issue.
 	entity member {
 		project  project  required  key
 		person   user     required  key
-		role     enum     maintainer "Maintainer" | developer "Developer" | tester "Tester" | approver "Approver" | reporter "Reporter"  key
+		role     role     required  key
+	}
+
+	// Maintainers run the project and may take any step; the others take their own.
+	// Whoever holds several roles still never signs off on their own work, which
+	// issues.one's commands make sure of.
+	roles role per project from member {
+		maintainer "Maintainer" {
+			project::update  member::create  member::delete  role::create  role::update
+			issue::create  issue::update  issue::close  issue::reopen
+			issue::start  issue::implement  issue::finish  issue::verify  issue::sign_off  issue::approve  issue::send_back
+			comment::create
+			report::resolve  reply::create
+		}
+		developer "Developer"  issue::create  issue::update  issue::start  issue::implement  issue::finish  comment::create
+		tester "Tester"  issue::create  issue::verify  issue::sign_off  issue::send_back  comment::create
+		approver "Approver"  issue::create  issue::approve  issue::send_back  comment::create
+		reporter "Reporter"  issue::create  comment::create
 	}
 
 	command project::create {
@@ -42,25 +69,13 @@ namespace projects {
 		require person != me  "you can't remove yourself from a project"
 	}
 
-	// Maintainers run the project and may take any step; the others take their own.
-	// Whoever holds several roles still never signs off on their own work, which
-	// issues.one's commands make sure of.
-	role maintainer per project from member {
-		project::update  member::create  member::delete
-		issue::create  issue::update  issue::close  issue::reopen
-		issue::start  issue::implement  issue::finish  issue::verify  issue::sign_off  issue::approve  issue::send_back
-		comment::create
-		report::resolve  reply::create
-	}
-	role developer per project from member  issue::create  issue::update  issue::start  issue::implement  issue::finish  comment::create
-	role tester per project from member  issue::create  issue::verify  issue::sign_off  issue::send_back  comment::create
-	role approver per project from member  issue::create  issue::approve  issue::send_back  comment::create
-	role reporter per project from member  issue::create  comment::create
+	command role::create
+	command role::update
 
 	// Every public project, newest first. A private project is listed nowhere.
 	view all public {
 		each project where visibility == visibility::public {
-			order -created_at
+			order created_at descending
 			slug  name
 		}
 	}
@@ -69,7 +84,7 @@ namespace projects {
 	view mine per user {
 		each member where person == user.id {
 			order project
-			project  project.name  role
+			project  project.name  role.title
 		}
 	}
 
@@ -82,15 +97,19 @@ namespace projects {
 		takes_reports = project.takes_reports
 		lifecycle = project.lifecycle
 		issues = each issue where project == project.id {
-			order -status  -number
+			order status descending  number descending
 			number  title  labels  status  implemented_by.name  author.picture  author.name
 		}
 		members = each member where project == project.id {
 			order role
-			person  person.picture  person.name  role
+			person  person.picture  person.name  role.title
+		}
+		roles = each role where project == project.id {
+			order name
+			name  title  may
 		}
 		timeline = each change of issue where project == project.id {
-			order -created_at
+			order created_at descending
 			limit 100
 			issue  issue.number  issue.title  field  before  after  action  created_by.name  created_at
 		}
@@ -103,7 +122,7 @@ namespace projects {
 		}
 		table mine link /:project {
 			project.name "Yours"
-			role
+			role.title "Role"
 		}
 		table my_reports link /:project/reports/:report {
 			project
@@ -128,7 +147,7 @@ namespace projects {
 		}
 		table project_page.issues by status link /:project/issues/:issue {
 			search title labels
-			sort -number
+			sort number descending
 			page 25
 			number "#"
 			title
@@ -153,13 +172,39 @@ namespace projects {
 		table project_page.members {
 			person.picture ""
 			person.name "Name"
-			role
+			role.title "Role"
 			delete "Remove" when person != me
 		}
 		confirm member::delete "Take this role away from them?"
 		member::create "Add someone"
 		form member::create "Add" {
 			person  role
+		}
+		link /:project/roles "Roles, and what each allows"
+	}
+
+	// A role's own page, where what it allows is changed.
+	view role_page per role {
+		readers member
+		name = role.name
+		title = role.title
+		may = role.may
+	}
+
+	screen "Roles" /:project/roles {
+		table project_page.roles link /:project/roles/:role {
+			title "Role"
+		}
+		role::create "New role"
+		form role::create "Create role" {
+			name  title  may "Allows"
+		}
+	}
+
+	screen "{role_page.title}" /:project/roles/:role {
+		role::update "Edit"
+		form role::update "Save" {
+			title  may "Allows"
 		}
 	}
 
