@@ -81,7 +81,7 @@ namespace projects {
 	// Every public project, newest first. A private project is listed nowhere.
 	view all public {
 		each project where visibility == visibility::public {
-			order created_at descending
+			order by created_at descending
 			slug  name
 		}
 	}
@@ -89,7 +89,7 @@ namespace projects {
 	// The projects a person belongs to, public or private.
 	view mine per user {
 		each member where person == user.id {
-			order project
+			order by project
 			project  project.name  role.title
 		}
 	}
@@ -103,19 +103,19 @@ namespace projects {
 		takes_reports = project.takes_reports
 		lifecycle = project.lifecycle
 		issues = each issue where project == project.id {
-			order status descending  number descending
-			number  title  labels  status  implemented_by.name  author.picture  author.name
+			order by status descending  number descending
+			number  title  labels  status  priority  implemented_by.name  author.picture  author.name
 		}
 		members = each member where project == project.id {
-			order role
+			order by role
 			person  person.picture  person.name  role.title
 		}
 		roles = each role where project == project.id {
-			order name
+			order by name
 			name  title  may
 		}
 		timeline = each change of issue where project == project.id {
-			order created_at descending
+			order by created_at descending
 			limit 100
 			issue  issue.number  issue.title  field  before  after  action  created_by.name  created_at
 		}
@@ -145,20 +145,21 @@ namespace projects {
 		markdown "{project_page.summary}"
 		issue::create "New issue"
 		form issue::create "Open issue" {
-			title  body "Description"  labels
+			title  body "Description"  priority  labels
 		}
 		project::update "Edit project"
 		form project::update "Save" {
 			name  summary  visibility  takes_reports  lifecycle
 		}
 		table project_page.issues by status link /:project/issues/:issue {
-			search title labels
-			sort number descending
+			search title labels priority
+			sort by number descending
 			page 25
 			number "#"
 			title
 			labels
 			status
+			priority
 			implemented_by.name "Implementing"
 			author.picture ""
 			author.name "Opened by"

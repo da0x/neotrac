@@ -1,13 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="neotrac">
   <!-- Copyright 2026 Daher Alfawares. SPDX-License-Identifier: AGPL-3.0-only -->
   <!-- A list of tasks, two checked off and one still to do: what neotrac tracks. -->
-  <rect width="64" height="64" rx="15" fill="#0f766e"/>
+  <rect width="64" height="64" rx="15" fill="#005f87"/>
   <!-- Done: a filled box with its check, and its line faded. -->
-  <rect x="10" y="10" width="14" height="14" rx="4" fill="#5eead4"/>
-  <path d="M13.5 17.2l3 3 5.2-6" fill="none" stroke="#0f766e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="10" y="10" width="14" height="14" rx="4" fill="#87d7ff"/>
+  <path d="M13.5 17.2l3 3 5.2-6" fill="none" stroke="#005f87" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
   <rect x="30" y="14.5" width="24" height="5" rx="2.5" fill="#ffffff" opacity="0.5"/>
-  <rect x="10" y="25" width="14" height="14" rx="4" fill="#5eead4"/>
-  <path d="M13.5 32.2l3 3 5.2-6" fill="none" stroke="#0f766e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="10" y="25" width="14" height="14" rx="4" fill="#87d7ff"/>
+  <path d="M13.5 32.2l3 3 5.2-6" fill="none" stroke="#005f87" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
   <rect x="30" y="29.5" width="18" height="5" rx="2.5" fill="#ffffff" opacity="0.5"/>
   <!-- To do: an empty box, and its line bright. -->
   <rect x="11.5" y="41.5" width="11" height="11" rx="3" fill="none" stroke="#ffffff" stroke-width="3"/>

@@ -23,6 +23,13 @@ namespace projects {
 		closed       "Closed"
 	}
 
+	// How soon an issue matters.
+	enum priority {
+		low     "Low"
+		medium  "Medium"
+		high    "High"
+	}
+
 	entity issue history {
 		project         project       required  key
 		number          serial        per project  key
@@ -31,6 +38,7 @@ namespace projects {
 		labels          list of text
 		author          user          = me
 		status          status = status::open
+		priority        priority = priority::medium
 		implemented_by  user
 		verified_by     user
 		approved_by     user
@@ -122,6 +130,7 @@ namespace projects {
 		body = issue.body
 		labels = issue.labels
 		status = issue.status
+		priority = issue.priority
 		lifecycle = issue.project.lifecycle
 		implemented_by = issue.implemented_by
 		verified_by = issue.verified_by
@@ -129,11 +138,11 @@ namespace projects {
 		verifier = issue.verified_by.name
 		approver = issue.approved_by.name
 		comments = each comment where issue == issue.id {
-			order created_at
+			order by created_at
 			author.picture  author.name  body  created_at
 		}
 		history = each change of issue where issue == issue.id {
-			order created_at
+			order by created_at
 			field  before  after  action  created_by.name  created_at
 		}
 	}
@@ -157,6 +166,7 @@ namespace projects {
 			issue::send_back "Send back" when (issue_page.status == status::implemented || issue_page.status == status::verified) && issue_page.implemented_by != me
 			details issue_page {
 				status "Status"
+				priority "Priority"
 				labels "Labels"
 				implementer "Implemented by"
 				verifier "Verified by"
@@ -164,7 +174,7 @@ namespace projects {
 			}
 			issue::update "Edit"
 			form issue::update "Save" {
-				title  body "Description"  labels
+				title  body "Description"  priority  labels
 			}
 			issue::close "Close" when issue_page.status != status::done && issue_page.status != status::closed
 			issue::reopen "Reopen" when issue_page.status == status::closed
