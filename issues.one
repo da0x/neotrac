@@ -116,6 +116,9 @@ namespace projects {
 		lifecycle = issue.project.lifecycle
 		implemented_by = issue.implemented_by
 		verified_by = issue.verified_by
+		implementer = issue.implemented_by.name
+		verifier = issue.verified_by.name
+		approver = issue.approved_by.name
 		comments = each comment where issue == issue.id {
 			order created_at
 			author.picture  author.name  body  created_at
@@ -126,26 +129,37 @@ namespace projects {
 		}
 	}
 
-	screen "#{issue_page.number} {issue_page.title}" /:project/issues/:issue {
-		markdown "{issue_page.body}"
-		issue::update "Edit"
-		form issue::update "Save" {
-			title  body "Description"  labels
+	screen "#{issue_page.number} {issue_page.title}" /:project/issues/:issue layout two_columns {
+		main {
+			markdown "{issue_page.body}"
+			timeline issue_page.history
+			thread issue_page.comments
+			form comment::create "Comment" {
+				body "Comment"
+			}
 		}
-		issue::start "Start work" when issue_page.status == status::open
-		issue::implement "Mark implemented" when issue_page.status == status::in_progress && issue_page.implemented_by == me && issue_page.lifecycle != lifecycle::simple
-		issue::finish "Finish" when issue_page.status == status::in_progress && issue_page.implemented_by == me && issue_page.lifecycle == lifecycle::simple
-		issue::verify "Verify" when issue_page.status == status::implemented && issue_page.implemented_by != me && issue_page.lifecycle == lifecycle::full
-		issue::sign_off "Verify" when issue_page.status == status::implemented && issue_page.implemented_by != me && issue_page.lifecycle == lifecycle::reviewed
-		issue::approve "Approve" when issue_page.status == status::verified && issue_page.implemented_by != me && issue_page.verified_by != me
-		issue::send_back "Send back" when (issue_page.status == status::implemented || issue_page.status == status::verified) && issue_page.implemented_by != me
-		issue::close "Close" when issue_page.status != status::done && issue_page.status != status::closed
-		issue::reopen "Reopen" when issue_page.status == status::closed
-		copy issue_page "Copy issue"
-		timeline issue_page.history
-		thread issue_page.comments
-		form comment::create "Comment" {
-			body "Comment"
+		side {
+			issue::start "Start work" when issue_page.status == status::open
+			issue::implement "Mark implemented" when issue_page.status == status::in_progress && issue_page.implemented_by == me && issue_page.lifecycle != lifecycle::simple
+			issue::finish "Finish" when issue_page.status == status::in_progress && issue_page.implemented_by == me && issue_page.lifecycle == lifecycle::simple
+			issue::verify "Verify" when issue_page.status == status::implemented && issue_page.implemented_by != me && issue_page.lifecycle == lifecycle::full
+			issue::sign_off "Verify" when issue_page.status == status::implemented && issue_page.implemented_by != me && issue_page.lifecycle == lifecycle::reviewed
+			issue::approve "Approve" when issue_page.status == status::verified && issue_page.implemented_by != me && issue_page.verified_by != me
+			issue::send_back "Send back" when (issue_page.status == status::implemented || issue_page.status == status::verified) && issue_page.implemented_by != me
+			details issue_page {
+				status "Status"
+				labels "Labels"
+				implementer "Implemented by"
+				verifier "Verified by"
+				approver "Approved by"
+			}
+			issue::update "Edit"
+			form issue::update "Save" {
+				title  body "Description"  labels
+			}
+			issue::close "Close" when issue_page.status != status::done && issue_page.status != status::closed
+			issue::reopen "Reopen" when issue_page.status == status::closed
+			copy issue_page "Copy issue"
 		}
 	}
 

@@ -121,6 +121,9 @@ namespace projects {
 			name  summary  visibility  takes_reports  lifecycle
 		}
 		table project_page.issues by status link /:project/issues/:issue {
+			search title labels
+			sort -number
+			page 25
 			number "#"
 			title
 			labels
