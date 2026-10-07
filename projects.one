@@ -36,11 +36,17 @@ namespace projects {
 	command project::update
 	command member::create
 
+	// Taking a role away from someone, though never from yourself, so a project
+	// always keeps the maintainer who took the others'.
+	command member::delete {
+		require person != me  "you can't remove yourself from a project"
+	}
+
 	// Maintainers run the project and may take any step; the others take their own.
 	// Whoever holds several roles still never signs off on their own work, which
 	// issues.one's commands make sure of.
 	role maintainer per project from member {
-		project::update  member::create
+		project::update  member::create  member::delete
 		issue::create  issue::update  issue::close  issue::reopen
 		issue::start  issue::implement  issue::finish  issue::verify  issue::sign_off  issue::approve  issue::send_back
 		comment::create
@@ -148,7 +154,9 @@ namespace projects {
 			person.picture ""
 			person.name "Name"
 			role
+			delete "Remove"
 		}
+		confirm member::delete "Take this role away from them?"
 		member::create "Add someone"
 		form member::create "Add" {
 			person  role
