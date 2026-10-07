@@ -11,6 +11,7 @@ project neotrac {
 	authentication  google
 	authentication  github
 	icon            "assets/icon.svg"
+	color           "#0f766e"
 	analytics       google
 	
 	environment production {

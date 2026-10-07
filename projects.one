@@ -109,7 +109,7 @@ namespace projects {
 		markdown "{project_page.summary}"
 		issue::create "New issue"
 		form issue::create "Open issue" {
-			title  body  labels
+			title  body "Description"  labels
 		}
 		project::update "Edit project"
 		form project::update "Save" {
