@@ -7,6 +7,12 @@
 
 namespace projects {
 
+	enum lifecycle {
+		full      "Implement, verify, approve"
+		reviewed  "Implement, verify"
+		simple    "Start, finish"
+	}
+
 	entity project {
 		slug           text  required  unique  key
 		name           text  required
@@ -14,7 +20,7 @@ namespace projects {
 		visibility     enum  public | private = visibility::public
 		takes_reports  boolean = false
 		// How many steps an issue takes before it's done (issues.one).
-		lifecycle      enum  full "Implement, verify, approve" | reviewed "Implement, verify" | simple "Start, finish" = lifecycle::full
+		lifecycle      lifecycle = lifecycle::full
 	}
 
 	// A project's role: what it's called, and the commands it allows. Each project

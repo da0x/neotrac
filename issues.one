@@ -14,6 +14,15 @@
 
 namespace projects {
 
+	enum status {
+		open         "Open"
+		in_progress  "In progress"
+		implemented  "Implemented"
+		verified     "Verified"
+		done         "Done"
+		closed       "Closed"
+	}
+
 	entity issue history {
 		project         project       required  key
 		number          serial        per project  key
@@ -21,7 +30,7 @@ namespace projects {
 		body            markdown
 		labels          list of text
 		author          user          = me
-		status          enum          open "Open" | in_progress "In progress" | implemented "Implemented" | verified "Verified" | done "Done" | closed "Closed" = status::open
+		status          status = status::open
 		implemented_by  user
 		verified_by     user
 		approved_by     user
