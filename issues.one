@@ -3,18 +3,28 @@
 
 // Issues, numbered within their project: issue 12 of uione is uione-12. Every
 // change to one is kept, and shown as its history.
+//
+// An issue goes through its project's lifecycle, a step at a time, each step taken
+// by someone whose role in the project lets them: a developer starts it and
+// implements it, a tester verifies it, and an approver approves it. Whoever
+// implemented it can't verify or approve it, and whoever verified it can't approve
+// it, so no one signs off on their own work. A project picks how many of those
+// steps it takes (projects.one); any issue can be closed without being done, and
+// reopened.
 
 namespace projects {
 
 	entity issue history {
-		project    project       required  key
-		number     serial        per project  key
-		title      text          required
-		body       markdown
-		labels     list of text
-		assignees  list of user
-		author     user          = me
-		status     enum          open | closed = status::open
+		project         project       required  key
+		number          serial        per project  key
+		title           text          required
+		body            markdown
+		labels          list of text
+		author          user          = me
+		status          enum          open "Open" | in_progress "In progress" | implemented "Implemented" | verified "Verified" | done "Done" | closed "Closed" = status::open
+		implemented_by  user
+		verified_by     user
+		approved_by     user
 	}
 
 	entity comment {
@@ -26,13 +36,70 @@ namespace projects {
 	command issue::create
 	command issue::update
 
+	// Starting an issue makes whoever starts it the one implementing it.
+	command issue::start {
+		require status == status::open  "this issue isn't open to start"
+		status = status::in_progress
+		implemented_by = me
+	}
+
+	// Implemented, for a tester to verify, in a project that verifies.
+	command issue::implement {
+		require status == status::in_progress  "this issue isn't in progress"
+		require implemented_by == me  "only whoever started it says it's implemented"
+		require project.lifecycle != lifecycle::simple  "this project's issues are finished, not implemented"
+		status = status::implemented
+	}
+
+	// Done, in a project that doesn't verify.
+	command issue::finish {
+		require status == status::in_progress  "this issue isn't in progress"
+		require implemented_by == me  "only whoever started it finishes it"
+		require project.lifecycle == lifecycle::simple  "this project's issues are verified before they're done"
+		status = status::done
+	}
+
+	// Verified, for an approver to approve, in a project that approves.
+	command issue::verify {
+		require status == status::implemented  "this issue isn't implemented yet"
+		require implemented_by != me  "whoever implemented an issue doesn't verify it"
+		require project.lifecycle == lifecycle::full  "this project's issues are done once they're verified"
+		status = status::verified
+		verified_by = me
+	}
+
+	// Verified and so done, in a project that doesn't approve.
+	command issue::sign_off {
+		require status == status::implemented  "this issue isn't implemented yet"
+		require implemented_by != me  "whoever implemented an issue doesn't verify it"
+		require project.lifecycle == lifecycle::reviewed  "this project's issues are approved after they're verified"
+		status = status::done
+		verified_by = me
+	}
+
+	command issue::approve {
+		require status == status::verified  "this issue isn't verified yet"
+		require implemented_by != me  "whoever implemented an issue doesn't approve it"
+		require verified_by != me  "whoever verified an issue doesn't approve it"
+		status = status::done
+		approved_by = me
+	}
+
+	// Back to whoever is implementing it, when it isn't right yet.
+	command issue::send_back {
+		require status == status::implemented || status == status::verified  "only an implemented or verified issue goes back"
+		require implemented_by != me  "whoever implemented an issue doesn't send it back"
+		status = status::in_progress
+	}
+
+	// Closed without being done, like a duplicate, and reopened.
 	command issue::close {
-		require status == status::open  "that issue is already closed"
+		require status != status::done && status != status::closed  "this issue is already done or closed"
 		status = status::closed
 	}
 
 	command issue::reopen {
-		require status == status::closed  "that issue is already open"
+		require status == status::closed  "this issue isn't closed"
 		status = status::open
 	}
 
@@ -46,13 +113,16 @@ namespace projects {
 		body = issue.body
 		labels = issue.labels
 		status = issue.status
+		lifecycle = issue.project.lifecycle
+		implemented_by = issue.implemented_by
+		verified_by = issue.verified_by
 		comments = each comment where issue == issue.id {
 			order created_at
 			author.picture  author.name  body  created_at
 		}
 		history = each change of issue where issue == issue.id {
 			order created_at
-			field  before  after  created_by.name  created_at
+			field  before  after  action  created_by.name  created_at
 		}
 	}
 
@@ -62,8 +132,16 @@ namespace projects {
 		form issue::update "Save" {
 			title  body  labels
 		}
-		issue::close "Close issue" when issue_page.status == status::open
-		issue::reopen "Reopen issue" when issue_page.status == status::closed
+		issue::start "Start work" when issue_page.status == status::open
+		issue::implement "Mark implemented" when issue_page.status == status::in_progress && issue_page.implemented_by == me && issue_page.lifecycle != lifecycle::simple
+		issue::finish "Finish" when issue_page.status == status::in_progress && issue_page.implemented_by == me && issue_page.lifecycle == lifecycle::simple
+		issue::verify "Verify" when issue_page.status == status::implemented && issue_page.implemented_by != me && issue_page.lifecycle == lifecycle::full
+		issue::sign_off "Verify" when issue_page.status == status::implemented && issue_page.implemented_by != me && issue_page.lifecycle == lifecycle::reviewed
+		issue::approve "Approve" when issue_page.status == status::verified && issue_page.implemented_by != me && issue_page.verified_by != me
+		issue::send_back "Send back" when (issue_page.status == status::implemented || issue_page.status == status::verified) && issue_page.implemented_by != me
+		issue::close "Close" when issue_page.status != status::done && issue_page.status != status::closed
+		issue::reopen "Reopen" when issue_page.status == status::closed
+		copy issue_page "Copy issue"
 		timeline issue_page.history
 		thread issue_page.comments
 		form comment::create "Comment" {

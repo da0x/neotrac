@@ -13,13 +13,17 @@ namespace projects {
 		summary        markdown
 		visibility     enum  public | private = visibility::public
 		takes_reports  boolean = false
+		// How many steps an issue takes before it's done (issues.one).
+		lifecycle      enum  full "Implement, verify, approve" | reviewed "Implement, verify" | simple "Start, finish" = lifecycle::full
 	}
 
-	// A person's place in a project, and what they may do there.
+	// A person's place in a project, and what they may do there: one record for each
+	// role they hold, so someone can both implement and verify, though never the same
+	// issue.
 	entity member {
 		project  project  required  key
 		person   user     required  key
-		role     enum     maintainer | reporter = role::reporter
+		role     enum     maintainer "Maintainer" | developer "Developer" | tester "Tester" | approver "Approver" | reporter "Reporter"  key
 	}
 
 	command project::create {
@@ -32,12 +36,19 @@ namespace projects {
 	command project::update
 	command member::create
 
+	// Maintainers run the project and may take any step; the others take their own.
+	// Whoever holds several roles still never signs off on their own work, which
+	// issues.one's commands make sure of.
 	role maintainer per project from member {
 		project::update  member::create
 		issue::create  issue::update  issue::close  issue::reopen
+		issue::start  issue::implement  issue::finish  issue::verify  issue::sign_off  issue::approve  issue::send_back
 		comment::create
 		report::resolve  reply::create
 	}
+	role developer per project from member  issue::create  issue::update  issue::start  issue::implement  issue::finish  comment::create
+	role tester per project from member  issue::create  issue::verify  issue::sign_off  issue::send_back  comment::create
+	role approver per project from member  issue::create  issue::approve  issue::send_back  comment::create
 	role reporter per project from member  issue::create  comment::create
 
 	// Every public project, newest first. A private project is listed nowhere.
@@ -63,9 +74,10 @@ namespace projects {
 		summary = project.summary
 		visibility = project.visibility
 		takes_reports = project.takes_reports
+		lifecycle = project.lifecycle
 		issues = each issue where project == project.id {
 			order -status  -number
-			number  title  labels  status  assignees.name  author.picture  author.name
+			number  title  labels  status  implemented_by.name  author.picture  author.name
 		}
 		members = each member where project == project.id {
 			order role
@@ -101,14 +113,14 @@ namespace projects {
 		}
 		project::update "Edit project"
 		form project::update "Save" {
-			name  summary  visibility  takes_reports
+			name  summary  visibility  takes_reports  lifecycle
 		}
 		table project_page.issues by status link /:project/issues/:issue {
 			number "#"
 			title
 			labels
 			status
-			assignees.name "Assigned"
+			implemented_by.name "Implementing"
 			author.picture ""
 			author.name "Opened by"
 		}
