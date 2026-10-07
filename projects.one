@@ -87,7 +87,7 @@ namespace projects {
 		}
 		members = each member where project == project.id {
 			order role
-			person.picture  person.name  role
+			person  person.picture  person.name  role
 		}
 		timeline = each change of issue where project == project.id {
 			order -created_at
@@ -154,7 +154,7 @@ namespace projects {
 			person.picture ""
 			person.name "Name"
 			role
-			delete "Remove"
+			delete "Remove" when person != me
 		}
 		confirm member::delete "Take this role away from them?"
 		member::create "Add someone"
