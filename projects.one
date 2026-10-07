@@ -83,6 +83,11 @@ namespace projects {
 			order role
 			person.picture  person.name  role
 		}
+		timeline = each change of issue where project == project.id {
+			order -created_at
+			limit 100
+			issue  issue.number  issue.title  field  before  after  action  created_by.name  created_at
+		}
 	}
 
 	screen "Projects" / {
@@ -124,9 +129,15 @@ namespace projects {
 			author.picture ""
 			author.name "Opened by"
 		}
+		link /:project/timeline "Timeline"
 		link /:project/people "People"
 		link /:project/report "Report a problem privately"
 		link /:project/reports "Reports, for its people"
+	}
+
+	// Everything that happened to a project's issues, newest first.
+	screen "{project_page.name}: timeline" /:project/timeline {
+		timeline project_page.timeline link /:project/issues/:issue
 	}
 
 	screen "People" /:project/people {
