@@ -283,8 +283,9 @@ namespace projects at / {
 
 	// Someone asked to join a project, by the email they sign in with. Once they sign
 	// in with it, they're a member with its role, by who they are, not by their
-	// email, so changing it later changes nothing, and the invitation is done. Only a
-	// sign-in that vouches for its email, like Google's, takes one.
+	// email, so changing it later changes nothing, and the invitation is done. Only an
+	// email they're known to have takes one: their Google sign-in's, or any address
+	// GitHub has verified for their GitHub account.
 	entity invitation invites member {
 		project  project  required  key
 		email    email    required  key
