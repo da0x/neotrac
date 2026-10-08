@@ -87,7 +87,7 @@ namespace projects {
 		start = project.start
 		issues = each issue where project == project.id {
 			order by number descending
-			number  title  labels  phase.title  priority  author.picture  author.name
+			number  title  labels  phase  phase.title  priority  author.picture  author.name
 		}
 		phases = each phase where project == project.id {
 			order by position
@@ -153,6 +153,11 @@ namespace projects {
 			priority
 			author.picture ""
 			author.name "Opened by"
+		}
+		board project_page.issues by phase over project_page.phases link /:project/issues/:issue {
+			move issue::move along project_page.steps
+			title
+			number "#"  priority  labels  author.picture
 		}
 		link /:project/timeline "Timeline"
 		link /:project/people "People"
