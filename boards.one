@@ -5,7 +5,7 @@
 // product's work, its marketing and its executive matters side by side. The people
 // and their roles are the project's, the same on every board.
 
-namespace projects at / {
+namespace projects {
 
 	// A board of a project, named from its title when it's made.
 	entity board {
@@ -42,7 +42,7 @@ namespace projects at / {
 		project_name = board.project.name
 		issues = each issue where board == board.id {
 			order by number descending
-			number  title  labels  phase  phase.title  priority  author  author.picture  author.name  assignees  assignees.name
+			number  title  labels  phase  phase.title  priority  author  author.picture  author.name  assignees  assignees.name  updated_at
 		}
 		phases = each phase where board == board.id {
 			order by position

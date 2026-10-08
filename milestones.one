@@ -4,7 +4,7 @@
 // A project's milestones, and its roadmap: what each release, or any goal, needs
 // done and by when, and how far along it is, across the project's boards.
 
-namespace projects at / {
+namespace projects {
 
 	entity milestone {
 		project      project   required  key

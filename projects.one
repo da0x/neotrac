@@ -44,10 +44,13 @@ namespace projects at / {
 			project::update  member::create  member::delete  role::create  role::update
 			board::create  board::update  milestone::create  milestone::update  page::create  page::update
 			phase::create  phase::update  phase::delete  step::create  step::update  step::delete
-			issue::create  issue::update  issue::move  comment::create
+			issue::create  issue::update  issue::move  issue::transfer  link::create  link::delete  comment::create
 			report::resolve  reply::create
 		}
-		member "Member"  issue::create  issue::update  issue::move  comment::create  milestone::create  milestone::update  page::create  page::update
+		member "Member" {
+			issue::create  issue::update  issue::move  issue::transfer  link::create  link::delete  comment::create
+			milestone::create  milestone::update  page::create  page::update
+		}
 	}
 
 	// Whoever makes a project maintains it, and it starts with a board called what the
@@ -85,6 +88,17 @@ namespace projects at / {
 		each issue where assignees has user.id {
 			order by number descending
 			project  number  title  project.name  phase.title
+		}
+	}
+
+	// What's new to a person: each change on the boards they follow, and to the issues
+	// assigned to them, newest first, leaving out their own. Only what they may read
+	// is in it, so a private project's changes go once they leave it.
+	view news per user {
+		changes = each change of issue where (board.followers has user.id || assignees has user.id) && created_by != user.id {
+			order by created_at descending
+			limit 30
+			project  project.name  issue  issue.number  issue.title  field  before  after  action  created_by.name  created_at
 		}
 	}
 
@@ -148,6 +162,7 @@ namespace projects at / {
 			text "Projects, issues, and the history of every change, in the open."
 			link /about "Why neotrac"
 		}
+		timeline news.changes "What's new" link /:project/:issue
 		table mine link /:project {
 			project.name "Your projects"
 			role.title "Role"
@@ -200,6 +215,7 @@ namespace projects at / {
 			tally project_page.issues by board and phase
 			filter "Assigned to me" assignees == me
 			filter "High priority" priority == priority::high
+			filter "Changed this week" updated_at > 7 days ago
 		}
 		link /:project/roadmap "Roadmap"
 		link /:project/wiki "Wiki"

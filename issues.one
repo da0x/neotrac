@@ -8,7 +8,7 @@
 // them. Each step names the roles that may take it, so who moves what where is
 // the project's to say, in its settings (workflow.one).
 
-namespace projects at / {
+namespace projects {
 
 	// How soon an issue matters.
 	enum priority {
@@ -31,9 +31,30 @@ namespace projects at / {
 		assignees  list of user
 		// The milestone it's part of, if any (milestones.one).
 		milestone  milestone
-		// What replaces it, like a decision that supersedes this one, or the issue
-		// this one repeats.
-		replaced_by  issue
+	}
+
+	// How one issue bears on another, said from each side: one blocks another, which
+	// is blocked by it.
+	enum relation {
+		blocks         "Blocks"
+		blocked_by     "Blocked by"
+		relates        "Relates to"
+		duplicates     "Duplicates"
+		duplicated_by  "Duplicated by"
+		replaces       "Replaces"
+		replaced_by    "Replaced by"
+	}
+
+	// One issue bearing on another of its project's, on any of its boards: it blocks
+	// it, or repeats it, or replaces it, as a decision supersedes an older one. A link
+	// is kept from each side, so each issue's page says it in its own words.
+	entity link {
+		project   project   required
+		from      issue     required
+		to        issue     required
+		relation  relation  = relation::relates
+		// On the side kept for the other issue, the link it was made with.
+		pair      link
 	}
 
 	entity comment {
@@ -48,6 +69,45 @@ namespace projects at / {
 	}
 
 	command issue::update
+
+	// To another of its project's boards, where it starts in the phase that board
+	// starts issues in. Its number, and so its address, stay the same.
+	command issue::transfer {
+		changes board
+		require board.project == project  "pick one of this project's boards"
+		phase = board.start
+	}
+
+	command link::create {
+		require to != from  "pick another issue"
+		require from.project == project && to.project == project  "pick one of this project's issues"
+		if relation == relation::blocks {
+			create link { project = project  pair = id  from = to  to = from  relation = relation::blocked_by }
+		}
+		if relation == relation::blocked_by {
+			create link { project = project  pair = id  from = to  to = from  relation = relation::blocks }
+		}
+		if relation == relation::relates {
+			create link { project = project  pair = id  from = to  to = from  relation = relation::relates }
+		}
+		if relation == relation::duplicates {
+			create link { project = project  pair = id  from = to  to = from  relation = relation::duplicated_by }
+		}
+		if relation == relation::duplicated_by {
+			create link { project = project  pair = id  from = to  to = from  relation = relation::duplicates }
+		}
+		if relation == relation::replaces {
+			create link { project = project  pair = id  from = to  to = from  relation = relation::replaced_by }
+		}
+		if relation == relation::replaced_by {
+			create link { project = project  pair = id  from = to  to = from  relation = relation::replaces }
+		}
+	}
+
+	// Both sides go together.
+	command link::delete {
+		delete each link where pair == id || id == pair
+	}
 
 	// Along a step from the phase it's in, that one of the person's roles may take.
 	command issue::move {
@@ -71,10 +131,12 @@ namespace projects at / {
 		assigned = issue.assignees.name
 		milestone = issue.milestone
 		milestone_title = issue.milestone.title
-		replaced_by = issue.replaced_by
-		replacement = issue.replaced_by.title
 		board = issue.board
 		board_title = issue.board.title
+		// How it bears on others, and they on it, each said from this side.
+		links = each link where from == issue.id {
+			relation  to  to.number  to.title
+		}
 		steps = each step where board == issue.board {
 			from  to  from.title  to.title  title  roles
 		}
@@ -91,6 +153,13 @@ namespace projects at / {
 	screen "#{issue_page.number} {issue_page.title}" /:project/:issue under /:project/boards/:board "{issue_page.board_title}" layout two_columns {
 		main {
 			markdown "{issue_page.body}"
+			table issue_page.links link /:project/:to {
+				hide when empty
+				relation "Linked"
+				to.number "#"
+				to.title "Issue"
+				delete "Remove"
+			}
 			timeline issue_page.history
 			thread issue_page.comments
 			form comment::create "Comment" {
@@ -103,13 +172,20 @@ namespace projects at / {
 				phase_title "Phase"
 				assigned "Assigned to"
 				milestone_title "Milestone"
-				replacement "Replaced by"
 				priority "Priority"
 				labels "Labels"
 			}
 			issue::update "Edit"
 			form issue::update "Save" {
-				title  body "Description"  assignees "Assigned to"  milestone  priority  labels  replaced_by "Replaced by"
+				title  body "Description"  assignees "Assigned to"  milestone  priority  labels
+			}
+			link::create "Link an issue"
+			form link::create "Link" {
+				relation "This issue"  to "Issue"
+			}
+			issue::transfer "Transfer to another board"
+			form issue::transfer "Transfer" {
+				board "Board"
 			}
 			copy issue_page "Copy issue"
 		}

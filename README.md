@@ -17,8 +17,9 @@ users. See `LICENSE`.
   people in each and the roles they hold. A project defines its own roles, and what
   each may do, on its pages.
 - **Boards**, several to a project, like its product's work, its marketing and its
-  executive matters, each a card on the project's page with how its issues stand.
-  Anyone signed in follows a board, and finds it on their front page.
+  executive matters, each a card on the project's page with how its issues stand,
+  and links that open it filtered: assigned to me, high priority, or changed this
+  week. Anyone signed in follows a board, and finds it on their front page.
 - **Workflows** of a board's own: the phases its issues go through, and which role may
   move an issue from which phase to which, edited as a grid or a diagram, with no
   deploy. A board starts from a preset: basic, agile, editorial, bugs, architecture
@@ -26,7 +27,12 @@ users. See `LICENSE`.
 - **Issues**, numbered within their project, like neotrac.org/neotrac/12, shown as a
   table with a tab for each phase or as a board whose cards are dragged along the
   moves a person's roles allow. Each has comments, a priority, labels, and a history
-  of every change, which the project's timeline gathers.
+  of every change, which the project's timeline gathers. An issue moves to another
+  of its project's boards keeping its number, and links to others on any of them:
+  it blocks one, relates to another, duplicates or replaces a third.
+- **What's new**: on your front page, every change on the boards you follow and to
+  the issues assigned to you, leaving out your own, and only from projects you may
+  read.
 - **Assignees**: the people working on an issue, picked from the project's own, and
   what's assigned to you listed on your front page and a filter on every board.
 - **Milestones and a roadmap**: what a release, or any goal, needs done and by when,

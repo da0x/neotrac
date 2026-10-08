@@ -4,7 +4,7 @@
 // A project's wiki: pages its people write together in Markdown, each keeping every
 // change, as Trac's did.
 
-namespace projects at / {
+namespace projects {
 
 	entity page history {
 		project  project   required  key

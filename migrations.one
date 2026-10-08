@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 // Changes to what's stored that a deploy brings, each done once, the first time
-// the backend starts with it. One stays here until every place neotrac runs has
-// done it, and then goes.
+// the backend starts with it. They stay here once done, as examples of the
+// language.
 
-namespace projects at / {
+namespace projects {
 
 	// Every project made before boards takes one, called what the project is, with
 	// the workflow and the issues it has: its phases, steps and issues are that
@@ -53,11 +53,47 @@ namespace projects at / {
 	}
 
 	// Triage is for bug reports. The workflow projects made before boards were given
-	// starts in Inbox instead, a phase for what's new and not yet sorted; only its
-	// title changes.
-	once "2026-10-08 inbox" {
+	// starts in Backlog instead, the work waiting to be picked up; only its title
+	// changes.
+	once "2026-10-08 backlog" {
 		each phase where name == "triage" {
-			title = "Inbox"
+			title = "Backlog"
+		}
+	}
+
+	// Every project made before issues were linked, or moved between boards, lets its
+	// maintainers and members do both, as new projects do.
+	once "2026-10-08 links" {
+		each role where name == "maintainer" {
+			add issue::transfer to may
+			add link::create to may
+			add link::delete to may
+		}
+		each role where name == "member" {
+			add issue::transfer to may
+			add link::create to may
+			add link::delete to may
+		}
+	}
+
+	// Boards made from the presets before their phases were named in sentence case,
+	// like the rest of neotrac, and without slashes, take the new names. A phase
+	// renamed since keeps its own.
+	once "2026-10-08 sentence case" {
+		each phase where title == "To Do" {
+			title = "To do"
+		}
+		each phase where title == "In Progress" {
+			title = "In progress"
+		}
+		each phase where title == "Testing / Review" {
+			title = "In review"
+		}
+		each phase where title == "Idea / Intake" {
+			title = "Ideas"
+		}
+		each phase where title == "In Fixing" {
+			title = "In fixing"
 		}
 	}
 
