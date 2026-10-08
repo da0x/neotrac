@@ -17,7 +17,7 @@ project neotrac {
 	appearance      light
 	corners         square
 	analytics       google
-	copyright       "Daher Alfawares" "https://www.linkedin.com/in/dalfawares"
+	copyright       "Daher Alfawares" "https://www.linkedin.com/in/daheralfawares"
 	unread          news.changes since news.seen
 	
 	environment production {
