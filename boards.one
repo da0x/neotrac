@@ -42,7 +42,7 @@ namespace projects at / {
 		project_name = board.project.name
 		issues = each issue where board == board.id {
 			order by number descending
-			number  title  labels  phase  phase.title  priority  author  author.picture  author.name
+			number  title  labels  phase  phase.title  priority  author  author.picture  author.name  assignees  assignees.name
 		}
 		phases = each phase where board == board.id {
 			order by position
@@ -71,6 +71,7 @@ namespace projects at / {
 			number "#"
 			title
 			labels
+			assignees.name "Assigned to"
 			priority
 			author.picture ""
 			author.name "Opened by"
@@ -79,10 +80,10 @@ namespace projects at / {
 		board board_page.issues by phase over board_page.phases link /:project/:issue {
 			move issue::move along board_page.steps
 			title
-			number "#"  priority  labels  author.picture
+			number "#"  priority  labels  assignees.name
 		}
 		form issue::create "Open issue" {
-			title  body "Description"  priority  labels
+			title  body "Description"  assignees "Assigned to"  milestone  priority  labels
 		}
 		link /:project "All boards"
 	}

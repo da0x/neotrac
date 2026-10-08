@@ -1,0 +1,53 @@
+// Copyright 2026 Daher Alfawares
+// SPDX-License-Identifier: AGPL-3.0-only
+
+// A project's wiki: pages its people write together in Markdown, each keeping every
+// change, as Trac's did.
+
+namespace projects at / {
+
+	entity page history {
+		project  project   required  key
+		name     text      required  key = slug(title)
+		title    text      required
+		body     markdown
+	}
+
+	command page::create
+	command page::update
+
+	view wiki_page per page {
+		readers member
+		public when page.project.visibility == visibility::public
+		title = page.title
+		body = page.body
+		history = each change of page where page == page.id {
+			order by created_at
+			field  before  after  action  created_by.name  created_at
+		}
+	}
+
+	screen "Wiki" /:project/wiki {
+		table project_page.pages link /:project/wiki/:page {
+			search title
+			title "Page"
+			updated_at "Changed"
+			page::create "New page"
+		}
+		form page::create "Add" {
+			title  body
+		}
+	}
+
+	screen "{wiki_page.title}" /:project/wiki/:page {
+		heading {
+			page::update "Edit" icon edit
+			form page::update "Save" {
+				title  body
+			}
+		}
+		markdown "{wiki_page.body}"
+		timeline wiki_page.history
+	}
+
+} // namespace projects

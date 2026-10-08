@@ -26,6 +26,12 @@ users. See `LICENSE`.
   table with a tab for each phase or as a board whose cards are dragged along the
   moves a person's roles allow. Each has comments, a priority, labels, and a history
   of every change, which the project's timeline gathers.
+- **Assignees**: the people working on an issue, picked from the project's own, and
+  what's assigned to you listed on your front page and a filter on every board.
+- **Milestones and a roadmap**: what a release, or any goal, needs done and by when,
+  each a card with how its issues stand.
+- **A wiki**: pages a project's people write together in Markdown, each keeping every
+  change.
 - **Private reports** of problems, like a security hole, read only by the project's
   people and whoever filed each one.
 
@@ -41,6 +47,8 @@ One `.one` file for each part:
   and a board's Workflow page.
 - `issues.one`: issues, their comments and history, and an issue's page.
 - `reports.one`: problems reported to a project privately.
+- `milestones.one`: milestones and the roadmap.
+- `wiki.one`: a project's wiki.
 - `migrations.one`: changes to what's stored that a deploy brought, each done once.
   They're kept after they've run, as examples of the language.
 - `about.one` and `about/`: the thank-you to Trac.

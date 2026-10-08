@@ -27,6 +27,10 @@ namespace projects at / {
 		author    user      = me
 		phase     phase
 		priority  priority = priority::medium
+		// Who's working on it, from the project's people.
+		assignees  list of user
+		// The milestone it's part of, if any (milestones.one).
+		milestone  milestone
 	}
 
 	entity comment {
@@ -60,6 +64,10 @@ namespace projects at / {
 		phase = issue.phase
 		phase_title = issue.phase.title
 		priority = issue.priority
+		assignees = issue.assignees
+		assigned = issue.assignees.name
+		milestone = issue.milestone
+		milestone_title = issue.milestone.title
 		board = issue.board
 		board_title = issue.board.title
 		steps = each step where board == issue.board {
@@ -88,12 +96,14 @@ namespace projects at / {
 			issue::move along issue_page.steps
 			details issue_page {
 				phase_title "Phase"
+				assigned "Assigned to"
+				milestone_title "Milestone"
 				priority "Priority"
 				labels "Labels"
 			}
 			issue::update "Edit"
 			form issue::update "Save" {
-				title  body "Description"  priority  labels
+				title  body "Description"  assignees "Assigned to"  milestone  priority  labels
 			}
 			copy issue_page "Copy issue"
 		}

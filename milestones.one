@@ -1,0 +1,65 @@
+// Copyright 2026 Daher Alfawares
+// SPDX-License-Identifier: AGPL-3.0-only
+
+// A project's milestones, and its roadmap: what each release, or any goal, needs
+// done and by when, and how far along it is, across the project's boards.
+
+namespace projects at / {
+
+	entity milestone {
+		project      project   required  key
+		name         text      required  key = slug(title)
+		title        text      required
+		due          date
+		description  markdown
+	}
+
+	command milestone::create
+	command milestone::update
+
+	view milestone_page per milestone {
+		readers member
+		public when milestone.project.visibility == visibility::public
+		title = milestone.title
+		due = milestone.due
+		description = milestone.description
+		issues = each issue where milestone == milestone.id {
+			order by number descending
+			number  title  phase.title  priority  assignees.name
+		}
+	}
+
+	// Each milestone as a card, soonest first: when it's due, and its issues by phase.
+	screen "Roadmap" /:project/roadmap {
+		heading {
+			milestone::create "New milestone"
+			form milestone::create "Add" {
+				title  due "Due"  description
+			}
+		}
+		cards project_page.milestones link /:project/milestones/:milestone {
+			title
+			due "Due"
+			tally project_page.issues by milestone and phase
+		}
+	}
+
+	screen "{milestone_page.title}" /:project/milestones/:milestone under /:project/roadmap "Roadmap" {
+		heading {
+			milestone::update "Edit milestone" icon edit
+			form milestone::update "Save" {
+				title  due "Due"  description
+			}
+		}
+		subtitle "{milestone_page.description}"
+		table milestone_page.issues link /:project/:issue {
+			search title
+			number "#"
+			title
+			phase.title "Phase"
+			assignees.name "Assigned to"
+			priority
+		}
+	}
+
+} // namespace projects

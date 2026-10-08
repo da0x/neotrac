@@ -42,12 +42,12 @@ namespace projects at / {
 	roles role per project from member {
 		maintainer "Maintainer" {
 			project::update  member::create  member::delete  role::create  role::update
-			board::create  board::update
+			board::create  board::update  milestone::create  milestone::update  page::create  page::update
 			phase::create  phase::update  phase::delete  step::create  step::update  step::delete
 			issue::create  issue::update  issue::move  comment::create
 			report::resolve  reply::create
 		}
-		member "Member"  issue::create  issue::update  issue::move  comment::create
+		member "Member"  issue::create  issue::update  issue::move  comment::create  milestone::create  milestone::update  page::create  page::update
 	}
 
 	// Whoever makes a project maintains it, and it starts with a board called what the
@@ -80,6 +80,14 @@ namespace projects at / {
 		}
 	}
 
+	// The issues a person is working on, in any project, newest first.
+	view assigned per user {
+		each issue where assignees has user.id {
+			order by number descending
+			project  number  title  project.name  phase.title
+		}
+	}
+
 	// The boards a person follows, in any project.
 	view followed per user {
 		each board where followers has user.id {
@@ -108,7 +116,15 @@ namespace projects at / {
 			name  title
 		}
 		issues = each issue where project == project.id {
-			board  phase  phase.title  phase.position
+			board  milestone  phase  phase.title  phase.position
+		}
+		milestones = each milestone where project == project.id {
+			order by due
+			name  title  due
+		}
+		pages = each page where project == project.id {
+			order by title
+			name  title  updated_at
 		}
 		members = each member where project == project.id {
 			order by role
@@ -136,7 +152,15 @@ namespace projects at / {
 			project.name "Your projects"
 			role.title "Role"
 		}
+		table assigned link /:project/:issue {
+			hide when empty
+			number "#"
+			title "Assigned to you"
+			project.name "Project"
+			phase.title "Phase"
+		}
 		table followed link /:project/boards/:board {
+			hide when empty
 			title "Boards you follow"
 			project.name "Project"
 		}
@@ -174,9 +198,11 @@ namespace projects at / {
 		cards project_page.boards link /:project/boards/:board {
 			title
 			tally project_page.issues by board and phase
-			filter "Opened by me" author == me
+			filter "Assigned to me" assignees == me
 			filter "High priority" priority == priority::high
 		}
+		link /:project/roadmap "Roadmap"
+		link /:project/wiki "Wiki"
 		link /:project/timeline "Timeline"
 		link /:project/people "People"
 		link /:project/report "Report a problem privately"

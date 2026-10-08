@@ -35,4 +35,21 @@ namespace projects at / {
 		}
 	}
 
+	// Every project made before milestones and its wiki lets its maintainers and
+	// members make and change both, as new projects do.
+	once "2026-10-08 milestones and the wiki" {
+		each role where name == "maintainer" {
+			add milestone::create to may
+			add milestone::update to may
+			add page::create to may
+			add page::update to may
+		}
+		each role where name == "member" {
+			add milestone::create to may
+			add milestone::update to may
+			add page::create to may
+			add page::update to may
+		}
+	}
+
 } // namespace projects
