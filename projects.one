@@ -130,6 +130,7 @@ namespace projects at / {
 	screen "neotrac" / {
 		hero "Open project tracking for everyone" {
 			text "Projects, issues, and the history of every change, in the open."
+			link /about "Why neotrac"
 		}
 		table mine link /:project {
 			project.name "Your projects"

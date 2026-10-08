@@ -1,0 +1,13 @@
+// Copyright 2026 Daher Alfawares
+// SPDX-License-Identifier: AGPL-3.0-only
+
+// Why neotrac is here: a thank-you to Trac. Every markdown file in about/ is a page,
+// so about/01-trac.md is /about.
+
+namespace about {
+
+	screen about /:page {
+		markdown "about/*.md"
+	}
+
+} // namespace about
