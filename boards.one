@@ -56,10 +56,10 @@ namespace projects {
 
 	screen "{board_page.title}" /:project/boards/:board {
 		heading {
-			board::follow "Follow" when !(board_page.followers has me)
-			board::unfollow "Following" when board_page.followers has me
-			link /:project/boards/:board/workflow "Workflow"
-			board::update "Edit board"
+			board::follow "Follow" icon follow when !(board_page.followers has me)
+			board::unfollow "Stop following" icon following when board_page.followers has me
+			link /:project/boards/:board/workflow "Workflow" icon workflow
+			board::update "Edit board" icon edit
 			form board::update "Save" {
 				title
 			}
@@ -75,7 +75,7 @@ namespace projects {
 			priority
 			author.picture ""
 			author.name "Opened by"
-			issue::create "New issue"
+			issue::create "New issue" icon add
 		}
 		board board_page.issues by phase over board_page.phases link /:project/:issue {
 			move issue::move along board_page.steps

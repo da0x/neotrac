@@ -11,9 +11,17 @@ namespace projects {
 		name     text      required  key = slug(title)
 		title    text      required
 		body     markdown
+		// Where it's listed among the wiki's pages, as they're arranged by dragging.
+		position number
 	}
 
-	command page::create
+	// A new page goes after the others.
+	command page::create {
+		if position == none {
+			position = 1000
+		}
+	}
+
 	command page::update
 
 	view wiki_page per page {
@@ -28,7 +36,9 @@ namespace projects {
 	}
 
 	screen "Wiki" /:project/wiki {
+		text "Drag a page to move it. The project's page lists them in the same order."
 		table project_page.pages link /:project/wiki/:page {
+			reorder position
 			search title
 			title "Page"
 			updated_at "Changed"

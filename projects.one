@@ -151,8 +151,8 @@ namespace projects at / {
 			name  title  due
 		}
 		pages = each page where project == project.id {
-			order by title
-			name  title  updated_at
+			order by position
+			name  title  position  updated_at
 		}
 		members = each member where project == project.id {
 			order by role
@@ -165,6 +165,12 @@ namespace projects at / {
 		timeline = each change of issue where project == project.id {
 			order by created_at descending
 			limit 100
+			issue  issue.number  issue.title  field  before  after  action  created_by.name  created_at
+		}
+		// The latest few, for the project's own page.
+		recent = each change of issue where project == project.id {
+			order by created_at descending
+			limit 5
 			issue  issue.number  issue.title  field  before  after  action  created_by.name  created_at
 		}
 	}
@@ -213,9 +219,9 @@ namespace projects at / {
 		}
 	}
 
-	screen "{project_page.name}" /:project {
+	screen "{project_page.name}" /:project layout two_columns {
 		heading {
-			board::create "New board"
+			board::create "New board" icon add
 			form board::create "Create board" {
 				title  workflow "Start from"
 			}
@@ -227,19 +233,38 @@ namespace projects at / {
 		subtitle "{project_page.summary}"
 		// Each board as a card: how its issues stand, phase by phase, and the two
 		// ways it's most often looked at.
-		cards project_page.boards link /:project/boards/:board {
-			title
-			tally project_page.issues by board and phase
-			filter "Assigned to me" assignees == me
-			filter "High priority" priority == priority::high
-			filter "Changed this week" updated_at > 7 days ago
+		main {
+			cards project_page.boards link /:project/boards/:board {
+				title
+				tally project_page.issues by board and phase
+				filter "Assigned to me" assignees == me
+				filter "High priority" priority == priority::high
+				filter "Changed this week" updated_at > 7 days ago
+			}
+			timeline project_page.recent "Recent activity" link /:project/:issue
+			link /:project/timeline "All activity"
 		}
-		link /:project/roadmap "Roadmap"
-		link /:project/wiki "Wiki"
-		link /:project/timeline "Timeline"
-		link /:project/people "People"
-		link /:project/report "Report a problem privately"
-		link /:project/reports "Reports, for its people"
+		// What's in each part of the project, a glance at a time, and the way in.
+		side {
+			section "Roadmap" {
+				table project_page.milestones link /:project/milestones/:milestone {
+					title "Milestone"
+					due "Due"
+				}
+				link /:project/roadmap "Open the roadmap"
+			}
+			section "Wiki" {
+				table project_page.pages link /:project/wiki/:page {
+					title "Page"
+				}
+				link /:project/wiki "Open the wiki"
+			}
+			section "People" {
+				link /:project/people "Who works on it"
+				link /:project/report "Report a problem privately"
+				link /:project/reports "Reports, for its people"
+			}
+		}
 	}
 
 	// Everything that happened to a project's issues, newest first.

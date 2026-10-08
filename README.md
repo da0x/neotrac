@@ -39,7 +39,8 @@ users. See `LICENSE`.
 - **Milestones and a roadmap**: what a release, or any goal, needs done and by when,
   each a card with how its issues stand.
 - **A wiki**: pages a project's people write together in Markdown, each keeping every
-  change.
+  change, arranged by dragging and listed in that order on the project's page,
+  beside its roadmap and recent activity.
 - **Private reports** of problems, like a security hole, read only by the project's
   people and whoever filed each one.
 

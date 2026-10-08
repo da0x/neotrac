@@ -97,4 +97,12 @@ namespace projects {
 		}
 	}
 
+	// Wiki pages written before they could be arranged take their place in the order
+	// they were written, each at 1000 as a new one is; the first drag numbers them.
+	once "2026-10-08 wiki order" {
+		each page {
+			position = 1000
+		}
+	}
+
 } // namespace projects
