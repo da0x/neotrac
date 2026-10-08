@@ -1,19 +1,49 @@
 # neotrac
 
-Open project tracking for everyone: projects, their people, and the issues they
-work on, with every change kept. It's written in [uione](https://github.com/da0x/uione),
-and will be served at neotrac.org.
+Open project tracking for everyone: projects, the boards their work is on, and the
+issues on them, with every change kept. It's served at [neotrac.org](https://neotrac.org),
+and written in [uione](https://github.com/da0x/uione).
 
-AGPL-3.0: anyone who runs a changed neotrac as a service shares their changes with its users. See `LICENSE`.
+neotrac is a thank-you to [Trac](https://trac.edgewall.org), and the ideas that made it
+good, rebuilt for the way we work now: [neotrac.org/about](https://neotrac.org/about)
+says why.
+
+AGPL-3.0: anyone who runs a changed neotrac as a service shares their changes with its
+users. See `LICENSE`.
+
+## What it does
+
+- **Projects**, public or private, found and searched on the front page, with the
+  people in each and the roles they hold. A project defines its own roles, and what
+  each may do, on its pages.
+- **Boards**, several to a project, like its product's work, its marketing and its
+  executive matters, each a card on the project's page with how its issues stand.
+  Anyone signed in follows a board, and finds it on their front page.
+- **Workflows** of a board's own: the phases its issues go through, and which role may
+  move an issue from which phase to which, edited as a grid or a diagram, with no
+  deploy. A board starts from a preset: basic, agile, editorial, bugs, or custom.
+- **Issues**, numbered within their project, like neotrac.org/neotrac/12, shown as a
+  table with a tab for each phase or as a board whose cards are dragged along the
+  moves a person's roles allow. Each has comments, a priority, labels, and a history
+  of every change, which the project's timeline gathers.
+- **Private reports** of problems, like a security hole, read only by the project's
+  people and whoever filed each one.
 
 ## What's here
 
-- `neotrac.one`: the project's settings and its front page.
-- `projects.one`: projects, public or private, and the people in each, with a role.
-- `reports.one`: problems reported to a project privately, like a security hole,
-  read only by its people and whoever filed each one.
-- `issues.one`: issues numbered within their project, with comments and a history of
-  every change.
+One `.one` file for each part:
+
+- `neotrac.one`: the project's settings: where it runs, how people sign in, its look.
+- `projects.one`: projects, their people and roles, the front page, and a project's
+  page.
+- `boards.one`: boards, a board's page, and following one.
+- `workflow.one`: phases, the moves between them, the presets a board starts from,
+  and a board's Workflow page.
+- `issues.one`: issues, their comments and history, and an issue's page.
+- `reports.one`: problems reported to a project privately.
+- `migrations.one`: changes to what's stored that a deploy brought, each done once.
+  They're kept after they've run, as examples of the language.
+- `about.one` and `about/`: the thank-you to Trac.
 
 ## Working on it
 
@@ -24,6 +54,12 @@ one check .
 one build .
 ```
 
-`one build` writes the web app, the Go backend and the Firestore rules into
-`build/`. The backend builds against the published `one` library, and the web app
-installs uione's packages from npm.
+`one build` writes the web app, the Go backend, the Firestore rules and the Pulumi
+program that deploys them into `build/`. The backend builds against the published
+`one` library, and the web app installs uione's packages from npm, both at the version
+`neotrac.one` names.
+
+neotrac.org is deployed from the uione studio, at [uione.io](https://uione.io), which
+builds what's pushed here in neotrac's own Google Cloud project.
+
+See `AGENTS.md` for how the code is written here.
