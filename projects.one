@@ -41,7 +41,7 @@ namespace projects at / {
 	// Which steps between phases each role may take is the project's to say.
 	roles role per project from member {
 		maintainer "Maintainer" {
-			project::update  member::create  member::delete  role::create  role::update
+			project::update  member::create  member::delete  invitation::create  invitation::delete  role::create  role::update
 			board::create  board::update  milestone::create  milestone::update  page::create  page::update
 			phase::create  phase::update  phase::delete  step::create  step::update  step::delete
 			issue::create  issue::update  issue::move  issue::transfer  link::create  link::delete  comment::create
@@ -104,11 +104,12 @@ namespace projects at / {
 		seen_at = now
 	}
 
-	// What's new to a person: each change on the boards they follow, and to the issues
-	// assigned to them, newest first, leaving out their own. Only what they may read
+	// What's new to a person: each change on the boards they follow, to the issues
+	// assigned to them, and each comment naming them, newest first, leaving out
+	// their own. Only what they may read
 	// is in it, so a private project's changes go once they leave it.
 	view news per user {
-		changes = each change of issue where (board.followers has user.id || assignees has user.id) && created_by != user.id {
+		changes = each change of issue where (board.followers has user.id || assignees has user.id || mentioned has user.id) && created_by != user.id {
 			order by created_at descending
 			limit 30
 			project  project.name  issue  issue.number  issue.title  field  before  after  action  created_by.name  created_at
@@ -144,7 +145,7 @@ namespace projects at / {
 			name  title
 		}
 		issues = each issue where project == project.id {
-			number  title  board  milestone  phase  phase.title  phase.position
+			number  title  labels  board  milestone  phase  phase.title  phase.position
 		}
 		milestones = each milestone where project == project.id {
 			order by due
@@ -234,6 +235,11 @@ namespace projects at / {
 		// Each board as a card: how its issues stand, phase by phase, and the two
 		// ways it's most often looked at.
 		main {
+			// Every issue by its number, title or labels, and every wiki page by its title.
+			find "Search this project" {
+				project_page.issues "Issues" link /:project/:issue by number title labels
+				project_page.pages "Wiki" link /:project/wiki/:page by title
+			}
 			cards project_page.boards link /:project/boards/:board {
 				title
 				tally project_page.issues by board and phase
@@ -246,8 +252,11 @@ namespace projects at / {
 		}
 		// What's in each part of the project, a glance at a time, and the way in.
 		side {
-			section "Roadmap" {
+			// What's due in the next two weeks, or overdue: the last 5% to finish.
+			section "Due soon" {
 				table project_page.milestones link /:project/milestones/:milestone {
+					only due <= 2 weeks from now
+					hide when empty
 					title "Milestone"
 					due "Due"
 				}
@@ -272,6 +281,29 @@ namespace projects at / {
 		timeline project_page.timeline link /:project/:issue
 	}
 
+	// Someone asked to join a project, by the email they sign in with. Once they sign
+	// in with it, they're a member with its role, by who they are, not by their
+	// email, so changing it later changes nothing, and the invitation is done. Only a
+	// sign-in that vouches for its email, like Google's, takes one.
+	entity invitation invites member {
+		project  project  required  key
+		email    email    required  key
+		role     role     required
+	}
+
+	command invitation::create
+	command invitation::delete
+
+	// Who's been asked to join, read only by the project's people, since it names
+	// their email.
+	view invitations per project {
+		readers member
+		invited = each invitation where project == project.id {
+			order by created_at
+			email  role.title
+		}
+	}
+
 	screen "People" /:project/people {
 		table project_page.members {
 			person.picture ""
@@ -280,9 +312,16 @@ namespace projects at / {
 			delete "Remove" when person != me
 		}
 		confirm member::delete "Take this role away from them?"
-		member::create "Add someone"
-		form member::create "Add" {
-			person  role
+		invitation::create "Add someone"
+		form invitation::create "Invite" {
+			email "Email"  role
+		}
+		text "They join once they sign in with that email. Tell them, and send them here."
+		table invitations.invited {
+			hide when empty
+			email "Invited"
+			role.title "Role"
+			delete "Withdraw"
 		}
 		link /:project/roles "Roles, and what each allows"
 	}

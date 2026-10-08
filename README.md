@@ -15,7 +15,8 @@ users. See `LICENSE`.
 
 - **Projects**, public or private, found and searched on the front page, with the
   people in each and the roles they hold. A project defines its own roles, and what
-  each may do, on its pages.
+  each may do, on its pages. People are invited by email, and join once they sign
+  in with it. A project's page finds any of its issues or wiki pages as you type.
 - **Boards**, several to a project, like its product's work, its marketing and its
   executive matters, each a card on the project's page with how its issues stand,
   and links that open it filtered: assigned to me, high priority, or changed this
@@ -26,7 +27,8 @@ users. See `LICENSE`.
   decisions (ADRs), or custom.
 - **Issues**, numbered within their project, like neotrac.org/neotrac/12, shown as a
   table with a tab for each phase or as a board whose cards are dragged along the
-  moves a person's roles allow. Each has comments, a priority, labels, and a history
+  moves a person's roles allow, each colored by its priority as Trac's were. Each
+  has comments, where @username tells someone, a priority, labels, and a history
   of every change, which the project's timeline gathers. An issue moves to another
   of its project's boards keeping its number, and links to others on any of them:
   it blocks one, relates to another, duplicates or replaces a third.

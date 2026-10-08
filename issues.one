@@ -10,11 +10,15 @@
 
 namespace projects {
 
-	// How soon an issue matters.
+	// How soon an issue matters, the most urgent first. An issue's color says it, as
+	// Trac's did: red for critical, yellow for high, plain for normal, then cyan and
+	// blue for what can wait.
 	enum priority {
-		low     "Low"
-		medium  "Medium"
-		high    "High"
+		critical  "Critical"
+		high      "High"
+		normal    "Normal"
+		low       "Low"
+		trivial   "Trivial"
 	}
 
 	entity issue history {
@@ -26,7 +30,7 @@ namespace projects {
 		labels    list of text
 		author    user      = me
 		phase     phase
-		priority  priority = priority::medium
+		priority  priority  required = priority::normal
 		// Who's working on it, from the project's people.
 		assignees  list of user
 		// The milestone it's part of, if any (milestones.one).
@@ -57,10 +61,14 @@ namespace projects {
 		pair      link
 	}
 
-	entity comment {
-		issue   issue     required
-		body    markdown  required
-		author  user      = me
+	// A comment is kept in its issue's history too, so it's in the What's new of
+	// whoever follows the issue's board or is assigned it, and of whoever it names
+	// with @username.
+	entity comment history of issue {
+		issue      issue     required
+		body       markdown  required
+		author     user      = me
+		mentioned  list of user = mentions(body)
 	}
 
 	// A new issue starts in the phase its board starts issues in.
@@ -169,6 +177,7 @@ namespace projects {
 		side {
 			issue::move along issue_page.steps
 			details issue_page {
+				tint by priority
 				phase_title "Phase"
 				assigned "Assigned to"
 				milestone_title "Milestone"

@@ -68,19 +68,20 @@ namespace projects {
 			search title labels phase.title priority
 			sort by number descending
 			page 25
+			tint by priority
 			number "#"
 			title
 			labels
 			assignees.name "Assigned to"
-			priority
 			author.picture ""
 			author.name "Opened by"
 			issue::create "New issue" icon add
 		}
 		board board_page.issues by phase over board_page.phases link /:project/:issue {
 			move issue::move along board_page.steps
+			tint by priority
 			title
-			number "#"  priority  labels  assignees.name
+			number "#"  labels  assignees.name
 		}
 		form issue::create "Open issue" {
 			title  body "Description"  assignees "Assigned to"  milestone  priority  labels

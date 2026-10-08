@@ -54,11 +54,11 @@ namespace projects {
 		subtitle "{milestone_page.description}"
 		table milestone_page.issues link /:project/:issue {
 			search title
+			tint by priority
 			number "#"
 			title
 			phase.title "Phase"
 			assignees.name "Assigned to"
-			priority
 		}
 	}
 

@@ -105,4 +105,23 @@ namespace projects {
 		}
 	}
 
+	// Priorities as Trac had them, five, Normal the one every issue starts with.
+	// Medium was the middle of three and becomes Normal; an issue with none is Normal.
+	once "2026-10-08 priorities" {
+		each issue where priority == "medium" {
+			priority = priority::normal
+		}
+		each issue where priority == none {
+			priority = priority::normal
+		}
+	}
+
+	// Maintainers of projects made before invitations invite people by email.
+	once "2026-10-08 invitations" {
+		each role where name == "maintainer" {
+			add invitation::create to may
+			add invitation::delete to may
+		}
+	}
+
 } // namespace projects
