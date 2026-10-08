@@ -32,7 +32,8 @@ users. See `LICENSE`.
   it blocks one, relates to another, duplicates or replaces a third.
 - **What's new**: on your front page, every change on the boards you follow and to
   the issues assigned to you, leaving out your own, and only from projects you may
-  read.
+  read. What came since you last looked is marked, and counted beside neotrac's
+  name on every page.
 - **Assignees**: the people working on an issue, picked from the project's own, and
   what's assigned to you listed on your front page and a filter on every board.
 - **Milestones and a roadmap**: what a release, or any goal, needs done and by when,

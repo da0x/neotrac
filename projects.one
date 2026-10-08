@@ -91,6 +91,19 @@ namespace projects at / {
 		}
 	}
 
+	// When a person last looked at what's new to them, so what came after is marked
+	// new: one for each person, set each time they look.
+	entity reader {
+		person   user  key  = me
+		seen_at  date
+	}
+
+	command reader::create {
+		permission signed_in
+		require person == me  "you can only say when you looked yourself"
+		seen_at = now
+	}
+
 	// What's new to a person: each change on the boards they follow, and to the issues
 	// assigned to them, newest first, leaving out their own. Only what they may read
 	// is in it, so a private project's changes go once they leave it.
@@ -100,6 +113,7 @@ namespace projects at / {
 			limit 30
 			project  project.name  issue  issue.number  issue.title  field  before  after  action  created_by.name  created_at
 		}
+		seen = first(reader where person == user.id).seen_at
 	}
 
 	// The boards a person follows, in any project.
@@ -162,7 +176,10 @@ namespace projects at / {
 			text "Projects, issues, and the history of every change, in the open."
 			link /about "Why neotrac"
 		}
-		timeline news.changes "What's new" link /:project/:issue
+		timeline news.changes "What's new" link /:project/:issue {
+			new since news.seen
+			seen reader::create
+		}
 		table mine link /:project {
 			project.name "Your projects"
 			role.title "Role"
