@@ -5,11 +5,11 @@
 // issues they work on, with every change kept.
 
 project neotrac {
-	one             "0.6.18"
+	one             "0.6.20"
 	region          "us-east4"
 	ui              radix
-	authentication  google
-	authentication  github
+	signin          google
+	signin          github
 	icon            "assets/icon.svg"
 	theme           papercolor
 	corners         square
@@ -18,12 +18,5 @@ project neotrac {
 	environment production {
 		domain    "neotrac.org"
 		firebase  "neotrac"
-	}
-}
-
-screen "neotrac" / {
-	hero "Open project tracking for everyone" {
-		text "Projects, issues, and the history of every change, in the open."
-		link namespace projects "See the projects"
 	}
 }

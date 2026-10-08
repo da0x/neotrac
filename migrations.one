@@ -5,7 +5,7 @@
 // the backend starts with it. One stays here until every place neotrac runs has
 // done it, and then goes.
 
-namespace projects {
+namespace projects at / {
 
 	// Every project made before boards takes one, called what the project is, with
 	// the workflow and the issues it has: its phases, steps and issues are that

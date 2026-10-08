@@ -6,7 +6,7 @@
 // people and by whoever filed it, never by anyone else, even when the project is
 // public. The project's maintainers answer and resolve it.
 
-namespace projects {
+namespace projects at / {
 
 	entity report {
 		project  project       required
@@ -23,7 +23,7 @@ namespace projects {
 	}
 
 	command report::create {
-		permission authenticated
+		permission signed_in
 		require project.takes_reports  "this project doesn't take reports"
 	}
 

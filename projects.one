@@ -5,7 +5,7 @@
 // maintainers bring in others. A public project can be read by anyone; a private
 // one only by its people.
 
-namespace projects {
+namespace projects at / {
 
 	entity project {
 		slug           text  required  unique  key
@@ -53,7 +53,7 @@ namespace projects {
 	// Whoever makes a project maintains it, and it starts with a board called what the
 	// project is, from the preset they pick.
 	command project::create {
-		permission authenticated
+		permission signed_in
 		create member {
 			project = id  person = me  role = role::maintainer
 		}
@@ -80,6 +80,14 @@ namespace projects {
 		}
 	}
 
+	// The boards a person follows, in any project.
+	view followed per user {
+		each board where followers has user.id {
+			order by title
+			project  title  project.name
+		}
+	}
+
 	// The projects a person belongs to, public or private.
 	view mine per user {
 		each member where person == user.id {
@@ -99,6 +107,9 @@ namespace projects {
 			order by position
 			name  title
 		}
+		issues = each issue where project == project.id {
+			board  phase  phase.title  phase.position
+		}
 		members = each member where project == project.id {
 			order by role
 			person  person.picture  person.name  role.title
@@ -114,21 +125,32 @@ namespace projects {
 		}
 	}
 
-	screen "Projects" / {
-		table all link /:project {
-			slug "Project"
-			name
+	// The front page: every public project, found by its name, and, for whoever is
+	// signed in, their own projects and the boards they follow.
+	screen "neotrac" / {
+		hero "Open project tracking for everyone" {
+			text "Projects, issues, and the history of every change, in the open."
 		}
 		table mine link /:project {
-			project.name "Yours"
+			project.name "Your projects"
 			role.title "Role"
 		}
+		table followed link /:project/boards/:board {
+			title "Boards you follow"
+			project.name "Project"
+		}
+		table all link /:project {
+			search name slug
+			name "Projects"
+			slug "Address"
+			project::create "New project"
+		}
 		table my_reports link /:project/reports/:report {
+			hide when empty
 			project
 			title "Your reports"
 			status
 		}
-		project::create "New project"
 		form project::create "Create project" {
 			slug  name  summary  visibility  takes_reports  workflow "Start from"
 		}
@@ -136,18 +158,23 @@ namespace projects {
 
 	screen "{project_page.name}" /:project {
 		heading {
-			project::update "Edit project"
+			board::create "New board"
+			form board::create "Create board" {
+				title  workflow "Start from"
+			}
+			project::update "Edit project" icon edit
 			form project::update "Save" {
 				name  summary  visibility  takes_reports
 			}
 		}
-		markdown "{project_page.summary}"
-		table project_page.boards link /:project/boards/:board {
-			title "Board"
-			board::create "New board"
-		}
-		form board::create "Create board" {
-			title  workflow "Start from"
+		subtitle "{project_page.summary}"
+		// Each board as a card: how its issues stand, phase by phase, and the two
+		// ways it's most often looked at.
+		cards project_page.boards link /:project/boards/:board {
+			title
+			tally project_page.issues by board and phase
+			filter "Opened by me" author == me
+			filter "High priority" priority == priority::high
 		}
 		link /:project/timeline "Timeline"
 		link /:project/people "People"
@@ -157,7 +184,7 @@ namespace projects {
 
 	// Everything that happened to a project's issues, newest first.
 	screen "{project_page.name}: timeline" /:project/timeline {
-		timeline project_page.timeline link /:project/issues/:issue
+		timeline project_page.timeline link /:project/:issue
 	}
 
 	screen "People" /:project/people {

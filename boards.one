@@ -5,7 +5,7 @@
 // product's work, its marketing and its executive matters side by side. The people
 // and their roles are the project's, the same on every board.
 
-namespace projects {
+namespace projects at / {
 
 	// A board of a project, named from its title when it's made.
 	entity board {
@@ -16,19 +16,33 @@ namespace projects {
 		workflow  workflow = workflow::basic
 		start     phase
 		position  number
+		// Who follows it, to find it on their front page.
+		followers  list of user
 	}
 
 	command board::update
+
+	// Anyone signed in follows a board, and stops.
+	command board::follow {
+		permission signed_in
+		add me to followers
+	}
+
+	command board::unfollow {
+		permission signed_in
+		remove me from followers
+	}
 
 	view board_page per board {
 		readers member
 		public when board.project.visibility == visibility::public
 		title = board.title
 		start = board.start
+		followers = board.followers
 		project_name = board.project.name
 		issues = each issue where board == board.id {
 			order by number descending
-			number  title  labels  phase  phase.title  priority  author.picture  author.name
+			number  title  labels  phase  phase.title  priority  author  author.picture  author.name
 		}
 		phases = each phase where board == board.id {
 			order by position
@@ -42,13 +56,15 @@ namespace projects {
 
 	screen "{board_page.title}" /:project/boards/:board {
 		heading {
+			board::follow "Follow" when !(board_page.followers has me)
+			board::unfollow "Following" when board_page.followers has me
 			link /:project/boards/:board/workflow "Workflow"
 			board::update "Edit board"
 			form board::update "Save" {
 				title
 			}
 		}
-		table board_page.issues by phase over board_page.phases link /:project/issues/:issue {
+		table board_page.issues by phase over board_page.phases link /:project/:issue {
 			search title labels phase.title priority
 			sort by number descending
 			page 25
@@ -60,7 +76,7 @@ namespace projects {
 			author.name "Opened by"
 			issue::create "New issue"
 		}
-		board board_page.issues by phase over board_page.phases link /:project/issues/:issue {
+		board board_page.issues by phase over board_page.phases link /:project/:issue {
 			move issue::move along board_page.steps
 			title
 			number "#"  priority  labels  author.picture

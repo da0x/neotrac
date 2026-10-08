@@ -8,7 +8,7 @@
 // them. Each step names the roles that may take it, so who moves what where is
 // the project's to say, in its settings (workflow.one).
 
-namespace projects {
+namespace projects at / {
 
 	// How soon an issue matters.
 	enum priority {
@@ -60,6 +60,7 @@ namespace projects {
 		phase = issue.phase
 		phase_title = issue.phase.title
 		priority = issue.priority
+		board = issue.board
 		board_title = issue.board.title
 		steps = each step where board == issue.board {
 			from  to  from.title  to.title  title  roles
@@ -74,7 +75,7 @@ namespace projects {
 		}
 	}
 
-	screen "#{issue_page.number} {issue_page.title}" /:project/issues/:issue layout two_columns {
+	screen "#{issue_page.number} {issue_page.title}" /:project/:issue under /:project/boards/:board "{issue_page.board_title}" layout two_columns {
 		main {
 			markdown "{issue_page.body}"
 			timeline issue_page.history
