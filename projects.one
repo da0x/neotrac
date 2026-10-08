@@ -42,7 +42,7 @@ namespace projects {
 	roles role per project from member {
 		maintainer "Maintainer" {
 			project::update  member::create  member::delete  role::create  role::update
-			phase::create  phase::update  step::create  step::delete
+			phase::create  phase::update  phase::delete  step::create  step::update  step::delete
 			issue::create  issue::update  issue::move  comment::create
 			report::resolve  reply::create
 		}
@@ -84,6 +84,7 @@ namespace projects {
 		summary = project.summary
 		visibility = project.visibility
 		takes_reports = project.takes_reports
+		start = project.start
 		issues = each issue where project == project.id {
 			order by number descending
 			number  title  labels  phase.title  priority  author.picture  author.name

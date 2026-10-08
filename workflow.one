@@ -12,12 +12,14 @@ namespace projects {
 		agile      "Agile / Scrum sprint"
 		editorial  "Editorial & content planning"
 		bugs       "Bug & issue tracker"
+		custom     "Custom: Open and Done, to make your own"
 	}
 
 	// A phase of a project's issues, in its place among the others.
+	// Its name is made from its title when it's added, and stays when it's renamed.
 	entity phase {
 		project   project  required  key
-		name      text     required  key
+		name      text     required  key = slug(title)
 		title     text     required
 		position  number
 	}
@@ -32,12 +34,75 @@ namespace projects {
 		roles    list of role
 	}
 
-	// Every project made before workflows takes the delivery workflow, once.
-	backend workflow
+	// Every project made before workflows takes the delivery workflow its people
+	// asked for: triage to accepted, each step taken by the roles they named, with
+	// those roles named for it and allowing what they do in it. Every issue starts
+	// over in Triage.
+	once "2026-10-07 workflows" {
+		each role where name == "maintainer" {
+			may = [
+				project::update, member::create, member::delete, role::create, role::update,
+				phase::create, phase::update, phase::delete, step::create, step::update, step::delete,
+				issue::create, issue::update, issue::move, comment::create,
+				report::resolve, reply::create,
+			]
+		}
+		each role where name == "developer" {
+			title = "Programmer"
+			may = [issue::create, issue::update, issue::move, comment::create]
+		}
+		each role where name == "tester" {
+			title = "Quality engineer"
+			may = [issue::create, issue::update, issue::move, comment::create]
+		}
+		each role where name == "approver" {
+			title = "Product owner"
+			may = [issue::create, issue::update, issue::move, comment::create]
+		}
+		each project {
+			create role { project = id  name = "member"  title = "Member"  may = [issue::create, issue::update, issue::move, comment::create] }
+			create phase { project = id  name = "triage"  title = "Triage"  position = 1 }
+			create phase { project = id  name = "ready"  title = "Ready"  position = 2 }
+			create phase { project = id  name = "in_progress"  title = "In progress"  position = 3 }
+			create phase { project = id  name = "in_review"  title = "In review"  position = 4 }
+			create phase { project = id  name = "verified"  title = "Verified"  position = 5 }
+			create phase { project = id  name = "accepted"  title = "Accepted"  position = 6 }
+			create step { project = id  from = phase::triage  to = phase::ready  roles = [role::maintainer, role::approver] }
+			create step { project = id  from = phase::ready  to = phase::in_progress  roles = [role::maintainer, role::developer] }
+			create step { project = id  from = phase::in_progress  to = phase::in_review  roles = [role::maintainer, role::developer] }
+			create step { project = id  from = phase::in_review  to = phase::verified  roles = [role::maintainer, role::tester] }
+			create step { project = id  from = phase::in_review  to = phase::in_progress  roles = [role::maintainer, role::tester, role::developer] }
+			create step { project = id  from = phase::verified  to = phase::accepted  roles = [role::maintainer, role::approver] }
+			start = phase::triage
+		}
+		each issue {
+			phase = phase::triage
+		}
+	}
 
-	command phase::create
+	// A phase added goes after the others, until it's dragged elsewhere.
+	command phase::create {
+		position = 1000
+	}
+
 	command phase::update
+
+	// A phase goes, and its issues move to another; the moves to and from it go
+	// with it, and new issues start in the other if they started in it.
+	command phase::delete {
+		input into phase
+		require into != id  "pick another phase for its issues"
+		each issue where phase == id {
+			phase = into
+		}
+		delete each step where from == id || to == id
+		if project.start == id {
+			project.start = into
+		}
+	}
+
 	command step::create
+	command step::update
 	command step::delete
 
 	// Whoever makes a project maintains it, and it starts from the preset they pick.
@@ -111,29 +176,48 @@ namespace projects {
 			create step { project = id  from = phase::in_fixing  to = phase::closed  roles = [role::maintainer, role::member] }
 			start = phase::reported
 		}
+		// Open and Done, each way, to rename, add to and rewire.
+		if workflow == workflow::custom {
+			create phase { project = id  name = "open"  title = "Open"  position = 1 }
+			create phase { project = id  name = "done"  title = "Done"  position = 2 }
+			create step { project = id  from = phase::open  to = phase::done  roles = [role::maintainer, role::member] }
+			create step { project = id  from = phase::done  to = phase::open  roles = [role::maintainer, role::member] }
+			start = phase::open
+		}
 	}
 
 	screen "Workflow" /:project/workflow {
+		text "The phases an issue goes through, in order. Drag a phase to move it."
 		table project_page.phases {
-			position "Order"
+			reorder position
 			title "Phase"
+			update "Rename"
+			delete "Remove"
+		}
+		form phase::update "Save" {
+			title "Called"
+		}
+		form phase::delete "Remove" {
+			into "Move its issues to"
 		}
 		phase::create "New phase"
 		form phase::create "Add" {
-			name  title  position "Order"
+			title "Called"
 		}
-		table project_page.steps {
-			from.title "From"
-			to.title "To"
-			title "Says"
-			roles.title "Taken by"
-			delete "Remove"
+		form project::update "Save" {
+			start "New issues start in"
 		}
-		confirm step::delete "Remove this step? Issues can't move along it any more."
-		step::create "New step"
-		form step::create "Add" {
-			from  to  title "Says"  roles "Taken by"
+		text "An issue moves only along the moves here, from a phase on the left to one along the top. A move that isn't here, like In progress to Triage, isn't allowed."
+		grid project_page.steps by from and to over project_page.phases {
+			roles.title
 		}
+		form step::create "Allow" {
+			roles "Taken by"  title "Says"
+		}
+		form step::update "Save" {
+			roles "Taken by"  title "Says"
+		}
+		confirm step::delete "Remove this move? Issues can't go this way any more."
 	}
 
 } // namespace projects
