@@ -116,7 +116,7 @@ namespace projects at / {
 			name  title
 		}
 		issues = each issue where project == project.id {
-			board  milestone  phase  phase.title  phase.position
+			number  title  board  milestone  phase  phase.title  phase.position
 		}
 		milestones = each milestone where project == project.id {
 			order by due

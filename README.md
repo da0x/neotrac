@@ -21,7 +21,8 @@ users. See `LICENSE`.
   Anyone signed in follows a board, and finds it on their front page.
 - **Workflows** of a board's own: the phases its issues go through, and which role may
   move an issue from which phase to which, edited as a grid or a diagram, with no
-  deploy. A board starts from a preset: basic, agile, editorial, bugs, or custom.
+  deploy. A board starts from a preset: basic, agile, editorial, bugs, architecture
+  decisions (ADRs), or custom.
 - **Issues**, numbered within their project, like neotrac.org/neotrac/12, shown as a
   table with a tab for each phase or as a board whose cards are dragged along the
   moves a person's roles allow. Each has comments, a priority, labels, and a history

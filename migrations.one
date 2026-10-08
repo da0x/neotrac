@@ -52,4 +52,13 @@ namespace projects at / {
 		}
 	}
 
+	// Triage is for bug reports. The workflow projects made before boards were given
+	// starts in Inbox instead, a phase for what's new and not yet sorted; only its
+	// title changes.
+	once "2026-10-08 inbox" {
+		each phase where name == "triage" {
+			title = "Inbox"
+		}
+	}
+
 } // namespace projects

@@ -12,6 +12,7 @@ namespace projects at / {
 		agile      "Agile / Scrum sprint"
 		editorial  "Editorial & content planning"
 		bugs       "Bug & issue tracker"
+		adr        "Architecture decisions (ADRs)"
 		custom     "Custom: Open and Done, to make your own"
 	}
 
@@ -134,6 +135,22 @@ namespace projects at / {
 			start = phase::reported
 		}
 		// Open and Done, each way, to rename, add to and rewire.
+		// A decision proposed, then accepted or rejected by the maintainers; later
+		// deprecated, or superseded by another, which it names as Replaced by. A
+		// rejected one can be proposed again.
+		if workflow == workflow::adr {
+			create phase { board = id  project = project  name = "proposed"  title = "Proposed"  position = 1 }
+			create phase { board = id  project = project  name = "accepted"  title = "Accepted"  position = 2 }
+			create phase { board = id  project = project  name = "rejected"  title = "Rejected"  position = 3 }
+			create phase { board = id  project = project  name = "deprecated"  title = "Deprecated"  position = 4 }
+			create phase { board = id  project = project  name = "superseded"  title = "Superseded"  position = 5 }
+			create step { board = id  project = project  from = phase::proposed  to = phase::accepted  roles = [role::maintainer] }
+			create step { board = id  project = project  from = phase::proposed  to = phase::rejected  roles = [role::maintainer] }
+			create step { board = id  project = project  from = phase::rejected  to = phase::proposed  roles = [role::maintainer, role::member] }
+			create step { board = id  project = project  from = phase::accepted  to = phase::deprecated  roles = [role::maintainer] }
+			create step { board = id  project = project  from = phase::accepted  to = phase::superseded  roles = [role::maintainer] }
+			start = phase::proposed
+		}
 		if workflow == workflow::custom {
 			create phase { board = id  project = project  name = "open"  title = "Open"  position = 1 }
 			create phase { board = id  project = project  name = "done"  title = "Done"  position = 2 }

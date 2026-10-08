@@ -31,6 +31,9 @@ namespace projects at / {
 		assignees  list of user
 		// The milestone it's part of, if any (milestones.one).
 		milestone  milestone
+		// What replaces it, like a decision that supersedes this one, or the issue
+		// this one repeats.
+		replaced_by  issue
 	}
 
 	entity comment {
@@ -68,6 +71,8 @@ namespace projects at / {
 		assigned = issue.assignees.name
 		milestone = issue.milestone
 		milestone_title = issue.milestone.title
+		replaced_by = issue.replaced_by
+		replacement = issue.replaced_by.title
 		board = issue.board
 		board_title = issue.board.title
 		steps = each step where board == issue.board {
@@ -98,12 +103,13 @@ namespace projects at / {
 				phase_title "Phase"
 				assigned "Assigned to"
 				milestone_title "Milestone"
+				replacement "Replaced by"
 				priority "Priority"
 				labels "Labels"
 			}
 			issue::update "Edit"
 			form issue::update "Save" {
-				title  body "Description"  assignees "Assigned to"  milestone  priority  labels
+				title  body "Description"  assignees "Assigned to"  milestone  priority  labels  replaced_by "Replaced by"
 			}
 			copy issue_page "Copy issue"
 		}
