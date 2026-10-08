@@ -243,9 +243,9 @@ namespace projects at / {
 			cards project_page.boards link /:project/boards/:board {
 				title
 				tally project_page.issues by board and phase
-				filter "Assigned to me" assignees == me
-				filter "High priority" priority == priority::high
-				filter "Changed this week" updated_at > 7 days ago
+				filter "Assigned to me" assignees == me  color blue
+				filter "High priority" priority == priority::high  color red
+				filter "Changed this week" updated_at > 7 days ago  color green
 			}
 			timeline project_page.recent "Recent activity" link /:project/:issue
 			link /:project/timeline "All activity"
@@ -262,7 +262,7 @@ namespace projects at / {
 				}
 				link /:project/roadmap "Open the roadmap"
 			}
-			section "Wiki" {
+			section "Wiki" color violet {
 				table project_page.pages link /:project/wiki/:page {
 					title "Page"
 				}

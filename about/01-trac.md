@@ -34,3 +34,9 @@ that made Trac good, rebuilt for the way we work now.
 - **Free and open source,** under the AGPL, so it stays that way for everyone.
 
 neotrac isn't part of Trac or Edgewall Software. It's a thank-you.
+
+## Who made it
+
+neotrac is made by [Daher Alfawares](https://www.linkedin.com/in/dalfawares), and
+written in [uione](https://uione.io), a language for saying a whole feature once.
+Its source is on [GitHub](https://github.com/da0x/neotrac).

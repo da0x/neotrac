@@ -4,16 +4,20 @@
 // neotrac: open project tracking for everyone. Projects, their people, and the
 // issues they work on, with every change kept.
 
+import one
+
 project neotrac {
-	one             "0.6.29"
+	one             "0.7.0"
 	region          "us-east4"
 	ui              radix
 	signin          google
 	signin          github
 	icon            "assets/icon.svg"
 	theme           papercolor
+	appearance      light
 	corners         square
 	analytics       google
+	copyright       "Daher Alfawares" "https://www.linkedin.com/in/dalfawares"
 	unread          news.changes since news.seen
 	
 	environment production {
