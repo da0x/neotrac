@@ -20,6 +20,7 @@ namespace projects {
 	entity issue history {
 		project   project   required  key
 		number    serial    per project  key
+		board     board     required
 		title     text      required
 		body      markdown
 		labels    list of text
@@ -34,9 +35,9 @@ namespace projects {
 		author  user      = me
 	}
 
-	// A new issue starts in the phase its project starts issues in.
+	// A new issue starts in the phase its board starts issues in.
 	command issue::create {
-		phase = project.start
+		phase = board.start
 	}
 
 	command issue::update
@@ -59,6 +60,10 @@ namespace projects {
 		phase = issue.phase
 		phase_title = issue.phase.title
 		priority = issue.priority
+		board_title = issue.board.title
+		steps = each step where board == issue.board {
+			from  to  from.title  to.title  title  roles
+		}
 		comments = each comment where issue == issue.id {
 			order by created_at
 			author.picture  author.name  body  created_at
@@ -79,7 +84,7 @@ namespace projects {
 			}
 		}
 		side {
-			issue::move along project_page.steps
+			issue::move along issue_page.steps
 			details issue_page {
 				phase_title "Phase"
 				priority "Priority"

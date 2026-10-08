@@ -1,0 +1,74 @@
+// Copyright 2026 Daher Alfawares
+// SPDX-License-Identifier: AGPL-3.0-only
+
+// A project's boards: each its own issues, moving through its own workflow, like a
+// product's work, its marketing and its executive matters side by side. The people
+// and their roles are the project's, the same on every board.
+
+namespace projects {
+
+	// A board of a project, named from its title when it's made.
+	entity board {
+		project   project  required  key
+		name      text     required  key = slug(title)
+		title     text     required
+		// The preset it started from, and the phase new issues start in.
+		workflow  workflow = workflow::basic
+		start     phase
+		position  number
+	}
+
+	command board::update
+
+	view board_page per board {
+		readers member
+		public when board.project.visibility == visibility::public
+		title = board.title
+		start = board.start
+		project_name = board.project.name
+		issues = each issue where board == board.id {
+			order by number descending
+			number  title  labels  phase  phase.title  priority  author.picture  author.name
+		}
+		phases = each phase where board == board.id {
+			order by position
+			name  title  position
+		}
+		steps = each step where board == board.id {
+			order by from.position  to.position
+			from  to  from.title  from.position  to.title  to.position  title  roles  roles.title
+		}
+	}
+
+	screen "{board_page.title}" /:project/boards/:board {
+		heading {
+			link /:project/boards/:board/workflow "Workflow"
+			board::update "Edit board"
+			form board::update "Save" {
+				title
+			}
+		}
+		table board_page.issues by phase over board_page.phases link /:project/issues/:issue {
+			search title labels phase.title priority
+			sort by number descending
+			page 25
+			number "#"
+			title
+			labels
+			priority
+			author.picture ""
+			author.name "Opened by"
+			issue::create "New issue"
+		}
+		board board_page.issues by phase over board_page.phases link /:project/issues/:issue {
+			move issue::move along board_page.steps
+			title
+			number "#"  priority  labels  author.picture
+		}
+		form issue::create "Open issue" {
+			title  body "Description"  priority  labels
+		}
+		link /:project "All boards"
+	}
+
+} // namespace projects

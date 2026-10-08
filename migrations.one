@@ -1,0 +1,38 @@
+// Copyright 2026 Daher Alfawares
+// SPDX-License-Identifier: AGPL-3.0-only
+
+// Changes to what's stored that a deploy brings, each done once, the first time
+// the backend starts with it. One stays here until every place neotrac runs has
+// done it, and then goes.
+
+namespace projects {
+
+	// Every project made before boards takes one, called what the project is, with
+	// the workflow and the issues it has: its phases, steps and issues are that
+	// board's, and new issues start where they did. Maintainers may make and change
+	// boards.
+	once "2026-10-08 boards" {
+		each project {
+			create board { project = id  name = "main"  title = name  workflow = workflow  start = start  position = 1 }
+		}
+		each phase {
+			board = board::main
+		}
+		each step {
+			board = board::main
+		}
+		each issue {
+			board = board::main
+		}
+		each role where name == "maintainer" {
+			may = [
+				project::update, member::create, member::delete, role::create, role::update,
+				board::create, board::update,
+				phase::create, phase::update, phase::delete, step::create, step::update, step::delete,
+				issue::create, issue::update, issue::move, comment::create,
+				report::resolve, reply::create,
+			]
+		}
+	}
+
+} // namespace projects

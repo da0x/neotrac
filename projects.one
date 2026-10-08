@@ -13,8 +13,8 @@ namespace projects {
 		summary        markdown
 		visibility     enum  public | private = visibility::public
 		takes_reports  boolean = false
-		// The preset its phases and steps started from, and the phase new issues
-		// start in (workflow.one).
+		// The preset its first board starts from (boards.one). start is where its
+		// issues started before projects had boards, which its first board took.
 		workflow       workflow = workflow::basic
 		start          phase
 	}
@@ -42,11 +42,22 @@ namespace projects {
 	roles role per project from member {
 		maintainer "Maintainer" {
 			project::update  member::create  member::delete  role::create  role::update
+			board::create  board::update
 			phase::create  phase::update  phase::delete  step::create  step::update  step::delete
 			issue::create  issue::update  issue::move  comment::create
 			report::resolve  reply::create
 		}
 		member "Member"  issue::create  issue::update  issue::move  comment::create
+	}
+
+	// Whoever makes a project maintains it, and it starts with a board called what the
+	// project is, from the preset they pick.
+	command project::create {
+		permission authenticated
+		create member {
+			project = id  person = me  role = role::maintainer
+		}
+		board::create { project = id  name = "main"  title = name  workflow = workflow  position = 1 }
 	}
 
 	command project::update
@@ -84,18 +95,9 @@ namespace projects {
 		summary = project.summary
 		visibility = project.visibility
 		takes_reports = project.takes_reports
-		start = project.start
-		issues = each issue where project == project.id {
-			order by number descending
-			number  title  labels  phase  phase.title  priority  author.picture  author.name
-		}
-		phases = each phase where project == project.id {
+		boards = each board where project == project.id {
 			order by position
-			name  title  position
-		}
-		steps = each step where project == project.id {
-			order by from.position  to.position
-			from  to  from.title  from.position  to.title  to.position  title  roles  roles.title
+			name  title
 		}
 		members = each member where project == project.id {
 			order by role
@@ -133,35 +135,22 @@ namespace projects {
 	}
 
 	screen "{project_page.name}" /:project {
+		heading {
+			project::update "Edit project"
+			form project::update "Save" {
+				name  summary  visibility  takes_reports
+			}
+		}
 		markdown "{project_page.summary}"
-		issue::create "New issue"
-		form issue::create "Open issue" {
-			title  body "Description"  priority  labels
+		table project_page.boards link /:project/boards/:board {
+			title "Board"
+			board::create "New board"
 		}
-		project::update "Edit project"
-		form project::update "Save" {
-			name  summary  visibility  takes_reports
-		}
-		table project_page.issues link /:project/issues/:issue {
-			search title labels phase.title priority
-			sort by number descending
-			page 25
-			number "#"
-			title
-			labels
-			phase.title "Phase"
-			priority
-			author.picture ""
-			author.name "Opened by"
-		}
-		board project_page.issues by phase over project_page.phases link /:project/issues/:issue {
-			move issue::move along project_page.steps
-			title
-			number "#"  priority  labels  author.picture
+		form board::create "Create board" {
+			title  workflow "Start from"
 		}
 		link /:project/timeline "Timeline"
 		link /:project/people "People"
-		link /:project/workflow "Workflow"
 		link /:project/report "Report a problem privately"
 		link /:project/reports "Reports, for its people"
 	}
