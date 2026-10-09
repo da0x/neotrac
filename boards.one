@@ -24,12 +24,12 @@ namespace projects {
 
 	// Anyone signed in follows a board, and stops.
 	command board::follow {
-		permission signed_in
+		by anyone signed in
 		add me to followers
 	}
 
 	command board::unfollow {
-		permission signed_in
+		by anyone signed in
 		remove me from followers
 	}
 

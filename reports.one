@@ -23,7 +23,7 @@ namespace projects {
 	}
 
 	command report::create {
-		permission signed_in
+		by anyone signed in
 		require project.takes_reports  "this project doesn't take reports"
 	}
 

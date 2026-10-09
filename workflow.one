@@ -89,27 +89,27 @@ namespace projects {
 				name = "done"  title = "Done"  position = 3
 			}
 			dispatch step::create {
-				board = id  project = project  roles = [role::maintainer, role::member]
+				board = id  project = project  roles = [role::maintainer, role::contributor]
 				from = phase::to_do  to = phase::in_progress
 			}
 			dispatch step::create {
-				board = id  project = project  roles = [role::maintainer, role::member]
+				board = id  project = project  roles = [role::maintainer, role::contributor]
 				from = phase::to_do  to = phase::done
 			}
 			dispatch step::create {
-				board = id  project = project  roles = [role::maintainer, role::member]
+				board = id  project = project  roles = [role::maintainer, role::contributor]
 				from = phase::in_progress  to = phase::to_do
 			}
 			dispatch step::create {
-				board = id  project = project  roles = [role::maintainer, role::member]
+				board = id  project = project  roles = [role::maintainer, role::contributor]
 				from = phase::in_progress  to = phase::done
 			}
 			dispatch step::create {
-				board = id  project = project  roles = [role::maintainer, role::member]
+				board = id  project = project  roles = [role::maintainer, role::contributor]
 				from = phase::done  to = phase::to_do
 			}
 			dispatch step::create {
-				board = id  project = project  roles = [role::maintainer, role::member]
+				board = id  project = project  roles = [role::maintainer, role::contributor]
 				from = phase::done  to = phase::in_progress
 			}
 			start = phase::to_do
@@ -137,35 +137,35 @@ namespace projects {
 				name = "completed"  title = "Completed"  position = 5
 			}
 			dispatch step::create {
-				board = id  project = project  roles = [role::maintainer, role::member]
+				board = id  project = project  roles = [role::maintainer, role::contributor]
 				from = phase::backlog  to = phase::to_do
 			}
 			dispatch step::create {
-				board = id  project = project  roles = [role::maintainer, role::member]
+				board = id  project = project  roles = [role::maintainer, role::contributor]
 				from = phase::to_do  to = phase::backlog
 			}
 			dispatch step::create {
-				board = id  project = project  roles = [role::maintainer, role::member]
+				board = id  project = project  roles = [role::maintainer, role::contributor]
 				from = phase::to_do  to = phase::in_progress
 			}
 			dispatch step::create {
-				board = id  project = project  roles = [role::maintainer, role::member]
+				board = id  project = project  roles = [role::maintainer, role::contributor]
 				from = phase::in_progress  to = phase::to_do
 			}
 			dispatch step::create {
-				board = id  project = project  roles = [role::maintainer, role::member]
+				board = id  project = project  roles = [role::maintainer, role::contributor]
 				from = phase::in_progress  to = phase::review
 			}
 			dispatch step::create {
-				board = id  project = project  roles = [role::maintainer, role::member]
+				board = id  project = project  roles = [role::maintainer, role::contributor]
 				from = phase::review  to = phase::in_progress
 			}
 			dispatch step::create {
-				board = id  project = project  roles = [role::maintainer, role::member]
+				board = id  project = project  roles = [role::maintainer, role::contributor]
 				from = phase::review  to = phase::completed
 			}
 			dispatch step::create {
-				board = id  project = project  roles = [role::maintainer, role::member]
+				board = id  project = project  roles = [role::maintainer, role::contributor]
 				from = phase::completed  to = phase::review
 			}
 			start = phase::backlog
@@ -193,35 +193,35 @@ namespace projects {
 				name = "published"  title = "Published"  position = 5
 			}
 			dispatch step::create {
-				board = id  project = project  roles = [role::maintainer, role::member]
+				board = id  project = project  roles = [role::maintainer, role::contributor]
 				from = phase::idea  to = phase::writing
 			}
 			dispatch step::create {
-				board = id  project = project  roles = [role::maintainer, role::member]
+				board = id  project = project  roles = [role::maintainer, role::contributor]
 				from = phase::writing  to = phase::idea
 			}
 			dispatch step::create {
-				board = id  project = project  roles = [role::maintainer, role::member]
+				board = id  project = project  roles = [role::maintainer, role::contributor]
 				from = phase::writing  to = phase::editing
 			}
 			dispatch step::create {
-				board = id  project = project  roles = [role::maintainer, role::member]
+				board = id  project = project  roles = [role::maintainer, role::contributor]
 				from = phase::editing  to = phase::writing
 			}
 			dispatch step::create {
-				board = id  project = project  roles = [role::maintainer, role::member]
+				board = id  project = project  roles = [role::maintainer, role::contributor]
 				from = phase::editing  to = phase::scheduled
 			}
 			dispatch step::create {
-				board = id  project = project  roles = [role::maintainer, role::member]
+				board = id  project = project  roles = [role::maintainer, role::contributor]
 				from = phase::scheduled  to = phase::editing
 			}
 			dispatch step::create {
-				board = id  project = project  roles = [role::maintainer, role::member]
+				board = id  project = project  roles = [role::maintainer, role::contributor]
 				from = phase::scheduled  to = phase::published
 			}
 			dispatch step::create {
-				board = id  project = project  roles = [role::maintainer, role::member]
+				board = id  project = project  roles = [role::maintainer, role::contributor]
 				from = phase::published  to = phase::scheduled
 			}
 			start = phase::idea
@@ -250,35 +250,35 @@ namespace projects {
 				name = "closed"  title = "Closed"  position = 5
 			}
 			dispatch step::create {
-				board = id  project = project  roles = [role::maintainer, role::member]
+				board = id  project = project  roles = [role::maintainer, role::contributor]
 				from = phase::reported  to = phase::triaged
 			}
 			dispatch step::create {
-				board = id  project = project  roles = [role::maintainer, role::member]
+				board = id  project = project  roles = [role::maintainer, role::contributor]
 				from = phase::triaged  to = phase::in_fixing
 			}
 			dispatch step::create {
-				board = id  project = project  roles = [role::maintainer, role::member]
+				board = id  project = project  roles = [role::maintainer, role::contributor]
 				from = phase::in_fixing  to = phase::verifying
 			}
 			dispatch step::create {
-				board = id  project = project  roles = [role::maintainer, role::member]
+				board = id  project = project  roles = [role::maintainer, role::contributor]
 				from = phase::verifying  to = phase::in_fixing
 			}
 			dispatch step::create {
-				board = id  project = project  roles = [role::maintainer, role::member]
+				board = id  project = project  roles = [role::maintainer, role::contributor]
 				from = phase::verifying  to = phase::closed
 			}
 			dispatch step::create {
-				board = id  project = project  roles = [role::maintainer, role::member]
+				board = id  project = project  roles = [role::maintainer, role::contributor]
 				from = phase::reported  to = phase::closed
 			}
 			dispatch step::create {
-				board = id  project = project  roles = [role::maintainer, role::member]
+				board = id  project = project  roles = [role::maintainer, role::contributor]
 				from = phase::triaged  to = phase::closed
 			}
 			dispatch step::create {
-				board = id  project = project  roles = [role::maintainer, role::member]
+				board = id  project = project  roles = [role::maintainer, role::contributor]
 				from = phase::in_fixing  to = phase::closed
 			}
 			start = phase::reported
@@ -316,7 +316,7 @@ namespace projects {
 				from = phase::proposed  to = phase::rejected
 			}
 			dispatch step::create {
-				board = id  project = project  roles = [role::maintainer, role::member]
+				board = id  project = project  roles = [role::maintainer, role::contributor]
 				from = phase::rejected  to = phase::proposed
 			}
 			dispatch step::create {
@@ -340,11 +340,11 @@ namespace projects {
 				name = "done"  title = "Done"  position = 2
 			}
 			dispatch step::create {
-				board = id  project = project  roles = [role::maintainer, role::member]
+				board = id  project = project  roles = [role::maintainer, role::contributor]
 				from = phase::open  to = phase::done
 			}
 			dispatch step::create {
-				board = id  project = project  roles = [role::maintainer, role::member]
+				board = id  project = project  roles = [role::maintainer, role::contributor]
 				from = phase::done  to = phase::open
 			}
 			start = phase::open

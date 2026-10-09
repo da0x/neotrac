@@ -19,44 +19,63 @@ namespace projects at / {
 		start          phase
 	}
 
-	// A project's role: what it's called, and the commands it allows. Each project
-	// starts with the two below and changes them, or adds its own, in its settings,
-	// with no deploy.
-	entity role {
-		project  project  required  key
-		name     slug     required  key
-		title    text     required
-		may      list of permission
+	// Each project has its own roles, which it changes, or adds to, in its settings,
+	// with no deploy; these are the two it starts with. The language keeps them as
+	// role records, and a person's place in a project as a member record for each
+	// role they hold. Which steps between phases each role may take is the
+	// project's to say.
+
+	// Runs the project and its settings.
+	define role maintainer "Maintainer" in project {
+		project::update
+		member::create
+		member::delete
+		invitation::create
+		invitation::delete
+		role::create
+		role::update
+		board::create
+		board::update
+		phase::create
+		phase::update
+		phase::delete
+		step::create
+		step::update
+		step::delete
+		milestone::create
+		milestone::update
+		page::create
+		page::update
+		issue::create
+		issue::update
+		issue::move
+		issue::transfer
+		link::create
+		link::delete
+		comment::create
+		report::resolve
+		reply::create
 	}
 
-	// A person's place in a project, and what they may do there: one record for each
-	// role they hold.
-	entity member {
-		project  project  required  key
-		person   user     required  key
-		role     role     required  key
-	}
-
-	// Maintainers run the project and its settings; members work on its issues.
-	// Which steps between phases each role may take is the project's to say.
-	roles role per project from member {
-		maintainer "Maintainer" {
-			project::update  member::{create delete}  invitation::{create delete}
-			role::{create update}  report::resolve  reply::create
-			board::{create update}  milestone::{create update}  page::{create update}
-			phase::{create update delete}  step::{create update delete}
-			issue::{create update move transfer}  link::{create delete}  comment::create
-		}
-		member "Member" {
-			issue::{create update move transfer}  link::{create delete}  comment::create
-			milestone::{create update}  page::{create update}
-		}
+	// Works on the project's issues, its milestones and its wiki.
+	define role contributor "Contributor" in project {
+		issue::create
+		issue::update
+		issue::move
+		issue::transfer
+		link::create
+		link::delete
+		comment::create
+		milestone::create
+		milestone::update
+		page::create
+		page::update
 	}
 
 	// Whoever makes a project maintains it, and it starts with a board called what the
 	// project is, from the preset they pick.
 	command project::create {
-		permission signed_in
+		by anyone signed in
 		dispatch member::create {
 			project = id  person = me  role = role::maintainer
 		}
@@ -101,7 +120,7 @@ namespace projects at / {
 	}
 
 	command reader::create {
-		permission signed_in
+		by anyone signed in
 		require person == me  "you can only say when you looked yourself"
 		seen_at = now
 	}
