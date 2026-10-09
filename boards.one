@@ -58,6 +58,10 @@ namespace projects {
 		heading {
 			board::follow "Follow" icon follow when !(board_page.followers has me)
 			board::unfollow "Stop following" icon following when board_page.followers has me
+			issue::create "New issue" icon add
+			form issue::create "Open issue" {
+				title  body "Description"  assignees "Assigned to"  milestone  priority  labels
+			}
 			link /:project/boards/:board/workflow "Workflow" icon workflow
 			board::update "Edit board" icon edit
 			form board::update "Save" {
@@ -75,16 +79,12 @@ namespace projects {
 			assignees.name "Assigned to"
 			author.picture ""
 			author.name "Opened by"
-			issue::create "New issue" icon add
 		}
 		board board_page.issues by phase over board_page.phases link /:project/:issue {
 			move issue::move along board_page.steps
 			tint by priority
 			title
 			number "#"  labels  assignees.name
-		}
-		form issue::create "Open issue" {
-			title  body "Description"  assignees "Assigned to"  milestone  priority  labels
 		}
 		link /:project "All boards"
 	}

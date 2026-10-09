@@ -262,8 +262,9 @@ namespace projects at / {
 				}
 				link /:project/roadmap "Open the roadmap"
 			}
-			section "Wiki" color violet {
+			section "Wiki" {
 				table project_page.pages link /:project/wiki/:page {
+					color violet
 					title "Page"
 				}
 				link /:project/wiki "Open the wiki"

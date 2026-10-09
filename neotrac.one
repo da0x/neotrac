@@ -7,7 +7,7 @@
 import one
 
 project neotrac {
-	one             "0.7.0"
+	one             "0.7.1"
 	region          "us-east4"
 	ui              radix
 	signin          google
@@ -17,11 +17,16 @@ project neotrac {
 	appearance      light
 	corners         square
 	analytics       google
-	copyright       "Daher Alfawares" "https://www.linkedin.com/in/daheralfawares"
 	unread          news.changes since news.seen
 	
 	environment production {
 		domain    "neotrac.org"
 		firebase  "neotrac"
 	}
+}
+
+footer {
+	text "© {year} [Daher Alfawares](https://www.linkedin.com/in/daheralfawares)"
+	link build.release "uione {build.version}"
+	link build.source "{build.commit}"
 }

@@ -161,6 +161,9 @@ namespace projects {
 	}
 
 	screen "{board_page.title}: workflow" /:project/boards/:board/workflow {
+		diagram board_page.steps by from and to over board_page.phases {
+			roles.title
+		}
 		text "The phases an issue goes through, in order. Drag a phase to move it."
 		table board_page.phases {
 			reorder position
@@ -181,10 +184,7 @@ namespace projects {
 		form board::update "Save" {
 			start "New issues start in"
 		}
-		text "An issue moves only along the moves here: the arrows below, or in the grid from a phase on the left to one along the top. A move that isn't here, like In progress to Triage, isn't allowed."
-		diagram board_page.steps by from and to over board_page.phases {
-			roles.title
-		}
+		text "An issue moves only along the moves here: the arrows above, or in the grid from a phase on the left to one along the top. A move that isn't here, like In progress to Triage, isn't allowed."
 		grid board_page.steps by from and to over board_page.phases {
 			roles.title
 		}
