@@ -1,0 +1,41 @@
+// Copyright 2026 Daher Alfawares
+// SPDX-License-Identifier: AGPL-3.0-only
+
+// Changes to what's stored that a deploy brings, each done once, the first time
+// the backend starts with it. Each is removed once production has run it.
+
+namespace projects {
+
+	// The role called member is now contributor, so it no longer shares its name with
+	// the member entity. A role's name is its key, which never changes, so each
+	// project gets a contributor role holding what its member role allowed, everything
+	// that named the old one names the new, and the old one goes.
+	once "2026-10-09 contributor role" {
+		each role where name == "member" {
+			dispatch role::create {
+				project = project  name = "contributor"
+				title = "Contributor"  may = may
+			}
+		}
+		each member where role == role::member {
+			dispatch member::create {
+				project = project  person = person  role = role::contributor
+			}
+			dispatch member::delete
+		}
+		each invitation where role == role::member {
+			dispatch invitation::create {
+				project = project  email = email  role = role::contributor
+			}
+		}
+		each step where roles has role::member {
+			dispatch step::update {
+				remove role::member from roles
+				add role::contributor to roles
+			}
+		}
+		each role where name == "member" {
+			dispatch role::delete
+		}
+	}
+}

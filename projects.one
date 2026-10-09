@@ -34,6 +34,7 @@ namespace projects at / {
 		invitation::delete
 		role::create
 		role::update
+		role::delete
 		board::create
 		board::update
 		phase::create
@@ -95,6 +96,11 @@ namespace projects at / {
 
 	command role::create
 	command role::update
+
+	// Removing a role no one holds; whoever holds it is given another first.
+	command role::delete {
+		require !exists(member where role == id)  "give its people another role first"
+	}
 
 	// Every public project, newest first. A private project is listed nowhere.
 	view all public {
