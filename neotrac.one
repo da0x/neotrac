@@ -7,21 +7,26 @@
 import one
 
 project neotrac {
-	one             "0.7.2"
+	one             "0.7.3"
 	region          "us-east4"
 	ui              radix
 	signin          google
 	signin          github
 	icon            "assets/icon.svg"
-	theme           papercolor
+	theme           neotrac
 	appearance      light
-	corners         square
+	accessibility   menu
 	analytics       google
 	
 	environment production {
 		domain    "neotrac.org"
 		firebase  "neotrac"
 	}
+}
+
+// PaperColor's colors, with square corners for a sharper look.
+define theme neotrac "neotrac" from papercolor {
+	corners  0
 }
 
 header {
