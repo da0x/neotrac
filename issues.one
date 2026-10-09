@@ -89,32 +89,59 @@ namespace projects {
 	command link::create {
 		require to != from  "pick another issue"
 		require from.project == project && to.project == project  "pick one of this project's issues"
-		if relation == relation::blocks {
-			create link { project = project  pair = id  from = to  to = from  relation = relation::blocked_by }
-		}
-		if relation == relation::blocked_by {
-			create link { project = project  pair = id  from = to  to = from  relation = relation::blocks }
-		}
-		if relation == relation::relates {
-			create link { project = project  pair = id  from = to  to = from  relation = relation::relates }
-		}
-		if relation == relation::duplicates {
-			create link { project = project  pair = id  from = to  to = from  relation = relation::duplicated_by }
-		}
-		if relation == relation::duplicated_by {
-			create link { project = project  pair = id  from = to  to = from  relation = relation::duplicates }
-		}
-		if relation == relation::replaces {
-			create link { project = project  pair = id  from = to  to = from  relation = relation::replaced_by }
-		}
-		if relation == relation::replaced_by {
-			create link { project = project  pair = id  from = to  to = from  relation = relation::replaces }
+		// The other side, said from there. The link made for it has a pair, so it
+		// makes no other.
+		if pair == none {
+			if relation == relation::blocks {
+				dispatch link::create {
+					project = project  pair = id
+					from = to  to = from  relation = relation::blocked_by
+				}
+			}
+			if relation == relation::blocked_by {
+				dispatch link::create {
+					project = project  pair = id
+					from = to  to = from  relation = relation::blocks
+				}
+			}
+			if relation == relation::relates {
+				dispatch link::create {
+					project = project  pair = id
+					from = to  to = from  relation = relation::relates
+				}
+			}
+			if relation == relation::duplicates {
+				dispatch link::create {
+					project = project  pair = id
+					from = to  to = from  relation = relation::duplicated_by
+				}
+			}
+			if relation == relation::duplicated_by {
+				dispatch link::create {
+					project = project  pair = id
+					from = to  to = from  relation = relation::duplicates
+				}
+			}
+			if relation == relation::replaces {
+				dispatch link::create {
+					project = project  pair = id
+					from = to  to = from  relation = relation::replaced_by
+				}
+			}
+			if relation == relation::replaced_by {
+				dispatch link::create {
+					project = project  pair = id
+					from = to  to = from  relation = relation::replaces
+				}
+			}
 		}
 	}
 
 	// Both sides go together.
 	command link::delete {
-		delete each link where pair == id || id == pair
+		each link where pair == id || id == pair {
+			dispatch link::delete
+		}
 	}
 
 	// Along a step from the phase it's in, that one of the person's roles may take.
@@ -148,11 +175,11 @@ namespace projects {
 		steps = each step where board == issue.board {
 			from  to  from.title  to.title  title  roles
 		}
-		comments = each comment where issue == issue.id {
+		comments = each comment in issue {
 			order by created_at
 			author.picture  author.name  body  created_at
 		}
-		history = each change of issue where issue == issue.id {
+		history = each change in issue {
 			order by created_at
 			field  before  after  action  created_by.name  created_at
 		}

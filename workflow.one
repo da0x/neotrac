@@ -37,9 +37,12 @@ namespace projects {
 		roles    list of role
 	}
 
-	// A phase added goes after the others, until it's dragged elsewhere.
+	// A phase added goes after the others, until it's dragged elsewhere, unless it
+	// says where, as a preset's phases do.
 	command phase::create {
-		position = 1000
+		if position == none {
+			position = 1000
+		}
 	}
 
 	command phase::update
@@ -50,11 +53,13 @@ namespace projects {
 		input into phase
 		require into != id  "pick another phase for its issues"
 		each issue where phase == id {
-			phase = into
+			dispatch issue::update { phase = into }
 		}
-		delete each step where from == id || to == id
+		each step where from == id || to == id {
+			dispatch step::delete
+		}
 		if board.start == id {
-			board.start = into
+			dispatch board::update { id = board  start = into }
 		}
 	}
 
@@ -71,91 +76,277 @@ namespace projects {
 		}
 		// To do, in progress, done; anyone in the project moves an issue between any two.
 		if workflow == workflow::basic {
-			create phase { board = id  project = project  name = "to_do"  title = "To do"  position = 1 }
-			create phase { board = id  project = project  name = "in_progress"  title = "In progress"  position = 2 }
-			create phase { board = id  project = project  name = "done"  title = "Done"  position = 3 }
-			create step { board = id  project = project  from = phase::to_do  to = phase::in_progress  roles = [role::maintainer, role::member] }
-			create step { board = id  project = project  from = phase::to_do  to = phase::done  roles = [role::maintainer, role::member] }
-			create step { board = id  project = project  from = phase::in_progress  to = phase::to_do  roles = [role::maintainer, role::member] }
-			create step { board = id  project = project  from = phase::in_progress  to = phase::done  roles = [role::maintainer, role::member] }
-			create step { board = id  project = project  from = phase::done  to = phase::to_do  roles = [role::maintainer, role::member] }
-			create step { board = id  project = project  from = phase::done  to = phase::in_progress  roles = [role::maintainer, role::member] }
+			dispatch phase::create {
+				board = id  project = project
+				name = "to_do"  title = "To do"  position = 1
+			}
+			dispatch phase::create {
+				board = id  project = project
+				name = "in_progress"  title = "In progress"  position = 2
+			}
+			dispatch phase::create {
+				board = id  project = project
+				name = "done"  title = "Done"  position = 3
+			}
+			dispatch step::create {
+				board = id  project = project  roles = [role::maintainer, role::member]
+				from = phase::to_do  to = phase::in_progress
+			}
+			dispatch step::create {
+				board = id  project = project  roles = [role::maintainer, role::member]
+				from = phase::to_do  to = phase::done
+			}
+			dispatch step::create {
+				board = id  project = project  roles = [role::maintainer, role::member]
+				from = phase::in_progress  to = phase::to_do
+			}
+			dispatch step::create {
+				board = id  project = project  roles = [role::maintainer, role::member]
+				from = phase::in_progress  to = phase::done
+			}
+			dispatch step::create {
+				board = id  project = project  roles = [role::maintainer, role::member]
+				from = phase::done  to = phase::to_do
+			}
+			dispatch step::create {
+				board = id  project = project  roles = [role::maintainer, role::member]
+				from = phase::done  to = phase::in_progress
+			}
 			start = phase::to_do
 		}
 		// A sprint's backlog to completed, a step forward or back at a time.
 		if workflow == workflow::agile {
-			create phase { board = id  project = project  name = "backlog"  title = "Backlog"  position = 1 }
-			create phase { board = id  project = project  name = "to_do"  title = "To do"  position = 2 }
-			create phase { board = id  project = project  name = "in_progress"  title = "In progress"  position = 3 }
-			create phase { board = id  project = project  name = "review"  title = "In review"  position = 4 }
-			create phase { board = id  project = project  name = "completed"  title = "Completed"  position = 5 }
-			create step { board = id  project = project  from = phase::backlog  to = phase::to_do  roles = [role::maintainer, role::member] }
-			create step { board = id  project = project  from = phase::to_do  to = phase::backlog  roles = [role::maintainer, role::member] }
-			create step { board = id  project = project  from = phase::to_do  to = phase::in_progress  roles = [role::maintainer, role::member] }
-			create step { board = id  project = project  from = phase::in_progress  to = phase::to_do  roles = [role::maintainer, role::member] }
-			create step { board = id  project = project  from = phase::in_progress  to = phase::review  roles = [role::maintainer, role::member] }
-			create step { board = id  project = project  from = phase::review  to = phase::in_progress  roles = [role::maintainer, role::member] }
-			create step { board = id  project = project  from = phase::review  to = phase::completed  roles = [role::maintainer, role::member] }
-			create step { board = id  project = project  from = phase::completed  to = phase::review  roles = [role::maintainer, role::member] }
+			dispatch phase::create {
+				board = id  project = project
+				name = "backlog"  title = "Backlog"  position = 1
+			}
+			dispatch phase::create {
+				board = id  project = project
+				name = "to_do"  title = "To do"  position = 2
+			}
+			dispatch phase::create {
+				board = id  project = project
+				name = "in_progress"  title = "In progress"  position = 3
+			}
+			dispatch phase::create {
+				board = id  project = project
+				name = "review"  title = "In review"  position = 4
+			}
+			dispatch phase::create {
+				board = id  project = project
+				name = "completed"  title = "Completed"  position = 5
+			}
+			dispatch step::create {
+				board = id  project = project  roles = [role::maintainer, role::member]
+				from = phase::backlog  to = phase::to_do
+			}
+			dispatch step::create {
+				board = id  project = project  roles = [role::maintainer, role::member]
+				from = phase::to_do  to = phase::backlog
+			}
+			dispatch step::create {
+				board = id  project = project  roles = [role::maintainer, role::member]
+				from = phase::to_do  to = phase::in_progress
+			}
+			dispatch step::create {
+				board = id  project = project  roles = [role::maintainer, role::member]
+				from = phase::in_progress  to = phase::to_do
+			}
+			dispatch step::create {
+				board = id  project = project  roles = [role::maintainer, role::member]
+				from = phase::in_progress  to = phase::review
+			}
+			dispatch step::create {
+				board = id  project = project  roles = [role::maintainer, role::member]
+				from = phase::review  to = phase::in_progress
+			}
+			dispatch step::create {
+				board = id  project = project  roles = [role::maintainer, role::member]
+				from = phase::review  to = phase::completed
+			}
+			dispatch step::create {
+				board = id  project = project  roles = [role::maintainer, role::member]
+				from = phase::completed  to = phase::review
+			}
 			start = phase::backlog
 		}
 		// An idea to what's published, a step forward or back at a time.
 		if workflow == workflow::editorial {
-			create phase { board = id  project = project  name = "idea"  title = "Ideas"  position = 1 }
-			create phase { board = id  project = project  name = "writing"  title = "Writing"  position = 2 }
-			create phase { board = id  project = project  name = "editing"  title = "Editing"  position = 3 }
-			create phase { board = id  project = project  name = "scheduled"  title = "Scheduled"  position = 4 }
-			create phase { board = id  project = project  name = "published"  title = "Published"  position = 5 }
-			create step { board = id  project = project  from = phase::idea  to = phase::writing  roles = [role::maintainer, role::member] }
-			create step { board = id  project = project  from = phase::writing  to = phase::idea  roles = [role::maintainer, role::member] }
-			create step { board = id  project = project  from = phase::writing  to = phase::editing  roles = [role::maintainer, role::member] }
-			create step { board = id  project = project  from = phase::editing  to = phase::writing  roles = [role::maintainer, role::member] }
-			create step { board = id  project = project  from = phase::editing  to = phase::scheduled  roles = [role::maintainer, role::member] }
-			create step { board = id  project = project  from = phase::scheduled  to = phase::editing  roles = [role::maintainer, role::member] }
-			create step { board = id  project = project  from = phase::scheduled  to = phase::published  roles = [role::maintainer, role::member] }
-			create step { board = id  project = project  from = phase::published  to = phase::scheduled  roles = [role::maintainer, role::member] }
+			dispatch phase::create {
+				board = id  project = project
+				name = "idea"  title = "Ideas"  position = 1
+			}
+			dispatch phase::create {
+				board = id  project = project
+				name = "writing"  title = "Writing"  position = 2
+			}
+			dispatch phase::create {
+				board = id  project = project
+				name = "editing"  title = "Editing"  position = 3
+			}
+			dispatch phase::create {
+				board = id  project = project
+				name = "scheduled"  title = "Scheduled"  position = 4
+			}
+			dispatch phase::create {
+				board = id  project = project
+				name = "published"  title = "Published"  position = 5
+			}
+			dispatch step::create {
+				board = id  project = project  roles = [role::maintainer, role::member]
+				from = phase::idea  to = phase::writing
+			}
+			dispatch step::create {
+				board = id  project = project  roles = [role::maintainer, role::member]
+				from = phase::writing  to = phase::idea
+			}
+			dispatch step::create {
+				board = id  project = project  roles = [role::maintainer, role::member]
+				from = phase::writing  to = phase::editing
+			}
+			dispatch step::create {
+				board = id  project = project  roles = [role::maintainer, role::member]
+				from = phase::editing  to = phase::writing
+			}
+			dispatch step::create {
+				board = id  project = project  roles = [role::maintainer, role::member]
+				from = phase::editing  to = phase::scheduled
+			}
+			dispatch step::create {
+				board = id  project = project  roles = [role::maintainer, role::member]
+				from = phase::scheduled  to = phase::editing
+			}
+			dispatch step::create {
+				board = id  project = project  roles = [role::maintainer, role::member]
+				from = phase::scheduled  to = phase::published
+			}
+			dispatch step::create {
+				board = id  project = project  roles = [role::maintainer, role::member]
+				from = phase::published  to = phase::scheduled
+			}
 			start = phase::idea
 		}
 		// Reported to closed, a step forward at a time; a fix that doesn't hold goes
 		// back from verifying, and anything can be closed.
 		if workflow == workflow::bugs {
-			create phase { board = id  project = project  name = "reported"  title = "Reported"  position = 1 }
-			create phase { board = id  project = project  name = "triaged"  title = "Triaged"  position = 2 }
-			create phase { board = id  project = project  name = "in_fixing"  title = "In fixing"  position = 3 }
-			create phase { board = id  project = project  name = "verifying"  title = "Verifying"  position = 4 }
-			create phase { board = id  project = project  name = "closed"  title = "Closed"  position = 5 }
-			create step { board = id  project = project  from = phase::reported  to = phase::triaged  roles = [role::maintainer, role::member] }
-			create step { board = id  project = project  from = phase::triaged  to = phase::in_fixing  roles = [role::maintainer, role::member] }
-			create step { board = id  project = project  from = phase::in_fixing  to = phase::verifying  roles = [role::maintainer, role::member] }
-			create step { board = id  project = project  from = phase::verifying  to = phase::in_fixing  roles = [role::maintainer, role::member] }
-			create step { board = id  project = project  from = phase::verifying  to = phase::closed  roles = [role::maintainer, role::member] }
-			create step { board = id  project = project  from = phase::reported  to = phase::closed  roles = [role::maintainer, role::member] }
-			create step { board = id  project = project  from = phase::triaged  to = phase::closed  roles = [role::maintainer, role::member] }
-			create step { board = id  project = project  from = phase::in_fixing  to = phase::closed  roles = [role::maintainer, role::member] }
+			dispatch phase::create {
+				board = id  project = project
+				name = "reported"  title = "Reported"  position = 1
+			}
+			dispatch phase::create {
+				board = id  project = project
+				name = "triaged"  title = "Triaged"  position = 2
+			}
+			dispatch phase::create {
+				board = id  project = project
+				name = "in_fixing"  title = "In fixing"  position = 3
+			}
+			dispatch phase::create {
+				board = id  project = project
+				name = "verifying"  title = "Verifying"  position = 4
+			}
+			dispatch phase::create {
+				board = id  project = project
+				name = "closed"  title = "Closed"  position = 5
+			}
+			dispatch step::create {
+				board = id  project = project  roles = [role::maintainer, role::member]
+				from = phase::reported  to = phase::triaged
+			}
+			dispatch step::create {
+				board = id  project = project  roles = [role::maintainer, role::member]
+				from = phase::triaged  to = phase::in_fixing
+			}
+			dispatch step::create {
+				board = id  project = project  roles = [role::maintainer, role::member]
+				from = phase::in_fixing  to = phase::verifying
+			}
+			dispatch step::create {
+				board = id  project = project  roles = [role::maintainer, role::member]
+				from = phase::verifying  to = phase::in_fixing
+			}
+			dispatch step::create {
+				board = id  project = project  roles = [role::maintainer, role::member]
+				from = phase::verifying  to = phase::closed
+			}
+			dispatch step::create {
+				board = id  project = project  roles = [role::maintainer, role::member]
+				from = phase::reported  to = phase::closed
+			}
+			dispatch step::create {
+				board = id  project = project  roles = [role::maintainer, role::member]
+				from = phase::triaged  to = phase::closed
+			}
+			dispatch step::create {
+				board = id  project = project  roles = [role::maintainer, role::member]
+				from = phase::in_fixing  to = phase::closed
+			}
 			start = phase::reported
 		}
 		// A decision proposed, then accepted or rejected by the maintainers; later
 		// deprecated, or superseded by another, whose link says it replaces this one.
 		// A rejected one can be proposed again.
 		if workflow == workflow::adr {
-			create phase { board = id  project = project  name = "proposed"  title = "Proposed"  position = 1 }
-			create phase { board = id  project = project  name = "accepted"  title = "Accepted"  position = 2 }
-			create phase { board = id  project = project  name = "rejected"  title = "Rejected"  position = 3 }
-			create phase { board = id  project = project  name = "deprecated"  title = "Deprecated"  position = 4 }
-			create phase { board = id  project = project  name = "superseded"  title = "Superseded"  position = 5 }
-			create step { board = id  project = project  from = phase::proposed  to = phase::accepted  roles = [role::maintainer] }
-			create step { board = id  project = project  from = phase::proposed  to = phase::rejected  roles = [role::maintainer] }
-			create step { board = id  project = project  from = phase::rejected  to = phase::proposed  roles = [role::maintainer, role::member] }
-			create step { board = id  project = project  from = phase::accepted  to = phase::deprecated  roles = [role::maintainer] }
-			create step { board = id  project = project  from = phase::accepted  to = phase::superseded  roles = [role::maintainer] }
+			dispatch phase::create {
+				board = id  project = project
+				name = "proposed"  title = "Proposed"  position = 1
+			}
+			dispatch phase::create {
+				board = id  project = project
+				name = "accepted"  title = "Accepted"  position = 2
+			}
+			dispatch phase::create {
+				board = id  project = project
+				name = "rejected"  title = "Rejected"  position = 3
+			}
+			dispatch phase::create {
+				board = id  project = project
+				name = "deprecated"  title = "Deprecated"  position = 4
+			}
+			dispatch phase::create {
+				board = id  project = project
+				name = "superseded"  title = "Superseded"  position = 5
+			}
+			dispatch step::create {
+				board = id  project = project  roles = [role::maintainer]
+				from = phase::proposed  to = phase::accepted
+			}
+			dispatch step::create {
+				board = id  project = project  roles = [role::maintainer]
+				from = phase::proposed  to = phase::rejected
+			}
+			dispatch step::create {
+				board = id  project = project  roles = [role::maintainer, role::member]
+				from = phase::rejected  to = phase::proposed
+			}
+			dispatch step::create {
+				board = id  project = project  roles = [role::maintainer]
+				from = phase::accepted  to = phase::deprecated
+			}
+			dispatch step::create {
+				board = id  project = project  roles = [role::maintainer]
+				from = phase::accepted  to = phase::superseded
+			}
 			start = phase::proposed
 		}
 		// Open and Done, each way, to rename, add to and rewire.
 		if workflow == workflow::custom {
-			create phase { board = id  project = project  name = "open"  title = "Open"  position = 1 }
-			create phase { board = id  project = project  name = "done"  title = "Done"  position = 2 }
-			create step { board = id  project = project  from = phase::open  to = phase::done  roles = [role::maintainer, role::member] }
-			create step { board = id  project = project  from = phase::done  to = phase::open  roles = [role::maintainer, role::member] }
+			dispatch phase::create {
+				board = id  project = project
+				name = "open"  title = "Open"  position = 1
+			}
+			dispatch phase::create {
+				board = id  project = project
+				name = "done"  title = "Done"  position = 2
+			}
+			dispatch step::create {
+				board = id  project = project  roles = [role::maintainer, role::member]
+				from = phase::open  to = phase::done
+			}
+			dispatch step::create {
+				board = id  project = project  roles = [role::maintainer, role::member]
+				from = phase::done  to = phase::open
+			}
 			start = phase::open
 		}
 	}
@@ -184,7 +375,9 @@ namespace projects {
 		form board::update "Save" {
 			start "New issues start in"
 		}
-		text "An issue moves only along the moves here: the arrows above, or in the grid from a phase on the left to one along the top. A move that isn't here, like In progress to Triage, isn't allowed."
+		text "An issue moves only along the moves here: the arrows above, or in the grid"
+		     "from a phase on the left to one along the top. A move that isn't here,"
+		     "like In progress to Triage, isn't allowed."
 		grid board_page.steps by from and to over board_page.phases {
 			roles.title
 		}

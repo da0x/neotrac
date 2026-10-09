@@ -41,15 +41,15 @@ namespace projects at / {
 	// Which steps between phases each role may take is the project's to say.
 	roles role per project from member {
 		maintainer "Maintainer" {
-			project::update  member::create  member::delete  invitation::create  invitation::delete  role::create  role::update
-			board::create  board::update  milestone::create  milestone::update  page::create  page::update
-			phase::create  phase::update  phase::delete  step::create  step::update  step::delete
-			issue::create  issue::update  issue::move  issue::transfer  link::create  link::delete  comment::create
-			report::resolve  reply::create
+			project::update  member::{create delete}  invitation::{create delete}
+			role::{create update}  report::resolve  reply::create
+			board::{create update}  milestone::{create update}  page::{create update}
+			phase::{create update delete}  step::{create update delete}
+			issue::{create update move transfer}  link::{create delete}  comment::create
 		}
 		member "Member" {
-			issue::create  issue::update  issue::move  issue::transfer  link::create  link::delete  comment::create
-			milestone::create  milestone::update  page::create  page::update
+			issue::{create update move transfer}  link::{create delete}  comment::create
+			milestone::{create update}  page::{create update}
 		}
 	}
 
@@ -57,10 +57,12 @@ namespace projects at / {
 	// project is, from the preset they pick.
 	command project::create {
 		permission signed_in
-		create member {
+		dispatch member::create {
 			project = id  person = me  role = role::maintainer
 		}
-		board::create { project = id  name = "main"  title = name  workflow = workflow  position = 1 }
+		dispatch board::create {
+			project = id  name = "main"  title = name  workflow = workflow  position = 1
+		}
 	}
 
 	command project::update
@@ -85,7 +87,7 @@ namespace projects at / {
 
 	// The issues a person is working on, in any project, newest first.
 	view assigned per user {
-		each issue where assignees has user.id {
+		each issue where assignees has me {
 			order by number descending
 			project  number  title  project.name  phase.title
 		}
@@ -109,17 +111,19 @@ namespace projects at / {
 	// their own. Only what they may read
 	// is in it, so a private project's changes go once they leave it.
 	view news per user {
-		changes = each change of issue where (board.followers has user.id || assignees has user.id || mentioned has user.id) && created_by != user.id {
+		changes = each change in issue where (board.followers has me || assignees has me || mentioned has me) && created_by != me {
 			order by created_at descending
 			limit 30
-			project  project.name  issue  issue.number  issue.title  field  before  after  action  created_by.name  created_at
+			project  project.name  issue  issue.number  issue.title
+			field  before  after  action  created_by.name  created_at
 		}
-		seen = first(reader where person == user.id).seen_at
+		seen = first(reader where person == me).seen_at
+		unread = count(changes where created_at > seen)
 	}
 
 	// The boards a person follows, in any project.
 	view followed per user {
-		each board where followers has user.id {
+		each board where followers has me {
 			order by title
 			project  title  project.name
 		}
@@ -127,7 +131,7 @@ namespace projects at / {
 
 	// The projects a person belongs to, public or private.
 	view mine per user {
-		each member where person == user.id {
+		each member where person == me {
 			order by project
 			project  project.name  role.title
 		}
@@ -140,39 +144,41 @@ namespace projects at / {
 		summary = project.summary
 		visibility = project.visibility
 		takes_reports = project.takes_reports
-		boards = each board where project == project.id {
+		boards = each board in project {
 			order by position
 			name  title
 		}
-		issues = each issue where project == project.id {
+		issues = each issue in project {
 			number  title  labels  board  milestone  phase  phase.title  phase.position
 		}
-		milestones = each milestone where project == project.id {
+		milestones = each milestone in project {
 			order by due
 			name  title  due
 		}
-		pages = each page where project == project.id {
+		pages = each page in project {
 			order by position
 			name  title  position  updated_at
 		}
-		members = each member where project == project.id {
+		members = each member in project {
 			order by role
 			person  person.picture  person.name  role.title
 		}
-		roles = each role where project == project.id {
+		roles = each role in project {
 			order by name
 			name  title  may
 		}
-		timeline = each change of issue where project == project.id {
+		timeline = each change in issue in project {
 			order by created_at descending
 			limit 100
-			issue  issue.number  issue.title  field  before  after  action  created_by.name  created_at
+			issue  issue.number  issue.title
+			field  before  after  action  created_by.name  created_at
 		}
 		// The latest few, for the project's own page.
-		recent = each change of issue where project == project.id {
+		recent = each change in issue in project {
 			order by created_at descending
 			limit 5
-			issue  issue.number  issue.title  field  before  after  action  created_by.name  created_at
+			issue  issue.number  issue.title
+			field  before  after  action  created_by.name  created_at
 		}
 	}
 
@@ -300,7 +306,7 @@ namespace projects at / {
 	// their email.
 	view invitations per project {
 		readers member
-		invited = each invitation where project == project.id {
+		invited = each invitation in project {
 			order by created_at
 			email  role.title
 		}

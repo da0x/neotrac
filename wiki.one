@@ -29,7 +29,7 @@ namespace projects {
 		public when page.project.visibility == visibility::public
 		title = page.title
 		body = page.body
-		history = each change of page where page == page.id {
+		history = each change in page {
 			order by created_at
 			field  before  after  action  created_by.name  created_at
 		}

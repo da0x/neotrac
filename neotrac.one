@@ -7,7 +7,7 @@
 import one
 
 project neotrac {
-	one             "0.7.1"
+	one             "0.7.2"
 	region          "us-east4"
 	ui              radix
 	signin          google
@@ -17,12 +17,15 @@ project neotrac {
 	appearance      light
 	corners         square
 	analytics       google
-	unread          news.changes since news.seen
 	
 	environment production {
 		domain    "neotrac.org"
 		firebase  "neotrac"
 	}
+}
+
+header {
+	badge news.unread
 }
 
 footer {

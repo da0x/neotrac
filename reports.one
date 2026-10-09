@@ -40,7 +40,7 @@ namespace projects {
 		title = report.title
 		body = report.body
 		status = report.status
-		replies = each reply where report == report.id {
+		replies = each reply in report {
 			order by created_at
 			author.picture  author.name  body  created_at
 		}
@@ -49,7 +49,7 @@ namespace projects {
 	// Every report a project was sent, for its people.
 	view project_reports per project {
 		readers member
-		each report where project == project.id {
+		each report in project {
 			order by status descending  created_at descending
 			title  status  author.picture  author.name  created_at
 		}
@@ -57,14 +57,15 @@ namespace projects {
 
 	// The reports a person filed, wherever they filed them.
 	view my_reports per user {
-		each report where author == user.id {
+		each report where author == me {
 			order by created_at descending
 			project  title  status
 		}
 	}
 
 	screen "Report a problem" /:project/report {
-		text "Tell the project's maintainers about a problem privately. Only they and you can read it."
+		text "Tell the project's maintainers about a problem privately."
+		     "Only they and you can read it."
 		report::create
 		form report::create {
 			title  body

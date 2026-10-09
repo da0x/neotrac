@@ -40,15 +40,16 @@ namespace projects {
 		start = board.start
 		followers = board.followers
 		project_name = board.project.name
-		issues = each issue where board == board.id {
+		issues = each issue in board {
 			order by number descending
-			number  title  labels  phase  phase.title  priority  author  author.picture  author.name  assignees  assignees.name  updated_at
+			number  title  labels  phase  phase.title  priority  updated_at
+			author  author.picture  author.name  assignees  assignees.name
 		}
-		phases = each phase where board == board.id {
+		phases = each phase in board {
 			order by position
 			name  title  position
 		}
-		steps = each step where board == board.id {
+		steps = each step in board {
 			order by from.position  to.position
 			from  to  from.title  from.position  to.title  to.position  title  roles  roles.title
 		}

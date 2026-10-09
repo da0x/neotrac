@@ -23,7 +23,7 @@ namespace projects {
 		title = milestone.title
 		due = milestone.due
 		description = milestone.description
-		issues = each issue where milestone == milestone.id {
+		issues = each issue in milestone {
 			order by number descending
 			number  title  phase.title  priority  assignees.name
 		}
