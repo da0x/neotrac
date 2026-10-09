@@ -376,8 +376,8 @@ namespace projects {
 			start "New issues start in"
 		}
 		text "An issue moves only along the moves here: the arrows above, or in the grid"
-		     "from a phase on the left to one along the top. A move that isn't here,"
-		     "like In progress to Triage, isn't allowed."
+			"from a phase on the left to one along the top. A move that isn't here,"
+			"like In progress to Triage, isn't allowed."
 		grid board_page.steps by from and to over board_page.phases {
 			roles.title
 		}

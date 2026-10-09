@@ -9,7 +9,9 @@ namespace projects {
 	// The role called member is now contributor, so it no longer shares its name with
 	// the member entity. A role's name is its key, which never changes, so each
 	// project gets a contributor role holding what its member role allowed, everything
-	// that named the old one names the new, and the old one goes.
+	// that named the old one names the new, and the old one goes, by role::delete,
+	// which maintainers may now do. What a later deploy adds to a role reaches every
+	// project by itself; this first one says so here.
 	once "2026-10-09 contributor role" {
 		each role where name == "member" {
 			dispatch role::create {
@@ -17,22 +19,31 @@ namespace projects {
 				title = "Contributor"  may = may
 			}
 		}
-		each member where role == role::member {
-			dispatch member::create {
-				project = project  person = person  role = role::contributor
-			}
-			dispatch member::delete
-		}
-		each invitation where role == role::member {
-			dispatch invitation::create {
-				project = project  email = email  role = role::contributor
+		each member {
+			if role == role::member {
+				dispatch member::create {
+					project = project  person = person  role = role::contributor
+				}
+				dispatch member::delete
 			}
 		}
-		each step where roles has role::member {
-			dispatch step::update {
-				remove role::member from roles
-				add role::contributor to roles
+		each invitation {
+			if role == role::member {
+				dispatch invitation::create {
+					project = project  email = email  role = role::contributor
+				}
 			}
+		}
+		each step {
+			if roles has role::member {
+				dispatch step::update {
+					remove role::member from roles
+					add role::contributor to roles
+				}
+			}
+		}
+		each role where name == "maintainer" {
+			dispatch role::update { add role::delete to may }
 		}
 		each role where name == "member" {
 			dispatch role::delete

@@ -65,7 +65,7 @@ namespace projects {
 
 	screen "Report a problem" /:project/report {
 		text "Tell the project's maintainers about a problem privately."
-		     "Only they and you can read it."
+			"Only they and you can read it."
 		report::create
 		form report::create {
 			title  body
