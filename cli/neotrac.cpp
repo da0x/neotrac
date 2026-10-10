@@ -18,6 +18,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <fcntl.h>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -25,9 +26,9 @@
 #include <set>
 #include <sstream>
 #include <string>
+#include <spawn.h>
 #include <sys/stat.h>
 #include <termios.h>
-#include <thread>
 #include <unistd.h>
 #include <vector>
 
@@ -505,42 +506,27 @@ namespace {
 		return done;
 	}
 
-	// Signs in with GitHub's device flow: a code to type at github.com, then the
-	// access GitHub gives traded for a neotrac sign-in.
-	std::string github_device_sign_in(const std::string& client_id) {
-		auto form = [](const std::string& s) {
-			std::string out;
-			for (unsigned char c : s) {
-				if (std::isalnum(c) || c == '-' || c == '_' || c == '.' || c == '~') out += static_cast<char>(c);
-				else {
-					char hex[4];
-					std::snprintf(hex, sizeof hex, "%%%02X", c);
-					out += hex;
-				}
-			}
-			return out;
-		};
-		std::vector<std::pair<std::string, std::string>> headers{{"Accept", "application/json"}, {"Content-Type", "application/x-www-form-urlencoded"}};
-		auto code = ember::https_post("https://github.com/login/device/code", headers, "client_id=" + form(client_id) + "&scope=" + form("read:user user:email"));
-		auto v = ember::parse_json(code.body);
-		if (code.status != 200 || !v["device_code"].is_string()) throw stop(signed_out, "GitHub didn't start a sign-in: " + code.body);
-		std::fprintf(stderr, "Open %s and type %s\n", detail::text(v["verification_uri"]).c_str(), detail::text(v["user_code"]).c_str());
-		int every = std::max(5, static_cast<int>(detail::number(v["interval"])));
-		for (;;) {
-			std::this_thread::sleep_for(std::chrono::seconds(every));
-			auto answer = ember::https_post("https://github.com/login/oauth/access_token", headers,
-			                                "client_id=" + form(client_id) + "&device_code=" + form(detail::text(v["device_code"])) +
-			                                    "&grant_type=" + form("urn:ietf:params:oauth:grant-type:device_code"));
-			auto got = ember::parse_json(answer.body);
-			if (got["access_token"].is_string()) return got["access_token"].as_string();
-			std::string why = detail::text(got["error"]);
-			if (why == "authorization_pending") continue;
-			if (why == "slow_down") {
-				every += 5;
-				continue;
-			}
-			throw stop(signed_out, "GitHub's sign-in ended: " + (why.empty() ? answer.body : why));
-		}
+	// Shows the address in the person's browser: $BROWSER when it's set, or the
+	// system's opener. It's printed too, for a browser that doesn't open.
+	void open_browser(const std::string& url) {
+		std::fprintf(stderr, "Opening your browser to authorize neotrac. If it doesn't open, go to:\n\n  %s\n\nWaiting for you there...\n", url.c_str());
+		std::string opener = env("BROWSER");
+		opener = opener.substr(0, opener.find(':'));
+#ifdef __APPLE__
+		if (opener.empty()) opener = "open";
+#else
+		if (opener.empty()) opener = "xdg-open";
+#endif
+		posix_spawn_file_actions_t quiet;
+		posix_spawn_file_actions_init(&quiet);
+		posix_spawn_file_actions_addopen(&quiet, STDOUT_FILENO, "/dev/null", O_WRONLY, 0);
+		posix_spawn_file_actions_addopen(&quiet, STDERR_FILENO, "/dev/null", O_WRONLY, 0);
+		std::string address = url;
+		char* argv[] = {opener.data(), address.data(), nullptr};
+		pid_t child;
+		// Not waited for: the browser comes back to this program while it runs.
+		posix_spawnp(&child, opener.c_str(), &quiet, nullptr, argv, environ);
+		posix_spawn_file_actions_destroy(&quiet);
 	}
 
 	int login(const asked& a) {
@@ -558,9 +544,11 @@ namespace {
 			app.sign_in_with_key(key);
 			k.key = key;
 		} else {
-			std::string client_id = env("NEOTRAC_GITHUB_CLIENT_ID");
-			if (client_id.empty()) throw stop(usage, "signing in as a person needs NEOTRAC_GITHUB_CLIENT_ID, the app's GitHub client id, for now");
-			app.sign_in_with_provider("github.com", github_device_sign_in(client_id));
+			try {
+				app.sign_in_with_browser(open_browser);
+			} catch (const refused& r) {
+				throw stop(signed_out, r.what());
+			}
 			k.refresh_token = app.refresh_token();
 			k.project = a.flag("project");
 		}
@@ -588,7 +576,7 @@ namespace {
 	const char* help = R"(neotrac: the issues waiting for you, or for a service, on the command line.
 
   neotrac login --key          sign in as a service, with the key its project gave it
-  neotrac login                sign in as yourself, with GitHub
+  neotrac login                sign in as yourself, in your browser
   neotrac whoami               who's signed in, and where
   neotrac queue                the issues in phases your roles work, free or yours
           [--board main] [--all] [--watch]

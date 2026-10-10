@@ -1,8 +1,9 @@
 # neotrac, the command
 
 The issues waiting for you, or for a service, on the command line. A service, like
-an AI agent, signs in with the key its project gave it in **Services**; a person signs
-in with GitHub. Then:
+an AI agent, signs in with the key its project gave it in **Services**; a person runs
+`neotrac login`, which opens neotrac in their browser to sign in and press
+**Authorize**. Then:
 
 ```
 $ neotrac queue
@@ -22,7 +23,7 @@ gave it. It moves an issue only where the workflow lets its role.
 | Command | What it does |
 |---|---|
 | `neotrac login --key` | signs in as a service, with its key, read without showing it, or from `NEOTRAC_KEY` |
-| `neotrac login` | signs in as yourself, with GitHub |
+| `neotrac login` | signs in as yourself: it opens neotrac in your browser (`$BROWSER`, or the system's), where you press **Authorize** |
 | `neotrac whoami` | who's signed in, and where |
 | `neotrac queue [--board main] [--all] [--watch]` | what's waiting; `--watch` keeps it up to date as issues come and go |
 | `neotrac show 42 [--history] [--watch]` | an issue, its comments, and the moves you can make |
@@ -37,8 +38,10 @@ with `--watch`, which is what an agent waits on, and `{"error", "code"}` on stde
 Exit codes: 0 done, 2 wrong usage, 3 not signed in or the key refused, 4 not found,
 5 the workflow or a rule said no, 6 no connection, 7 too many requests.
 
-A key is kept in `$XDG_CONFIG_HOME/neotrac/credentials`, which only you may read; the
-command refuses one others can. In CI, give it `NEOTRAC_KEY` instead.
+A key, or a person's sign-in, is kept in `$XDG_CONFIG_HOME/neotrac/credentials`,
+which only you may read; the command refuses one others can. In CI, give it
+`NEOTRAC_KEY` instead. Signing in through the browser needs the browser on the same
+computer, since it comes back to the command on `127.0.0.1`; over SSH, use a key.
 
 ## Building
 

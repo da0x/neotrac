@@ -13,7 +13,9 @@
 #   5. the service comments, is refused a move its role can't make (exit 5, the
 #      moves it can make listed) and makes the one it can;
 #   6. the issue's history names the service;
-#   7. once its key is revoked, the next command exits 3.
+#   7. once its key is revoked, the next command exits 3;
+#   8. a person logs in through the browser, here a script that presses Authorize,
+#      and a turned-down login exits 3.
 #
 # Needs the emulators (firestore localhost:8080, auth localhost:9099), ../build/api
 # from one build, and ./neotrac from make. Project demo-uione is cleared first.
@@ -51,7 +53,7 @@ as() { # as TOKEN COMMAND JSON: a person's command
 	curl -s -X POST -H 'Content-Type: application/json' -H "Authorization: Bearer $1" "$api/api/$2" -d "$3"
 }
 person=$(curl -s -X POST -H 'Content-Type: application/json' "$auth/accounts:signUp?key=any" \
-	-d '{"email":"maintainer@example.com","password":"password","returnSecureToken":true}' | python3 -c 'import json,sys; print(json.load(sys.stdin)["idToken"])')
+	-d '{"email":"maintainer@example.com","password":"password","displayName":"Maya","returnSecureToken":true}' | python3 -c 'import json,sys; print(json.load(sys.stdin)["idToken"])')
 as "$person" projects/project/create '{"slug":"e2e","name":"E2E","workflow":"bugs","visibility":"private"}' >/dev/null
 as "$person" projects/phase/create '{"board":"e2e-main","project":"e2e","title":"Investigate","worked_by":["e2e-agent"]}' >/dev/null
 as "$person" projects/step/create '{"board":"e2e-main","project":"e2e","from":"e2e-main-reported","to":"e2e-main-investigate","roles":["e2e-maintainer"]}' >/dev/null
@@ -111,5 +113,33 @@ check "the history names the service" grep -Eq "^  (Scout|Ranger): phase" "$logs
 as "$person" projects/service/revoke '{"id":"e2e-scout"}' >/dev/null
 "$neotrac" whoami >/dev/null 2>&1
 check "a revoked key exits 3" test $? -eq 3
+
+# The browser: it opens neotrac's /authorize page as the person signed in there, who
+# presses Authorize (or Cancel, with BROWSER_ANSWER=denied), and is sent back to the
+# command on 127.0.0.1.
+cat >"$logs/browser" <<'BROWSER'
+#!/bin/bash
+url=$1
+value() { sed -n "s/.*[?&]$1=\([^&]*\).*/\1/p" <<<"$url"; }
+port=$(value port) state=$(value state) challenge=$(value challenge)
+if [ "${BROWSER_ANSWER:-}" = denied ]; then
+	answer="error=denied"
+else
+	code=$(curl -s -X POST -H 'Content-Type: application/json' -H "Authorization: Bearer $PERSON" "$NEOTRAC_SERVER/api/authorize" -d "{\"challenge\":\"$challenge\"}" |
+		python3 -c 'import json,sys; print(json.load(sys.stdin)["code"])')
+	answer="code=$code"
+fi
+curl -s -o /dev/null -w '%{redirect_url}' "http://127.0.0.1:$port/?$answer&state=$state" >"$BROWSER_SAW"
+BROWSER
+chmod +x "$logs/browser"
+export BROWSER="$logs/browser" PERSON="$person" BROWSER_SAW="$logs/browser.saw"
+timeout 30 "$neotrac" login >"$logs/person" 2>"$logs/person.err"
+check "a person logs in through the browser" grep -qx "Signed in as Maya." "$logs/person"
+check "and the browser is sent back to say so" grep -q "/authorize?done=yes$" "$logs/browser.saw"
+"$neotrac" show 1 >"$logs/person.show" 2>&1
+check "signed in, the person reads the issue" grep -q "Crash on save" "$logs/person.show"
+BROWSER_ANSWER=denied timeout 30 "$neotrac" login >/dev/null 2>"$logs/denied"
+check "a login turned down in the browser exits 3" test $? -eq 3
+check "and says so" grep -q "it was turned down in the browser" "$logs/denied"
 
 if [ $failures -eq 0 ]; then echo "all passed"; else echo "$failures failed"; exit 1; fi
