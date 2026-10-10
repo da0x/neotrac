@@ -12,7 +12,7 @@ license=('GPL-3.0-only')
 depends=('botan' 'gcc-libs')
 makedepends=('libember')
 source=("$pkgname-$pkgver.tar.gz::https://github.com/da0x/neotrac/archive/refs/tags/cli-v$pkgver.tar.gz")
-sha256sums=('SKIP')
+sha256sums=('20fcc94fac4d895b56a81140d9a394b38d27d241bf3fed298c9b23d356a44853')
 
 build() {
 	cd "neotrac-cli-v$pkgver/cli"
