@@ -42,13 +42,17 @@ command refuses one others can. In CI, give it `NEOTRAC_KEY` instead.
 
 ## Building
 
-g++ 14 or later, [Botan 3](https://botan.randombit.net/), and
-[libember](https://github.com/da0x/libember)'s header:
+g++ 14 or later and [Botan 3](https://botan.randombit.net/):
 
 ```
-make                                 # libember's header in /usr/include
-make EMBER_INCLUDE=~/libember/include
+make
+sudo make install                    # to /usr/local/bin
 ```
+
+It uses [libember](https://github.com/da0x/libember)'s header from `/usr/include` or
+`/usr/local/include` when its package is installed. Otherwise `make` downloads
+libember 0.1.0's header once into `ember/` and checks its sha256. `EMBER_INCLUDE=…`
+points at another copy.
 
 Everything it knows about neotrac is in `generated/neotrac.hpp`, which
 `one build` writes from neotrac's `.one` files; `make header` writes it again.
