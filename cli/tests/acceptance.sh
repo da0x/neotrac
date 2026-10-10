@@ -136,20 +136,106 @@ export BROWSER="$logs/browser" PERSON="$person" BROWSER_SAW="$logs/browser.saw"
 timeout 30 "$neotrac" login >"$logs/person" 2>"$logs/person.err"
 check "a person logs in through the browser" grep -qx "Signed in as Maya." "$logs/person"
 check "and the browser is sent back to say so" grep -q "/authorize?done=yes$" "$logs/browser.saw"
-# A person in two projects says which one their commands work in, once.
+# A person in two projects selects the one their commands work in, once.
 as "$person" projects/project/create '{"slug":"lab","name":"Lab","workflow":"bugs","visibility":"private"}' >/dev/null
 "$neotrac" whoami >"$logs/whoami" 2>&1
 check "whoami lists the person's projects, without asking which" grep -Eq "^ +lab, Maintainer$" "$logs/whoami"
 "$neotrac" show 1 >/dev/null 2>"$logs/which"
-check "in two projects, a command asks which, naming them" grep -q "you're in e2e, lab; pick one with neotrac use" "$logs/which"
-"$neotrac" use nowhere >/dev/null 2>&1
-check "use refuses a project the person isn't in" test $? -eq 4
-"$neotrac" use e2e >"$logs/use" 2>&1
-check "use keeps the project" grep -qx "Commands now work in e2e." "$logs/use"
+check "in two projects, a command asks which, naming them" grep -q "you're in e2e, lab; pick one with neotrac select project" "$logs/which"
+"$neotrac" list projects --json >"$logs/projects"
+check "list projects names both" grep -q '"project":"lab"' "$logs/projects"
+"$neotrac" select project nowhere >/dev/null 2>&1
+check "select refuses a project the person isn't in" test $? -eq 4
+"$neotrac" select project </dev/null >/dev/null 2>"$logs/select"
+check "without a terminal, select says which there are" grep -q "say which project: e2e, lab" "$logs/select"
+"$neotrac" select project e2e >"$logs/use" 2>&1
+check "select keeps the project" grep -q "^Selected e2e." "$logs/use"
 "$neotrac" show 1 >"$logs/person.show" 2>&1
 check "signed in, the person reads the issue" grep -q "Crash on save" "$logs/person.show"
 "$neotrac" whoami >"$logs/whoami" 2>&1
-check "whoami marks the project kept" grep -Eq "^  \* e2e, Maintainer$" "$logs/whoami"
+check "whoami marks the project selected" grep -Eq "^  \* e2e, Maintainer$" "$logs/whoami"
+"$neotrac" select board main >/dev/null && "$neotrac" list boards >"$logs/boards"
+check "a board is selected too" grep -Eq "^\* main " "$logs/boards"
+"$neotrac" unselect board >/dev/null && "$neotrac" list boards >"$logs/boards"
+check "and unselected" grep -Eq "^  main " "$logs/boards"
+
+# Everything is written with flags by a program, as a person would in their editor.
+"$neotrac" new issue --title "Slow start" --priority high --labels "speed, start" --body "Takes ten seconds." --json >"$logs/new"
+check "a new issue is opened with its fields" grep -q '"id":"e2e-2"' "$logs/new"
+echo "It's the cache." | "$neotrac" edit issue 2 --body - >/dev/null
+"$neotrac" show issue 2 --json >"$logs/issue2"
+check "an issue is edited, its text from stdin, its fields kept" grep -q '"body":"It'"'"'s the cache.","phase":"Reported","board":"E2E","priority":"high","labels":\["speed","start"\]' "$logs/issue2"
+"$neotrac" list issues >"$logs/issues"
+check "list issues shows them newest first" test "$(head -1 "$logs/issues" | cut -c1-6)" = "#2    "
+"$neotrac" new page --title "How to build" --body "Run make." >/dev/null
+"$neotrac" edit page how_to_build --title "Building" >/dev/null
+"$neotrac" show page how_to_build >"$logs/page"
+check "a wiki page is written and edited" grep -qx "Building" "$logs/page"
+check "keeping its text" grep -qx "Run make." "$logs/page"
+"$neotrac" new milestone --title "Beta" --due 2026-12-01 >/dev/null
+"$neotrac" list milestones >"$logs/milestones"
+check "a milestone is added with its date" grep -Eq "^  beta +2026-12-01 +Beta$" "$logs/milestones"
+"$neotrac" list phases --json >"$logs/phases"
+check "the board's phases are listed" grep -q '"phase":"investigate"' "$logs/phases"
+
+"$neotrac" edit issue 2 --milestone beta >/dev/null
+"$neotrac" link 2 blocked_by 1 >"$logs/link"
+"$neotrac" link issue 2 blocked-by 1 >"$logs/again"
+"$neotrac" show issue 2 --json >"$logs/linked"
+check "an issue is put in a milestone" grep -q '"milestone":"Beta"' "$logs/linked"
+check "and linked to another" grep -q '"links":\[{"relation":"blocked_by","to":1}\]' "$logs/linked"
+check "linking it again changes nothing" grep -qx "#2 already blocked_by #1." "$logs/again"
+"$neotrac" show issue 1 --json >"$logs/other"
+check "the other side is kept, said from there" grep -q '"links":\[{"relation":"blocks","to":2}\]' "$logs/other"
+
+# At a terminal: a list to pick from, and the person's editor.
+cat >"$logs/editor" <<'EDITOR'
+#!/bin/bash
+sed -i -e 's/^Title: .*/Title: Picked and edited/' "$1"
+EDITOR
+chmod +x "$logs/editor"
+at_terminal() { # at_terminal KEYS COMMAND...: runs it in a terminal, pressing KEYS once it's drawn
+	python3 - "$@" <<'PTY'
+import os, pty, sys, time, select
+keys = sys.argv[1].encode().decode('unicode_escape').encode()
+pid, fd = pty.fork()
+if pid == 0:
+    os.execvp(sys.argv[2], sys.argv[2:])
+out, sent = b"", False
+while True:
+    r, _, _ = select.select([fd], [], [], 0.2)
+    if r:
+        try: chunk = os.read(fd, 4096)
+        except OSError: break
+        if not chunk: break
+        out += chunk
+    elif not sent and out:
+        os.write(fd, keys); sent = True
+_, status = os.waitpid(pid, 0)
+sys.stdout.write(out.decode(errors="replace"))
+sys.exit(os.waitstatus_to_exitcode(status))
+PTY
+}
+at_terminal 'j\r' "$neotrac" select project >"$logs/picked" 2>&1
+check "select at a terminal picks from a list" grep -q "Selected lab." "$logs/picked"
+"$neotrac" select project e2e >/dev/null
+EDITOR="$logs/editor" at_terminal 'j\r' "$neotrac" edit issue >"$logs/edited" 2>&1
+check "edit at a terminal picks the issue, then opens the editor" grep -q "Saved #1." "$logs/edited"
+"$neotrac" show issue 1 --json >"$logs/issue1"
+check "and saves what was written there" grep -q '"title":"Picked and edited"' "$logs/issue1"
+at_terminal 'q' "$neotrac" show milestone >/dev/null 2>&1
+check "leaving the list does nothing, and says so by its exit" test $? -eq 1
+
+# Deleting a project: the address typed, or --confirm for a program.
+"$neotrac" delete project lab </dev/null >/dev/null 2>"$logs/delete"
+check "deleting asks a program to confirm" grep -q "say --confirm lab to mean it" "$logs/delete"
+"$neotrac" delete project lab --confirm lap >/dev/null 2>&1
+check "a wrong address deletes nothing" test $? -eq 5
+at_terminal 'lab\n' "$neotrac" delete project lab >"$logs/deleted" 2>&1
+check "at a terminal, the address is typed" grep -q "Deleted lab." "$logs/deleted"
+"$neotrac" list projects --json >"$logs/projects"
+check "and it's gone" test "$(grep -c '"project":"lab"' "$logs/projects")" = 0
+
 BROWSER_ANSWER=denied timeout 30 "$neotrac" login >/dev/null 2>"$logs/denied"
 check "a login turned down in the browser exits 3" test $? -eq 3
 check "and says so" grep -q "it was turned down in the browser" "$logs/denied"

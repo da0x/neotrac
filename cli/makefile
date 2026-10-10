@@ -18,7 +18,7 @@ EMBER_VERSION = 0.1.0
 EMBER_SHA256 = bcdc31ac4e0ec87831f6b827870d43763731c5c9499c9d098121985806259ffd
 EMBER_INCLUDE ?= $(firstword $(foreach d,/usr/include /usr/local/include,$(if $(wildcard $(d)/ember.hpp),$(d))) ember)
 
-neotrac: neotrac.cpp generated/neotrac.hpp $(EMBER_INCLUDE)/ember.hpp
+neotrac: neotrac.cpp terminal.hpp generated/neotrac.hpp $(EMBER_INCLUDE)/ember.hpp
 	$(CXX) -std=c++23 $(CXXFLAGS) -Wall -Wextra -Igenerated -I$(EMBER_INCLUDE) neotrac.cpp -o neotrac $(TLS)
 
 ember/ember.hpp:

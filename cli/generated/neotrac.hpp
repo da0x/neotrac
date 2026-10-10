@@ -873,6 +873,32 @@ namespace neotrac {
 			}
 		};
 
+		// What board::delete is sent.
+		struct board_delete {
+			std::string id{};
+			std::optional<std::string> project{};
+			std::optional<std::string> name{};
+			std::optional<std::string> title{};
+			std::optional<::neotrac::projects::workflow> workflow{};
+			std::optional<std::string> start{};
+			std::optional<double> position{};
+			std::optional<std::vector<std::string>> followers{};
+
+			std::string json() const {
+				std::string out = "{";
+				auto add = [&](const char* name, const std::string& value) { out += (out.size() > 1 ? "," : "") + detail::json(std::string(name)) + ":" + value; };
+				add("id", detail::json(id));
+				if (project) add("project", detail::json(*project));
+				if (name) add("name", detail::json(*name));
+				if (title) add("title", detail::json(*title));
+				if (workflow) add("workflow", detail::json(std::string(to_string(*workflow))));
+				if (start) add("start", detail::json(*start));
+				if (position) add("position", detail::json(*position));
+				if (followers) add("followers", detail::json(*followers));
+				return out + "}";
+			}
+		};
+
 		// What board::follow is sent.
 		struct board_follow {
 			std::string id{};
@@ -1187,6 +1213,60 @@ namespace neotrac {
 			}
 		};
 
+		// What issue::delete is sent.
+		struct issue_delete {
+			std::string id{};
+			std::optional<std::string> project{};
+			std::optional<double> number{};
+			std::optional<std::string> board{};
+			std::optional<std::string> title{};
+			std::optional<std::string> body{};
+			std::optional<std::vector<std::string>> labels{};
+			std::optional<std::string> author{};
+			std::optional<std::string> phase{};
+			std::optional<::neotrac::projects::priority> priority{};
+			std::optional<std::vector<std::string>> assignees{};
+			std::optional<std::string> milestone{};
+
+			std::string json() const {
+				std::string out = "{";
+				auto add = [&](const char* name, const std::string& value) { out += (out.size() > 1 ? "," : "") + detail::json(std::string(name)) + ":" + value; };
+				add("id", detail::json(id));
+				if (project) add("project", detail::json(*project));
+				if (number) add("number", detail::json(*number));
+				if (board) add("board", detail::json(*board));
+				if (title) add("title", detail::json(*title));
+				if (body) add("body", detail::json(*body));
+				if (labels) add("labels", detail::json(*labels));
+				if (author) add("author", detail::json(*author));
+				if (phase) add("phase", detail::json(*phase));
+				if (priority) add("priority", detail::json(std::string(to_string(*priority))));
+				if (assignees) add("assignees", detail::json(*assignees));
+				if (milestone) add("milestone", detail::json(*milestone));
+				return out + "}";
+			}
+		};
+
+		// What comment::delete is sent.
+		struct comment_delete {
+			std::string id{};
+			std::optional<std::string> issue{};
+			std::optional<std::string> body{};
+			std::optional<std::string> author{};
+			std::optional<std::vector<std::string>> mentioned{};
+
+			std::string json() const {
+				std::string out = "{";
+				auto add = [&](const char* name, const std::string& value) { out += (out.size() > 1 ? "," : "") + detail::json(std::string(name)) + ":" + value; };
+				add("id", detail::json(id));
+				if (issue) add("issue", detail::json(*issue));
+				if (body) add("body", detail::json(*body));
+				if (author) add("author", detail::json(*author));
+				if (mentioned) add("mentioned", detail::json(*mentioned));
+				return out + "}";
+			}
+		};
+
 		// What milestone::create is sent.
 		struct milestone_create {
 			std::optional<std::string> project{};
@@ -1209,6 +1289,28 @@ namespace neotrac {
 
 		// What milestone::update is sent.
 		struct milestone_update {
+			std::string id{};
+			std::optional<std::string> project{};
+			std::optional<std::string> name{};
+			std::optional<std::string> title{};
+			std::optional<time> due{};
+			std::optional<std::string> description{};
+
+			std::string json() const {
+				std::string out = "{";
+				auto add = [&](const char* name, const std::string& value) { out += (out.size() > 1 ? "," : "") + detail::json(std::string(name)) + ":" + value; };
+				add("id", detail::json(id));
+				if (project) add("project", detail::json(*project));
+				if (name) add("name", detail::json(*name));
+				if (title) add("title", detail::json(*title));
+				if (due) add("due", detail::json(*due));
+				if (description) add("description", detail::json(*description));
+				return out + "}";
+			}
+		};
+
+		// What milestone::delete is sent.
+		struct milestone_delete {
 			std::string id{};
 			std::optional<std::string> project{};
 			std::optional<std::string> name{};
@@ -1275,6 +1377,34 @@ namespace neotrac {
 				if (takes_reports) add("takes_reports", detail::json(*takes_reports));
 				if (workflow) add("workflow", detail::json(std::string(to_string(*workflow))));
 				if (start) add("start", detail::json(*start));
+				return out + "}";
+			}
+		};
+
+		// What project::delete is sent.
+		struct project_delete {
+			std::string id{};
+			std::optional<std::string> slug{};
+			std::optional<std::string> name{};
+			std::optional<std::string> summary{};
+			std::optional<::neotrac::projects::project_visibility> visibility{};
+			std::optional<bool> takes_reports{};
+			std::optional<::neotrac::projects::workflow> workflow{};
+			std::optional<std::string> start{};
+			std::optional<std::string> address{};
+
+			std::string json() const {
+				std::string out = "{";
+				auto add = [&](const char* name, const std::string& value) { out += (out.size() > 1 ? "," : "") + detail::json(std::string(name)) + ":" + value; };
+				add("id", detail::json(id));
+				if (slug) add("slug", detail::json(*slug));
+				if (name) add("name", detail::json(*name));
+				if (summary) add("summary", detail::json(*summary));
+				if (visibility) add("visibility", detail::json(std::string(to_string(*visibility))));
+				if (takes_reports) add("takes_reports", detail::json(*takes_reports));
+				if (workflow) add("workflow", detail::json(std::string(to_string(*workflow))));
+				if (start) add("start", detail::json(*start));
+				if (address) add("address", detail::json(*address));
 				return out + "}";
 			}
 		};
@@ -1477,6 +1607,46 @@ namespace neotrac {
 			}
 		};
 
+		// What report::delete is sent.
+		struct report_delete {
+			std::string id{};
+			std::optional<std::string> project{};
+			std::optional<std::string> title{};
+			std::optional<std::string> body{};
+			std::optional<std::string> author{};
+			std::optional<::neotrac::projects::report_status> status{};
+
+			std::string json() const {
+				std::string out = "{";
+				auto add = [&](const char* name, const std::string& value) { out += (out.size() > 1 ? "," : "") + detail::json(std::string(name)) + ":" + value; };
+				add("id", detail::json(id));
+				if (project) add("project", detail::json(*project));
+				if (title) add("title", detail::json(*title));
+				if (body) add("body", detail::json(*body));
+				if (author) add("author", detail::json(*author));
+				if (status) add("status", detail::json(std::string(to_string(*status))));
+				return out + "}";
+			}
+		};
+
+		// What reply::delete is sent.
+		struct reply_delete {
+			std::string id{};
+			std::optional<std::string> report{};
+			std::optional<std::string> body{};
+			std::optional<std::string> author{};
+
+			std::string json() const {
+				std::string out = "{";
+				auto add = [&](const char* name, const std::string& value) { out += (out.size() > 1 ? "," : "") + detail::json(std::string(name)) + ":" + value; };
+				add("id", detail::json(id));
+				if (report) add("report", detail::json(*report));
+				if (body) add("body", detail::json(*body));
+				if (author) add("author", detail::json(*author));
+				return out + "}";
+			}
+		};
+
 		// What service::create is sent.
 		struct service_create {
 			std::optional<std::string> project{};
@@ -1627,6 +1797,28 @@ namespace neotrac {
 
 		// What page::update is sent.
 		struct page_update {
+			std::string id{};
+			std::optional<std::string> project{};
+			std::optional<std::string> name{};
+			std::optional<std::string> title{};
+			std::optional<std::string> body{};
+			std::optional<double> position{};
+
+			std::string json() const {
+				std::string out = "{";
+				auto add = [&](const char* name, const std::string& value) { out += (out.size() > 1 ? "," : "") + detail::json(std::string(name)) + ":" + value; };
+				add("id", detail::json(id));
+				if (project) add("project", detail::json(*project));
+				if (name) add("name", detail::json(*name));
+				if (title) add("title", detail::json(*title));
+				if (body) add("body", detail::json(*body));
+				if (position) add("position", detail::json(*position));
+				return out + "}";
+			}
+		};
+
+		// What page::delete is sent.
+		struct page_delete {
 			std::string id{};
 			std::optional<std::string> project{};
 			std::optional<std::string> name{};
@@ -2806,6 +2998,10 @@ namespace neotrac {
 		std::string board_update(const projects::board_update& sent) {
 			return detail::text(ember::parse_json(post("/api/projects/board/update", sent.json()))["id"]);
 		}
+		// board::delete: the id of what it changed, or refused.
+		std::string board_delete(const projects::board_delete& sent) {
+			return detail::text(ember::parse_json(post("/api/projects/board/delete", sent.json()))["id"]);
+		}
 		// board::follow: the id of what it changed, or refused.
 		std::string board_follow(const projects::board_follow& sent) {
 			return detail::text(ember::parse_json(post("/api/projects/board/follow", sent.json()))["id"]);
@@ -2850,6 +3046,14 @@ namespace neotrac {
 		std::string comment_create(const projects::comment_create& sent) {
 			return detail::text(ember::parse_json(post("/api/projects/comment/create", sent.json()))["id"]);
 		}
+		// issue::delete: the id of what it changed, or refused.
+		std::string issue_delete(const projects::issue_delete& sent) {
+			return detail::text(ember::parse_json(post("/api/projects/issue/delete", sent.json()))["id"]);
+		}
+		// comment::delete: the id of what it changed, or refused.
+		std::string comment_delete(const projects::comment_delete& sent) {
+			return detail::text(ember::parse_json(post("/api/projects/comment/delete", sent.json()))["id"]);
+		}
 		// milestone::create: the id of what it changed, or refused.
 		std::string milestone_create(const projects::milestone_create& sent) {
 			return detail::text(ember::parse_json(post("/api/projects/milestone/create", sent.json()))["id"]);
@@ -2858,6 +3062,10 @@ namespace neotrac {
 		std::string milestone_update(const projects::milestone_update& sent) {
 			return detail::text(ember::parse_json(post("/api/projects/milestone/update", sent.json()))["id"]);
 		}
+		// milestone::delete: the id of what it changed, or refused.
+		std::string milestone_delete(const projects::milestone_delete& sent) {
+			return detail::text(ember::parse_json(post("/api/projects/milestone/delete", sent.json()))["id"]);
+		}
 		// project::create: the id of what it changed, or refused.
 		std::string project_create(const projects::project_create& sent) {
 			return detail::text(ember::parse_json(post("/api/projects/project/create", sent.json()))["id"]);
@@ -2865,6 +3073,10 @@ namespace neotrac {
 		// project::update: the id of what it changed, or refused.
 		std::string project_update(const projects::project_update& sent) {
 			return detail::text(ember::parse_json(post("/api/projects/project/update", sent.json()))["id"]);
+		}
+		// project::delete: the id of what it changed, or refused.
+		std::string project_delete(const projects::project_delete& sent) {
+			return detail::text(ember::parse_json(post("/api/projects/project/delete", sent.json()))["id"]);
 		}
 		// member::create: the id of what it changed, or refused.
 		std::string member_create(const projects::member_create& sent) {
@@ -2910,6 +3122,14 @@ namespace neotrac {
 		std::string reply_create(const projects::reply_create& sent) {
 			return detail::text(ember::parse_json(post("/api/projects/reply/create", sent.json()))["id"]);
 		}
+		// report::delete: the id of what it changed, or refused.
+		std::string report_delete(const projects::report_delete& sent) {
+			return detail::text(ember::parse_json(post("/api/projects/report/delete", sent.json()))["id"]);
+		}
+		// reply::delete: the id of what it changed, or refused.
+		std::string reply_delete(const projects::reply_delete& sent) {
+			return detail::text(ember::parse_json(post("/api/projects/reply/delete", sent.json()))["id"]);
+		}
 		// service::create: the id of what it changed, or refused.
 		std::string service_create(const projects::service_create& sent) {
 			return detail::text(ember::parse_json(post("/api/projects/service/create", sent.json()))["id"]);
@@ -2937,6 +3157,10 @@ namespace neotrac {
 		// page::update: the id of what it changed, or refused.
 		std::string page_update(const projects::page_update& sent) {
 			return detail::text(ember::parse_json(post("/api/projects/page/update", sent.json()))["id"]);
+		}
+		// page::delete: the id of what it changed, or refused.
+		std::string page_delete(const projects::page_delete& sent) {
+			return detail::text(ember::parse_json(post("/api/projects/page/delete", sent.json()))["id"]);
 		}
 		// phase::create: the id of what it changed, or refused.
 		std::string phase_create(const projects::phase_create& sent) {
