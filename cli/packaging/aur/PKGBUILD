@@ -3,7 +3,7 @@
 # Maintainer: Daher Alfawares <3171199+da0x@users.noreply.github.com>
 
 pkgname=neotrac
-pkgver=0.2.0
+pkgver=0.3.0
 pkgrel=1
 pkgdesc="The issues waiting for you, or for a service, on neotrac, on the command line"
 arch=('x86_64' 'aarch64')
@@ -12,7 +12,7 @@ license=('GPL-3.0-only')
 depends=('botan' 'gcc-libs')
 makedepends=('libember')
 source=("$pkgname-$pkgver.tar.gz::https://github.com/da0x/neotrac/archive/refs/tags/cli-v$pkgver.tar.gz")
-sha256sums=('19584f6b3f96ed49315da62022f7a38396f0c124d352e42065471daa93a57730')
+sha256sums=('338514510fd523b435f53e5a07bf561075bb748ec5e1f202157bf07fd1a9bab5')
 
 build() {
 	cd "neotrac-cli-v$pkgver/cli"
