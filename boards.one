@@ -21,6 +21,7 @@ namespace projects {
 	}
 
 	command board::update
+	command board::delete
 
 	// Anyone signed in follows a board, and stops.
 	command board::follow {

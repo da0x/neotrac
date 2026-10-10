@@ -16,6 +16,7 @@ namespace projects {
 
 	command milestone::create
 	command milestone::update
+	command milestone::delete
 
 	view milestone_page per milestone {
 		readers member

@@ -23,6 +23,7 @@ namespace projects {
 	}
 
 	command page::update
+	command page::delete
 
 	view wiki_page per page {
 		readers member

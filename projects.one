@@ -28,6 +28,7 @@ namespace projects at / {
 	// Runs the project and its settings.
 	define role maintainer "Maintainer" in project {
 		project::update
+		project::delete
 		member::create
 		member::delete
 		invitation::create
@@ -105,6 +106,56 @@ namespace projects at / {
 	}
 
 	command project::update
+
+	// Deleting a project and everything in it: its issues, with their comments and
+	// links, its boards and their workflows, its milestones, its wiki, its reports,
+	// and who's been invited. Its roles, its people's places in it and its services
+	// go with it, as the language made them. It can't be undone, so whoever deletes
+	// it types its address to say they mean it. Its address is free again after.
+	command project::delete {
+		input address text
+		require address == slug  "type the project's address to delete it"
+		each issue where project == id {
+			dispatch issue::delete
+		}
+		each link where project == id {
+			dispatch link::delete
+		}
+		each step where project == id {
+			dispatch step::delete
+		}
+		each phase where project == id {
+			dispatch phase::delete
+		}
+		each board where project == id {
+			dispatch board::delete
+		}
+		each milestone where project == id {
+			dispatch milestone::delete
+		}
+		each page where project == id {
+			dispatch page::delete
+		}
+		each report where project == id {
+			dispatch report::delete
+		}
+		each invitation where project == id {
+			dispatch invitation::delete
+		}
+	}
+
+	// What goes with a project, deleted only by deleting it: no role grants these,
+	// so no person deletes them one by one.
+	define service neotrac "neotrac" {
+		issue::delete
+		comment::delete
+		board::delete
+		milestone::delete
+		page::delete
+		report::delete
+		reply::delete
+	}
+
 	command member::create
 
 	// Taking a role away from someone, though never from yourself, so a project
@@ -281,6 +332,7 @@ namespace projects at / {
 			project::update "Edit project" icon edit form "Save" {
 				name  summary  visibility  takes_reports
 			}
+			link /:project/settings "Settings"
 		}
 		subtitle "{project_page.summary}"
 		// Each board as a card: how its issues stand, phase by phase, and the two
@@ -331,6 +383,26 @@ namespace projects at / {
 	// Everything that happened to a project's issues, newest first.
 	screen "{project_page.name}: timeline" /:project/timeline {
 		timeline project_page.timeline link /:project/:issue
+	}
+
+	// A project's settings: what it's called and who may read it, who works on it,
+	// and, for its maintainers, deleting it.
+	screen "Settings" /:project/settings under /:project "{project_page.name}" {
+		section "The project" {
+			project::update "Edit project" icon edit form "Save" {
+				name  summary  visibility  takes_reports
+			}
+			link /:project/people "People"
+			link /:project/roles "Roles"
+			link /:project/services "Services"
+		}
+		section "Delete this project" color red {
+			text "Deleting it deletes its issues, boards, milestones, wiki and reports,"
+				"and takes away everyone's place in it. It can't be undone."
+			project::delete "Delete project" form "Delete it for good" {
+				address "Type its address to confirm"
+			}
+		}
 	}
 
 	// Someone asked to join a project, by the email they sign in with. Once they sign

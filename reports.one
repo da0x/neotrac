@@ -34,6 +34,15 @@ namespace projects {
 
 	command reply::create
 
+	// A report goes with its replies, only when its project does.
+	command report::delete {
+		each reply where report == id {
+			dispatch reply::delete
+		}
+	}
+
+	command reply::delete
+
 	view report_page per report {
 		readers member
 		readers report.author
