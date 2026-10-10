@@ -177,6 +177,7 @@ namespace {
 		caller who;
 		std::string project;
 		std::vector<std::string> roles;  // the ids of the roles held in the project
+		projects::mine mine;               // every project the person is in, with their roles
 	};
 
 	options options_for(const std::string& server) {
@@ -188,7 +189,24 @@ namespace {
 		return o;
 	}
 
-	session sign_in(const asked& a) {
+	// The projects a person is in, each once, in the order mine lists them.
+	std::vector<std::string> projects_in(const projects::mine& mine) {
+		std::vector<std::string> out;
+		for (const auto& row : mine.rows) {
+			if (std::ranges::find(out, row.project) == out.end()) out.push_back(row.project);
+		}
+		return out;
+	}
+
+	std::string joined(const std::vector<std::string>& words) {
+		std::string out;
+		for (const auto& w : words) out += (out.empty() ? "" : ", ") + w;
+		return out;
+	}
+
+	// Signs in from what's kept. A command that works on issues needs a project; whoami
+	// and use don't, so they pass needs_project = false.
+	session sign_in(const asked& a, bool needs_project = true) {
 		session s;
 		s.credentials = read_credentials();
 		std::string server = a.flag("server", env("NEOTRAC_SERVER"));
@@ -206,12 +224,13 @@ namespace {
 		s.who = s.app->me();
 		// The project: a service's own, or the one asked for, kept, or the person's only one.
 		s.project = s.who.service ? s.who.place : a.flag("project", s.credentials.project);
-		auto mine = s.app->mine().get();
+		s.mine = s.app->mine().get();
+		auto& mine = s.mine;
 		if (s.project.empty()) {
-			std::set<std::string> projects;
-			for (const auto& row : mine.rows) projects.insert(row.project);
-			if (projects.size() != 1) throw stop(usage, "say which project with --project, one of yours");
-			s.project = *projects.begin();
+			auto projects = projects_in(mine);
+			if (projects.size() == 1) s.project = projects.front();
+			else if (needs_project && projects.empty()) throw stop(not_found, "you aren't in any project yet; join one on neotrac first");
+			else if (needs_project) throw stop(usage, "you're in " + joined(projects) + "; pick one with neotrac use <project>, or --project");
 		}
 		for (const auto& row : mine.rows) {
 			if (row.project == s.project) s.roles.push_back(row.role);
@@ -560,16 +579,44 @@ namespace {
 	}
 
 	int whoami(const asked& a) {
-		auto s = sign_in(a);
+		auto s = sign_in(a, false);
 		std::string key = !env("NEOTRAC_KEY").empty() ? env("NEOTRAC_KEY") : s.credentials.key;
 		if (a.has("json")) {
 			std::printf("{\"id\":%s,\"name\":%s,\"service\":%s,\"project\":%s,\"roles\":%s}\n", json(s.who.id).c_str(), json(s.who.name).c_str(), json(s.who.service).c_str(),
 			            json(s.project).c_str(), json(s.roles).c_str());
 			return done;
 		}
-		std::printf("%s%s in %s", s.who.name.c_str(), s.who.service ? ", a service," : "", s.project.c_str());
-		if (!key.empty()) std::printf(", with key %s…", key.substr(0, 10).c_str());
-		std::printf("\n");
+		if (s.who.service) {
+			std::printf("%s, a service, in %s", s.who.name.c_str(), s.project.c_str());
+			if (!key.empty()) std::printf(", with key %s…", key.substr(0, 10).c_str());
+			std::printf("\n");
+			return done;
+		}
+		std::printf("%s\n", s.who.name.c_str());
+		for (const auto& project : projects_in(s.mine)) {
+			std::vector<std::string> titles;
+			for (const auto& row : s.mine.rows) {
+				if (row.project == project) titles.push_back(row.role_title);
+			}
+			std::printf("  %s %s, %s\n", project == s.project ? "*" : " ", project.c_str(), joined(titles).c_str());
+		}
+		if (s.mine.rows.empty()) std::printf("  in no project yet\n");
+		else if (s.project.empty()) std::printf("Pick the project commands work in with neotrac use <project>.\n");
+		return done;
+	}
+
+	// Keeps the project a person's commands work in, so --project isn't needed each time.
+	int use(const asked& a) {
+		if (a.words.size() != 1) throw stop(usage, "say which project, like neotrac use neotrac");
+		auto s = sign_in(a, false);
+		if (s.who.service) throw stop(usage, "a service works only in its own project, " + s.project);
+		auto projects = projects_in(s.mine);
+		if (std::ranges::find(projects, a.words[0]) == projects.end()) {
+			throw stop(not_found, "you aren't in " + a.words[0] + (projects.empty() ? std::string() : "; you're in " + joined(projects)));
+		}
+		s.credentials.project = a.words[0];
+		write_credentials(s.credentials);
+		std::printf("Commands now work in %s.\n", a.words[0].c_str());
 		return done;
 	}
 
@@ -577,7 +624,8 @@ namespace {
 
   neotrac login --key          sign in as a service, with the key its project gave it
   neotrac login                sign in as yourself, in your browser
-  neotrac whoami               who's signed in, and where
+  neotrac whoami               who's signed in, and their projects
+  neotrac use neotrac          the project your commands work in, kept
   neotrac queue                the issues in phases your roles work, free or yours
           [--board main] [--all] [--watch]
   neotrac show 42 [--history] [--watch]
@@ -603,6 +651,7 @@ refused, 4 not found, 5 the workflow said no, 6 no connection, 7 too many reques
 		}
 		if (a.command == "login") return login(a);
 		if (a.command == "whoami") return whoami(a);
+		if (a.command == "use") return use(a);
 		if (a.command == "queue") return queue(a);
 		if (a.command == "show") return show(a);
 		if (a.command == "claim") return claim(a, true);

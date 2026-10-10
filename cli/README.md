@@ -24,7 +24,8 @@ gave it. It moves an issue only where the workflow lets its role.
 |---|---|
 | `neotrac login --key` | signs in as a service, with its key, read without showing it, or from `NEOTRAC_KEY` |
 | `neotrac login` | signs in as yourself: it opens neotrac in your browser (`$BROWSER`, or the system's), where you press **Authorize** |
-| `neotrac whoami` | who's signed in, and where |
+| `neotrac whoami` | who's signed in, and their projects and roles |
+| `neotrac use neotrac` | the project a person's commands work in, kept until changed; `--project` picks one for a single command |
 | `neotrac queue [--board main] [--all] [--watch]` | what's waiting; `--watch` keeps it up to date as issues come and go |
 | `neotrac show 42 [--history] [--watch]` | an issue, its comments, and the moves you can make |
 | `neotrac claim 42`, `neotrac release 42` | take an issue so nobody else works it, or let it go |

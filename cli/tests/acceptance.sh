@@ -136,8 +136,20 @@ export BROWSER="$logs/browser" PERSON="$person" BROWSER_SAW="$logs/browser.saw"
 timeout 30 "$neotrac" login >"$logs/person" 2>"$logs/person.err"
 check "a person logs in through the browser" grep -qx "Signed in as Maya." "$logs/person"
 check "and the browser is sent back to say so" grep -q "/authorize?done=yes$" "$logs/browser.saw"
+# A person in two projects says which one their commands work in, once.
+as "$person" projects/project/create '{"slug":"lab","name":"Lab","workflow":"bugs","visibility":"private"}' >/dev/null
+"$neotrac" whoami >"$logs/whoami" 2>&1
+check "whoami lists the person's projects, without asking which" grep -Eq "^ +lab, Maintainer$" "$logs/whoami"
+"$neotrac" show 1 >/dev/null 2>"$logs/which"
+check "in two projects, a command asks which, naming them" grep -q "you're in e2e, lab; pick one with neotrac use" "$logs/which"
+"$neotrac" use nowhere >/dev/null 2>&1
+check "use refuses a project the person isn't in" test $? -eq 4
+"$neotrac" use e2e >"$logs/use" 2>&1
+check "use keeps the project" grep -qx "Commands now work in e2e." "$logs/use"
 "$neotrac" show 1 >"$logs/person.show" 2>&1
 check "signed in, the person reads the issue" grep -q "Crash on save" "$logs/person.show"
+"$neotrac" whoami >"$logs/whoami" 2>&1
+check "whoami marks the project kept" grep -Eq "^  \* e2e, Maintainer$" "$logs/whoami"
 BROWSER_ANSWER=denied timeout 30 "$neotrac" login >/dev/null 2>"$logs/denied"
 check "a login turned down in the browser exits 3" test $? -eq 3
 check "and says so" grep -q "it was turned down in the browser" "$logs/denied"
