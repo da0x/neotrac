@@ -36,7 +36,7 @@ namespace {
 
 	using namespace neotrac;
 
-	constexpr const char* version = "0.1.0";
+	constexpr const char* version = "0.2.0";
 
 	// What went wrong, as the exit code a script reads.
 	enum exit_code : int {
