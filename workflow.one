@@ -9,7 +9,7 @@ namespace projects {
 
 	enum workflow {
 		basic      "Basic task management"
-		agile      "Agile / Scrum sprint"
+		agile      "Software development"
 		editorial  "Editorial & content planning"
 		bugs       "Bug & issue tracker"
 		adr        "Architecture decisions (ADRs)"
@@ -117,7 +117,7 @@ namespace projects {
 			}
 			start = phase::to_do
 		}
-		// A sprint's backlog to completed, a step forward or back at a time.
+		// Software, from the backlog to completed, a step forward or back at a time.
 		if workflow == workflow::agile {
 			dispatch phase::create {
 				board = id  project = project
