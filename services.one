@@ -1,0 +1,45 @@
+// Copyright 2026 Daher Alfawares
+// SPDX-License-Identifier: AGPL-3.0-only
+
+namespace projects {
+
+	// A project's services: programs, like AI agents, given a role made for them,
+	// that work beside its people. Each signs in with a key, shown once when it's
+	// made, and does only what its role allows, here.
+	command service::create
+	command service::update
+	command service::delete
+	command service::key
+	command service::revoke
+
+	view services per project {
+		readers member
+		services = each service in project {
+			order by title
+			title  role  role.title  key_start  key_made  key_used
+		}
+	}
+
+	screen "Services" /:project/services {
+		text "Programs that work beside you, like an AI agent. Give one a role made for"
+			"services, then a key; a phase worked by that role puts its issues in the"
+			"service's queue, which it reads with the neotrac command."
+		table services.services {
+			hide when empty
+			title "Service"
+			role.title "Role"
+			key_start "Key"
+			key_used "Last used"
+			service::key "New key"
+			service::revoke "Revoke"
+			delete "Remove"
+		}
+		service::create "Add a service" form "Add" {
+			title "Called"  role
+		}
+		confirm service::revoke "Revoke its key? It stops working at once."
+		confirm service::delete "Remove this service? Its key stops working at once."
+		link /:project/people "People"
+	}
+
+} // namespace projects

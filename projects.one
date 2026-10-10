@@ -51,11 +51,18 @@ namespace projects at / {
 		issue::update
 		issue::move
 		issue::transfer
+		issue::claim
+		issue::release
 		link::create
 		link::delete
 		comment::create
 		report::resolve
 		reply::create
+		service::create
+		service::update
+		service::delete
+		service::key
+		service::revoke
 	}
 
 	// Works on the project's issues, its milestones and its wiki.
@@ -64,6 +71,8 @@ namespace projects at / {
 		issue::update
 		issue::move
 		issue::transfer
+		issue::claim
+		issue::release
 		link::create
 		link::delete
 		comment::create
@@ -71,6 +80,16 @@ namespace projects at / {
 		milestone::update
 		page::create
 		page::update
+	}
+
+	// A program, like an AI agent, that works the issues in the phases its role
+	// works: it takes one, says what it found, and moves it on where the workflow lets
+	// it. It's given in Services, and signs in with its key.
+	define role agent "Agent" in project for services {
+		issue::claim
+		issue::release
+		issue::move
+		comment::create
 	}
 
 	// Whoever makes a project maintains it, and it starts with a board called what the
@@ -161,7 +180,7 @@ namespace projects at / {
 	view mine per user {
 		each member where person == me {
 			order by project
-			project  project.name  role.title
+			project  project.name  role  role.title
 		}
 	}
 
@@ -357,6 +376,7 @@ namespace projects at / {
 			delete "Withdraw"
 		}
 		link /:project/roles "Roles, and what each allows"
+		link /:project/services "Services, programs that work beside you"
 	}
 
 	// A role's own page, where what it allows is changed.

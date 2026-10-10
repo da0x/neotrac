@@ -19,11 +19,14 @@ namespace projects {
 	// A phase of a board's issues, in its place among the others. Its name is made
 	// from its title when it's added, and stays when it's renamed.
 	entity phase {
-		board     board    required  key
-		name      text     required  key = slug(title)
-		project   project  required
-		title     text     required
-		position  number
+		board      board    required  key
+		name       text     required  key = slug(title)
+		project    project  required
+		title      text     required
+		position   number
+		// The roles whose people and services work its issues: a service holding
+		// one sees them in its queue and takes them, one at a time.
+		worked_by  list of role
 	}
 
 	// From one phase to another, for the roles it names. A step back is a step of
@@ -359,18 +362,19 @@ namespace projects {
 		table board_page.phases {
 			reorder position
 			title "Phase"
-			update "Rename"
+			worked_by.title "Worked by"
+			update "Change"
 			delete "Remove"
 			phase::create "New phase"
 		}
 		form phase::update "Save" {
-			title "Called"
+			title "Called"  worked_by "Worked by"
 		}
 		form phase::delete "Remove" {
 			into "Move its issues to"
 		}
 		form phase::create "Add" {
-			title "Called"
+			title "Called"  worked_by "Worked by"
 		}
 		form board::update "Save" {
 			start "New issues start in"

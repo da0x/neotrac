@@ -122,6 +122,20 @@ namespace projects {
 		}
 	}
 
+	// Taking an issue in a phase a role of yours works, that nobody else has taken,
+	// so two never work it at once.
+	command issue::claim {
+		require held(phase.worked_by)  "this phase isn't worked by a role you hold"
+		require assignees == none || assignees has me  "someone else has taken it"
+		add me to assignees
+	}
+
+	// Letting it go, for someone else to take.
+	command issue::release {
+		require assignees has me  "it isn't yours"
+		remove me from assignees
+	}
+
 	command comment::create
 
 	view issue_page per issue {
@@ -175,6 +189,8 @@ namespace projects {
 		}
 		side {
 			issue::move along issue_page.steps
+			issue::claim "Take it" when !(issue_page.assignees has me)
+			issue::release "Let it go" when issue_page.assignees has me
 			details issue_page {
 				tint by priority
 				phase_title "Phase"

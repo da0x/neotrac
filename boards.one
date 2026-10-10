@@ -47,7 +47,7 @@ namespace projects {
 		}
 		phases = each phase in board {
 			order by position
-			name  title  position
+			name  title  position  worked_by  worked_by.title
 		}
 		steps = each step in board {
 			order by from.position  to.position
