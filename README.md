@@ -45,6 +45,10 @@ users. See `LICENSE`.
   beside its roadmap and recent activity.
 - **Private reports** of problems, like a security hole, read only by the project's
   people and whoever filed each one.
+- **Services** that work beside people: programs, like an AI agent, a project gives
+  the Agent role and a key. A phase says which roles work it; a service takes an
+  issue in one, comments, and moves it on where the workflow lets it, from the
+  `neotrac` command in `cli/`.
 
 ## What's here
 
@@ -60,6 +64,9 @@ One `.one` file for each part:
 - `reports.one`: problems reported to a project privately.
 - `milestones.one`: milestones and the roadmap.
 - `wiki.one`: a project's wiki.
+- `services.one`: a project's services, and their keys.
+- `cli/`: the `neotrac` command, in C++, on the client `one build` writes; its own
+  README says how to build it. GPL-3.0.
 - `migrations.one`: changes to what's stored that a deploy brought, each done once.
   They're kept after they've run, as examples of the language.
 - `about.one` and `about/`: the thank-you to Trac.
