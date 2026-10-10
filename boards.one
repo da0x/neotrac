@@ -59,13 +59,11 @@ namespace projects {
 		heading {
 			board::follow "Follow" icon follow when !(board_page.followers has me)
 			board::unfollow "Stop following" icon following when board_page.followers has me
-			issue::create "New issue" icon add
-			form issue::create "Open issue" {
+			issue::create "New issue" icon add form "Open issue" {
 				title  body "Description"  assignees "Assigned to"  milestone  priority  labels
 			}
 			link /:project/boards/:board/workflow "Workflow" icon workflow
-			board::update "Edit board" icon edit
-			form board::update "Save" {
+			board::update "Edit board" icon edit form "Save" {
 				title
 			}
 		}

@@ -51,8 +51,7 @@ namespace projects {
 
 	screen "{wiki_page.title}" /:project/wiki/:page {
 		heading {
-			page::update "Edit" icon edit
-			form page::update "Save" {
+			page::update "Edit" icon edit form "Save" {
 				title  body
 			}
 		}

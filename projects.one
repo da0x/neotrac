@@ -136,7 +136,10 @@ namespace projects at / {
 	// their own. Only what they may read
 	// is in it, so a private project's changes go once they leave it.
 	view news per user {
-		changes = each change in issue where (board.followers has me || assignees has me || mentioned has me) && created_by != me {
+		changes = each change in issue where {
+			board.followers has me || assignees has me || mentioned has me
+			created_by != me
+		} {
 			order by created_at descending
 			limit 30
 			project  project.name  issue  issue.number  issue.title
@@ -253,12 +256,10 @@ namespace projects at / {
 
 	screen "{project_page.name}" /:project layout two_columns {
 		heading {
-			board::create "New board" icon add
-			form board::create "Create board" {
+			board::create "New board" icon add form "Create board" {
 				title  workflow "Start from"
 			}
-			project::update "Edit project" icon edit
-			form project::update "Save" {
+			project::update "Edit project" icon edit form "Save" {
 				name  summary  visibility  takes_reports
 			}
 		}
@@ -345,8 +346,7 @@ namespace projects at / {
 			delete "Remove" when person != me
 		}
 		confirm member::delete "Take this role away from them?"
-		invitation::create "Add someone"
-		form invitation::create "Invite" {
+		invitation::create "Add someone" form "Invite" {
 			email "Email"  role
 		}
 		text "They join once they sign in with that email. Tell them, and send them here."
@@ -371,15 +371,13 @@ namespace projects at / {
 		table project_page.roles link /:project/roles/:role {
 			title "Role"
 		}
-		role::create "New role"
-		form role::create "Create role" {
+		role::create "New role" form "Create role" {
 			name  title  may "Allows"
 		}
 	}
 
 	screen "{role_page.title}" /:project/roles/:role {
-		role::update "Edit"
-		form role::update "Save" {
+		role::update "Edit" form "Save" {
 			title  may "Allows"
 		}
 	}

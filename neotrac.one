@@ -7,7 +7,7 @@
 import one
 
 project neotrac {
-	one             "0.7.6"
+	one             "0.7.7"
 	region          "us-east4"
 	ui              radix
 	signin          google

@@ -32,8 +32,7 @@ namespace projects {
 	// Each milestone as a card, soonest first: when it's due, and its issues by phase.
 	screen "Roadmap" /:project/roadmap {
 		heading {
-			milestone::create "New milestone"
-			form milestone::create "Add" {
+			milestone::create "New milestone" form "Add" {
 				title  due "Due"  description
 			}
 		}
@@ -46,8 +45,7 @@ namespace projects {
 
 	screen "{milestone_page.title}" /:project/milestones/:milestone under /:project/roadmap "Roadmap" {
 		heading {
-			milestone::update "Edit milestone" icon edit
-			form milestone::update "Save" {
+			milestone::update "Edit milestone" icon edit form "Save" {
 				title  due "Due"  description
 			}
 		}

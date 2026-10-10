@@ -92,46 +92,16 @@ namespace projects {
 		// The other side, said from there. The link made for it has a pair, so it
 		// makes no other.
 		if pair == none {
-			if relation == relation::blocks {
-				dispatch link::create {
-					project = project  pair = id
-					from = to  to = from  relation = relation::blocked_by
-				}
-			}
-			if relation == relation::blocked_by {
-				dispatch link::create {
-					project = project  pair = id
-					from = to  to = from  relation = relation::blocks
-				}
-			}
-			if relation == relation::relates {
-				dispatch link::create {
-					project = project  pair = id
-					from = to  to = from  relation = relation::relates
-				}
-			}
-			if relation == relation::duplicates {
-				dispatch link::create {
-					project = project  pair = id
-					from = to  to = from  relation = relation::duplicated_by
-				}
-			}
-			if relation == relation::duplicated_by {
-				dispatch link::create {
-					project = project  pair = id
-					from = to  to = from  relation = relation::duplicates
-				}
-			}
-			if relation == relation::replaces {
-				dispatch link::create {
-					project = project  pair = id
-					from = to  to = from  relation = relation::replaced_by
-				}
-			}
-			if relation == relation::replaced_by {
-				dispatch link::create {
-					project = project  pair = id
-					from = to  to = from  relation = relation::replaces
+			dispatch link::create {
+				project = project  pair = id  from = to  to = from
+				relation = match relation {
+					blocks         blocked_by
+					blocked_by     blocks
+					relates        relates
+					duplicates     duplicated_by
+					duplicated_by  duplicates
+					replaces       replaced_by
+					replaced_by    replaces
 				}
 			}
 		}
@@ -139,7 +109,7 @@ namespace projects {
 
 	// Both sides go together.
 	command link::delete {
-		each link where pair == id || id == pair {
+		each other link where other.pair == id || other.id == pair {
 			dispatch link::delete
 		}
 	}
@@ -147,7 +117,9 @@ namespace projects {
 	// Along a step from the phase it's in, that one of the person's roles may take.
 	command issue::move {
 		changes phase
-		require exists(step where from == was issue.phase && to == issue.phase && held(roles))  "your role doesn't move an issue from there to there"
+		require "your role doesn't move an issue from there to there" {
+			exists(step where from == was issue.phase && to == issue.phase && held(roles))
+		}
 	}
 
 	command comment::create
@@ -211,16 +183,13 @@ namespace projects {
 				priority "Priority"
 				labels "Labels"
 			}
-			issue::update "Edit"
-			form issue::update "Save" {
+			issue::update "Edit" form "Save" {
 				title  body "Description"  assignees "Assigned to"  milestone  priority  labels
 			}
-			link::create "Link an issue"
-			form link::create "Link" {
+			link::create "Link an issue" form "Link" {
 				relation "This issue"  to "Issue"
 			}
-			issue::transfer "Transfer to another board"
-			form issue::transfer "Transfer" {
+			issue::transfer "Transfer to another board" form "Transfer" {
 				board "Board"
 			}
 			copy issue_page "Copy issue"

@@ -66,8 +66,7 @@ namespace projects {
 	screen "Report a problem" /:project/report {
 		text "Tell the project's maintainers about a problem privately."
 			"Only they and you can read it."
-		report::create
-		form report::create {
+		report::create form {
 			title  body
 		}
 	}
@@ -92,8 +91,7 @@ namespace projects {
 			body
 			created_at "Written"
 		}
-		reply::create
-		form reply::create {
+		reply::create form {
 			body
 		}
 	}
