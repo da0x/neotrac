@@ -9,13 +9,16 @@
 #      step into it, and Agent's step out of it to Verifying;
 #   2. a service, Scout, given Agent and a key;
 #   3. a running `neotrac queue --watch --json` shows the issue a person moves in;
-#   4. two services claim it at once: one wins, the other exits 5;
+#   4. two services claim it at once: one wins, the other exits 5, and can't move it
+#      either until the winner's lease runs out, when it takes it instead;
 #   5. the service comments, is refused a move its role can't make (exit 5, the
 #      moves it can make listed) and makes the one it can;
 #   6. the issue's history names the service;
 #   7. once its key is revoked, the next command exits 3;
 #   8. a person logs in through the browser, here a script that presses Authorize,
-#      and a turned-down login exits 3.
+#      and a turned-down login exits 3;
+#   9. neotrac work takes an issue moved into Investigate, runs a program on it, and
+#      moves it on, or lets it go when the program fails.
 #
 # Needs the emulators (firestore localhost:8080, auth localhost:9099), ../build/api
 # from one build, and ./neotrac from make. Project demo-uione is cleared first.
@@ -37,7 +40,8 @@ logs=$(mktemp -d)
 cleanup() {
 	[ -n "${backend:-}" ] && kill "$backend" 2>/dev/null
 	[ -n "${watching:-}" ] && kill "$watching" 2>/dev/null
-	rm -rf "$XDG_CONFIG_HOME" "$logs"
+	# KEEP_LOGS=1 keeps what each command said, to see why a check failed.
+	if [ -n "${KEEP_LOGS:-}" ]; then echo "logs kept in $logs" >&2; else rm -rf "$XDG_CONFIG_HOME" "$logs"; fi
 }
 trap cleanup EXIT
 
@@ -98,8 +102,20 @@ a=$?
 wait $second
 b=$?
 check "two claims at once: one wins, the other exits 5" test "$(printf '%s\n' $a $b | sort | tr '\n' ' ')" = "0 5 "
-winner=$scout
-[ $a -ne 0 ] && winner=$ranger
+winner=$scout loser=$ranger
+[ $a -ne 0 ] && winner=$ranger loser=$scout
+"$neotrac" show 1 >"$logs/held" 2>&1
+check "a claimed issue shows who holds it, and until when" grep -Eq ", held by (Scout|Ranger) until [0-9]{2}:[0-9]{2}" "$logs/held"
+NEOTRAC_KEY=$loser "$neotrac" move 1 verifying >"$logs/not-theirs" 2>&1
+check "nobody else moves an issue someone holds" test $? -eq 5
+check "and says why" grep -q "someone else holds it" "$logs/not-theirs"
+# Half an hour on, the lease runs out: its end is put in the past.
+curl -s -X PATCH -H "Authorization: Bearer owner" -H "Content-Type: application/json" \
+	"http://localhost:8080/v1/projects/demo-uione/databases/(default)/documents/projects_issue/e2e-1?updateMask.fieldPaths=held_until" \
+	-d '{"fields":{"held_until":{"timestampValue":"2020-01-01T00:00:00Z"}}}' >/dev/null
+NEOTRAC_KEY=$loser "$neotrac" claim 1 >"$logs/retaken" 2>&1
+check "once a lease runs out, another takes the issue" test $? -eq 0
+winner=$loser
 "$neotrac" comment 1 -m "Found it: a nil map on save." >/dev/null 2>&1 || true
 NEOTRAC_KEY=$winner "$neotrac" move 1 closed >"$logs/refused" 2>&1
 refused=$?
@@ -245,5 +261,37 @@ check "and it's gone" test "$(grep -c '"project":"lab"' "$logs/projects")" = 0
 BROWSER_ANSWER=denied timeout 30 "$neotrac" login >/dev/null 2>"$logs/denied"
 check "a login turned down in the browser exits 3" test $? -eq 3
 check "and says so" grep -q "it was turned down in the browser" "$logs/denied"
+
+# A worker: neotrac work takes what's moved into a phase its role works, runs a
+# program on it, says what the program wrote, and moves it on, or lets it go when the
+# program fails.
+issue_in_investigate() {
+	local id
+	id=$(as "$person" projects/issue/create "{\"project\":\"e2e\",\"board\":\"e2e-main\",\"title\":\"$1\"}" | python3 -c 'import json,sys; print(json.load(sys.stdin)["id"])')
+	as "$person" projects/issue/move "{\"id\":\"$id\",\"phase\":\"e2e-main-investigate\"}" >/dev/null
+	echo "${id#e2e-}"
+}
+cat >"$logs/fix" <<'FIX'
+#!/bin/bash
+title=$(python3 -c 'import json,sys; print(json.load(sys.stdin)["title"])')
+[ -d "$WORK_DIR/out" ] || exit 9
+if [ "$title" = "Flaky test" ]; then echo "Looked at $title: a race in setup."; else echo "can't reproduce $title" >&2; exit 1; fi
+FIX
+chmod +x "$logs/fix"
+worked=$(issue_in_investigate "Flaky test")
+NEOTRAC_KEY=$ranger timeout 60 "$neotrac" work --run "$logs/fix" --done verifying --once >/dev/null 2>"$logs/work"
+check "a worker takes an issue, runs its program, and finishes" test $? -eq 0
+"$neotrac" show issue "$worked" --json >"$logs/worked.json"
+"$neotrac" show issue "$worked" >"$logs/worked"
+check "moving it where it goes when done" grep -q '"phase":"Verifying"' "$logs/worked.json"
+check "saying what the program wrote" grep -q "Looked at Flaky test: a race in setup." "$logs/worked"
+check "and holding it no longer" grep -q '"held_by":""' "$logs/worked.json"
+failing=$(issue_in_investigate "Ghost bug")
+NEOTRAC_KEY=$ranger timeout 60 "$neotrac" work --run "$logs/fix" --done verifying --once >/dev/null 2>"$logs/work"
+"$neotrac" show issue "$failing" --json >"$logs/failed.json"
+"$neotrac" show issue "$failing" >"$logs/failed"
+check "a program that fails leaves the issue where it was" grep -q '"phase":"Investigate"' "$logs/failed.json"
+check "saying why" grep -q "can't reproduce Ghost bug" "$logs/failed"
+check "and lets it go, for another to take" grep -q '"held_by":""' "$logs/failed.json"
 
 if [ $failures -eq 0 ]; then echo "all passed"; else echo "$failures failed"; exit 1; fi

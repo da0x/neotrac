@@ -47,8 +47,9 @@ users. See `LICENSE`.
   people and whoever filed each one.
 - **Services** that work beside people: programs, like an AI agent, a project gives
   the Agent role and a key. A phase says which roles work it; a service takes an
-  issue in one, comments, and moves it on where the workflow lets it, from the
-  `neotrac` command in `cli/`.
+  issue in one, holding it for half an hour at a time, comments, and moves it on
+  where the workflow lets it, from the `neotrac` command in `cli/`, whose `neotrac
+  work` runs a program on each issue as it comes.
 
 ## What's here
 

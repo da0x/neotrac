@@ -34,7 +34,9 @@
 #include <string>
 #include <spawn.h>
 #include <sys/stat.h>
+#include <sys/wait.h>
 #include <termios.h>
+#include <thread>
 #include <unistd.h>
 #include <vector>
 
@@ -42,7 +44,7 @@ namespace {
 
 	using namespace neotrac;
 
-	constexpr const char* version = "0.3.0";
+	constexpr const char* version = "0.4.0";
 
 	// What went wrong, as the exit code a script reads.
 	enum exit_code : int {
@@ -75,7 +77,7 @@ namespace {
 
 	// Flags that take a value, like --board main; any other is on or off.
 	const std::set<std::string> valued{"board", "project", "server", "message", "m", "title", "body", "priority", "labels",
-	                                   "due", "name", "summary", "visibility", "workflow", "slug", "confirm",
+	                                   "due", "name", "summary", "visibility", "workflow", "slug", "confirm", "run", "done", "failed",
 	                                   "milestone"};
 
 	asked read_arguments(int count, char** given) {
@@ -272,11 +274,11 @@ namespace {
 		return n;
 	}
 
-	// One issue waiting in a phase a role of yours works.
+	// One issue waiting in a phase a role of yours works, and who holds it, if its
+	// lease hasn't run out.
 	struct waiting {
-		std::string id, title, phase_title, board_title, priority;
+		std::string id, title, phase_title, board_title, priority, holder;
 		double number = 0;
-		std::vector<std::string> assigned;
 		bool yours = false;
 	};
 
@@ -287,19 +289,20 @@ namespace {
 		return it == order.end() ? 2 : static_cast<int>(it - order.begin());
 	}
 
-	std::vector<waiting> queue_of(const session& s, const std::map<std::string, projects::board_page>& boards, const std::map<std::string, std::string>& titles, bool all) {
+	// What's worked by each of your roles, on the boards asked about: the issues free
+	// to take and yours, or, with --all, those others hold too.
+	std::vector<waiting> queue_of(const session& s, const std::map<std::string, projects::issue_work>& works, const std::map<std::string, std::string>& titles, bool all) {
 		std::vector<waiting> out;
-		for (const auto& [board, page] : boards) {
-			std::map<std::string, const projects::board_page::phases_row*> worked;
-			for (const auto& phase : page.phases) {
-				if (shares(phase.worked_by, s.roles)) worked[phase.id] = &phase;
-			}
-			for (const auto& issue : page.issues) {
-				auto phase = worked.find(issue.phase);
-				if (phase == worked.end()) continue;
-				bool yours = std::ranges::find(issue.assignees, s.who.id) != issue.assignees.end();
-				if (!all && !issue.assignees.empty() && !yours) continue;
-				out.push_back({issue.id, issue.title, phase->second->title, titles.at(board), projects::to_string(issue.priority), issue.number, issue.assignees_name, yours});
+		std::set<std::string> seen;
+		auto now = std::chrono::system_clock::now();
+		for (const auto& [role, work] : works) {
+			for (const auto& issue : work.items) {
+				if (!titles.contains(issue.board) || !seen.insert(issue.id).second) continue;
+				bool held = !issue.held_by.empty() && issue.held_until > now;
+				bool yours = held && issue.held_by == s.who.id;
+				if (!all && held && !yours) continue;
+				out.push_back({issue.id, issue.title, issue.phase_title, titles.at(issue.board), projects::to_string(issue.priority),
+				               held ? issue.held_by_name : "", issue.number, yours});
 			}
 		}
 		std::ranges::sort(out, [](const waiting& a, const waiting& b) {
@@ -314,7 +317,7 @@ namespace {
 			const auto& w = q[i];
 			out += (i ? "," : "") + std::string("{\"number\":") + json(w.number) + ",\"id\":" + json(w.id) + ",\"title\":" + json(w.title) +
 			       ",\"priority\":" + json(w.priority) + ",\"phase\":" + json(w.phase_title) + ",\"board\":" + json(w.board_title) +
-			       ",\"assigned\":" + json(w.assigned) + ",\"yours\":" + json(w.yours) + "}";
+			       ",\"held_by\":" + json(w.holder) + ",\"yours\":" + json(w.yours) + "}";
 		}
 		return out + "]";
 	}
@@ -325,15 +328,16 @@ namespace {
 			return;
 		}
 		for (const auto& w : q) {
-			std::string who = w.yours ? "yours" : w.assigned.empty() ? "free" : "taken by " + w.assigned.front();
+			std::string who = w.yours ? "yours" : w.holder.empty() ? "free" : "held by " + w.holder;
 			std::printf("#%-5.0f %-8s %-12s %-40s %s\n", w.number, w.priority.c_str(), w.phase_title.c_str(), w.title.substr(0, 40).c_str(), who.c_str());
 		}
 	}
 
 	volatile std::sig_atomic_t stopping = 0;
 
-	int queue(const asked& a) {
-		auto s = sign_in(a);
+	// The boards worked on, by id, with their titles: the one selected or named, or
+	// every one of the project's.
+	std::map<std::string, std::string> boards_worked(session& s) {
 		auto project = s.app->project_page(s.project).get();
 		if (!project.exists) throw stop(not_found, "there's no project " + s.project + " you may read");
 		std::map<std::string, std::string> titles;
@@ -341,23 +345,31 @@ namespace {
 			if (s.board.empty() || board.name == s.board || board.id == s.board) titles[board.id] = board.title;
 		}
 		if (titles.empty()) throw stop(not_found, "there's no board " + s.board + " in " + s.project);
+		if (s.roles.empty()) throw stop(not_found, "you hold no role in " + s.project + ", so nothing is worked by you there");
+		return titles;
+	}
+
+	int queue(const asked& a) {
+		auto s = sign_in(a);
+		auto titles = boards_worked(s);
 		bool all = a.has("all"), as_json = a.has("json");
 		if (!a.has("watch")) {
-			std::map<std::string, projects::board_page> boards;
-			for (const auto& [board, _] : titles) boards[board] = s.app->board_page(board).get();
-			auto q = queue_of(s, boards, titles, all);
+			std::map<std::string, projects::issue_work> works;
+			for (const auto& role : s.roles) works[role] = s.app->issue_work(role).get();
+			auto q = queue_of(s, works, titles, all);
 			if (as_json) std::puts(queue_json(q).c_str());
 			else print_queue(q);
 			return done;
 		}
-		// Watching: each board listened to, and the queue said again whenever one changes.
-		std::map<std::string, projects::board_page> boards;
+		// Watching: what each role works, listened to, and the queue said again whenever
+		// it changes, or a lease runs out.
+		std::map<std::string, projects::issue_work> works;
 		std::vector<ember::database::registration> listening;
 		std::string last;
 		int failed = done;
 		auto say = [&] {
-			if (boards.size() != titles.size()) return;
-			auto q = queue_of(s, boards, titles, all);
+			if (works.size() != s.roles.size()) return;
+			auto q = queue_of(s, works, titles, all);
 			std::string now = queue_json(q);
 			if (now == last) return;
 			last = now;
@@ -370,10 +382,10 @@ namespace {
 			}
 			std::fflush(stdout);
 		};
-		for (const auto& [board, _] : titles) {
-			listening.push_back(s.app->board_page(board).listen(
-			    [&, board](const projects::board_page& page) {
-				    boards[board] = page;
+		for (const auto& role : s.roles) {
+			listening.push_back(s.app->issue_work(role).listen(
+			    [&, role](const projects::issue_work& work) {
+				    works[role] = work;
 				    say();
 			    },
 			    [&](const ember::error& e) {
@@ -384,7 +396,10 @@ namespace {
 		}
 		std::signal(SIGINT, [](int) { stopping = 1; });
 		std::signal(SIGTERM, [](int) { stopping = 1; });
-		while (!stopping) s.here->run_one_for(std::chrono::milliseconds(250));
+		while (!stopping) {
+			s.here->run_one_for(std::chrono::milliseconds(250));
+			say();  // a lease that ran out frees its issue without a change to listen to
+		}
 		return failed;
 	}
 
@@ -410,13 +425,27 @@ namespace {
 
 	std::string text_of(const ember::value& v) { return v.is_string() ? v.as_string() : v.is_null() ? "" : ember::to_json(v); }
 
+	// Whether someone holds it: they claimed it, and their lease hasn't run out.
+	bool held(const projects::issue_page& page) { return !page.held_by.empty() && page.held_until > std::chrono::system_clock::now(); }
+
+	// A time today as 14:20, in this computer's zone.
+	std::string clock_of(neotrac::time t) {
+		std::time_t at = std::chrono::system_clock::to_time_t(std::chrono::time_point_cast<std::chrono::system_clock::duration>(t));
+		std::tm local{};
+		::localtime_r(&at, &local);
+		char out[8];
+		std::strftime(out, sizeof out, "%H:%M", &local);
+		return out;
+	}
+
 	void print_issue(const session& s, const projects::issue_page& page, bool history) {
 		std::printf("#%.0f %s\n", page.number, page.title.c_str());
 		std::printf("%s on %s, %s priority", page.phase_title.c_str(), page.board_title.c_str(), projects::to_string(page.priority));
 		if (!page.assigned.empty()) {
-			std::printf(", taken by");
+			std::printf(", assigned to");
 			for (std::size_t i = 0; i < page.assigned.size(); ++i) std::printf("%s %s", i ? "," : "", page.assigned[i].c_str());
 		}
+		if (held(page)) std::printf(", held by %s until %s", page.holder.c_str(), clock_of(page.held_until).c_str());
 		if (!page.labels.empty()) {
 			std::printf("; labels");
 			for (const auto& l : page.labels) std::printf(" %s", l.c_str());
@@ -441,7 +470,7 @@ namespace {
 	std::string issue_json(const session& s, const projects::issue_page& page) {
 		std::string out = "{\"number\":" + json(page.number) + ",\"title\":" + json(page.title) + ",\"body\":" + json(page.body) + ",\"phase\":" +
 		                  json(page.phase_title) + ",\"board\":" + json(page.board_title) + ",\"priority\":" + json(std::string(projects::to_string(page.priority))) +
-		                  ",\"labels\":" + json(page.labels) + ",\"assigned\":" + json(page.assigned) + ",\"milestone\":" + json(page.milestone_title) + ",\"links\":[";
+		                  ",\"labels\":" + json(page.labels) + ",\"assigned\":" + json(page.assigned) + ",\"held_by\":" + json(held(page) ? page.holder : std::string()) + ",\"milestone\":" + json(page.milestone_title) + ",\"links\":[";
 		for (std::size_t i = 0; i < page.links.size(); ++i) {
 			out += (i ? "," : "") + std::string("{\"relation\":") + json(std::string(projects::to_string(page.links[i].relation))) +
 			       ",\"to\":" + json(page.links[i].to_number) + "}";
@@ -484,6 +513,169 @@ namespace {
 		std::signal(SIGINT, [](int) { stopping = 1; });
 		std::signal(SIGTERM, [](int) { stopping = 1; });
 		while (!stopping) s.here->run_one_for(std::chrono::milliseconds(250));
+		return failed;
+	}
+
+	int code_of(int status);
+
+	// The last lines of what a program wrote, for a comment.
+	std::string tail_of(const std::string& path, std::size_t lines) {
+		std::ifstream in(path);
+		std::vector<std::string> kept;
+		for (std::string line; std::getline(in, line);) {
+			kept.push_back(line);
+			if (kept.size() > lines) kept.erase(kept.begin());
+		}
+		std::string out;
+		for (const auto& line : kept) out += line + "\n";
+		while (!out.empty() && (out.back() == '\n' || out.back() == ' ')) out.pop_back();
+		return out;
+	}
+
+	// The phase of an issue's board by its name, title or id.
+	std::string phase_named(session& s, const projects::issue_page& page, const std::string& word) {
+		auto board = s.app->board_page(page.board).get();
+		for (const auto& phase : board.phases) {
+			if (lower(phase.name) == lower(word) || lower(phase.title) == lower(word) || phase.id == word) return phase.id;
+		}
+		throw stop(usage, "there's no phase " + word + " on " + page.board_title);
+	}
+
+	// Works one issue it holds: runs the program with the issue as JSON on its input,
+	// in a folder of its own, WORK_DIR, keeping its claim while it runs; then says
+	// what it wrote, and moves it on, or, when it fails, back or lets it go.
+	void work_on(session& s, const std::string& id, const std::string& program, const std::string& done_word, const std::string& failed_word) {
+		auto page = read_issue(s, id, id);
+		std::string number = "#" + std::to_string(static_cast<long long>(page.number));
+		std::string root = (env("TMPDIR").empty() ? std::string("/tmp") : env("TMPDIR")) + "/neotrac-work-XXXXXX";
+		if (!::mkdtemp(root.data())) throw stop(other, "couldn't make a folder to work in");
+		std::string folder = root + "/work";
+		std::filesystem::create_directories(folder + "/out");
+		std::string out_path = root + "/stdout", err_path = root + "/stderr";
+		int input[2];
+		if (::pipe(input) != 0) throw stop(other, "couldn't start " + program);
+		posix_spawn_file_actions_t files;
+		posix_spawn_file_actions_init(&files);
+		posix_spawn_file_actions_adddup2(&files, input[0], STDIN_FILENO);
+		posix_spawn_file_actions_addclose(&files, input[1]);
+		posix_spawn_file_actions_addopen(&files, STDOUT_FILENO, out_path.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0600);
+		posix_spawn_file_actions_addopen(&files, STDERR_FILENO, err_path.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0600);
+		::setenv("WORK_DIR", folder.c_str(), 1);
+		::setenv("NEOTRAC_ISSUE", std::to_string(static_cast<long long>(page.number)).c_str(), 1);
+		std::string script = program;
+		char sh[] = "/bin/sh", c[] = "-c";
+		char* argv[] = {sh, c, script.data(), nullptr};
+		pid_t child;
+		int started = ::posix_spawn(&child, "/bin/sh", &files, nullptr, argv, environ);
+		posix_spawn_file_actions_destroy(&files);
+		::close(input[0]);
+		if (started != 0) {
+			::close(input[1]);
+			throw stop(other, "couldn't start " + program);
+		}
+		std::string given = issue_json(s, page) + "\n";
+		(void)!::write(input[1], given.data(), given.size());
+		::close(input[1]);
+		std::fprintf(stderr, "%s %s: working\n", number.c_str(), page.title.c_str());
+		// Kept while it runs: renewed every five minutes, well inside any lease.
+		auto renewed = std::chrono::steady_clock::now();
+		int status = 0;
+		bool lost = false;
+		while (::waitpid(child, &status, WNOHANG) == 0) {
+			std::this_thread::sleep_for(std::chrono::milliseconds(200));
+			if (std::chrono::steady_clock::now() - renewed < std::chrono::minutes(5)) continue;
+			try {
+				s.app->issue_renew({.id = id});
+				renewed = std::chrono::steady_clock::now();
+			} catch (const refused& r) {
+				// Someone else has it now: what this run makes is no longer wanted.
+				std::fprintf(stderr, "%s: lost it: %s\n", number.c_str(), r.what());
+				::kill(child, SIGTERM);
+				lost = true;
+			}
+		}
+		bool fine = !lost && WIFEXITED(status) && WEXITSTATUS(status) == 0;
+		try {
+			if (lost) {
+				// Nothing to say or move: it isn't this worker's any more.
+			} else if (fine) {
+				std::string said = tail_of(out_path, 40);
+				if (!said.empty()) s.app->comment_create({.issue = id, .body = said});
+				projects::issue_move sent{.id = id};
+				sent.phase = phase_named(s, page, done_word);
+				s.app->issue_move(sent);
+				std::fprintf(stderr, "%s: done, moved to %s\n", number.c_str(), done_word.c_str());
+			} else {
+				std::string why = WIFEXITED(status) ? "exited " + std::to_string(WEXITSTATUS(status)) : "was stopped";
+				std::string said = tail_of(err_path, 40);
+				s.app->comment_create({.issue = id, .body = program + " " + why + (said.empty() ? "." : ":\n\n```\n" + said + "\n```")});
+				if (!failed_word.empty()) {
+					projects::issue_move sent{.id = id};
+					sent.phase = phase_named(s, page, failed_word);
+					s.app->issue_move(sent);
+					std::fprintf(stderr, "%s: failed, moved to %s\n", number.c_str(), failed_word.c_str());
+				} else {
+					s.app->issue_release({.id = id});
+					std::fprintf(stderr, "%s: failed, let go\n", number.c_str());
+				}
+			}
+		} catch (const refused& r) {
+			std::fprintf(stderr, "%s: %s\n", number.c_str(), r.what());
+			try {
+				s.app->issue_release({.id = id});
+			} catch (const refused&) {
+			}
+		}
+		std::error_code ignored;
+		std::filesystem::remove_all(root, ignored);
+	}
+
+	// Works the issues in phases a role of yours works, one at a time, as they come:
+	// takes one, runs the program on it, and moves it on. --once stops after one.
+	int work(const asked& a) {
+		auto s = sign_in(a);
+		std::string program = a.flag("run"), done_word = a.flag("done"), failed_word = a.flag("failed");
+		if (program.empty() || done_word.empty()) throw stop(usage, "say what to run and where it goes when it's done, like neotrac work --run ./fix --done review");
+		auto titles = boards_worked(s);
+		bool once = a.has("once");
+		std::map<std::string, projects::issue_work> works;
+		std::vector<ember::database::registration> listening;
+		int failed = done;
+		for (const auto& role : s.roles) {
+			listening.push_back(s.app->issue_work(role).listen([&, role](const projects::issue_work& work) { works[role] = work; },
+			                                                     [&](const ember::error& e) {
+				                                                     std::fprintf(stderr, "neotrac: %s\n", e.message.c_str());
+				                                                     failed = e.code == 7 ? signed_out : other;
+				                                                     stopping = 1;
+			                                                     }));
+		}
+		std::signal(SIGINT, [](int) { stopping = 1; });
+		std::signal(SIGTERM, [](int) { stopping = 1; });
+		std::set<std::string> tried;  // taken by someone else as it was asked for; tried again once it changes
+		std::string seen;
+		std::fprintf(stderr, "Working %s as %s; waiting for issues.\n", s.project.c_str(), s.who.name.c_str());
+		while (!stopping) {
+			s.here->run_one_for(std::chrono::milliseconds(250));
+			if (works.size() != s.roles.size()) continue;
+			auto q = queue_of(s, works, titles, false);
+			std::string now = queue_json(q);
+			if (now != seen) tried.clear(), seen = now;
+			auto next = std::ranges::find_if(q, [&](const waiting& w) { return !tried.contains(w.id); });
+			if (next == q.end()) continue;
+			std::string id = next->id;
+			if (!next->yours) {
+				try {
+					s.app->issue_claim({.id = id});
+				} catch (const refused& r) {
+					if (code_of(r.status) != said_no) throw;
+					tried.insert(id);
+					continue;
+				}
+			}
+			work_on(s, id, program, done_word, failed_word);
+			tried.insert(id);  // until the queue says it's gone, or changed
+			if (once) break;
+		}
 		return failed;
 	}
 
@@ -1414,6 +1606,9 @@ Writing, in your editor ($VISUAL, $EDITOR or vi)
 
 Working an issue
   neotrac claim 42, neotrac release 42
+  neotrac work --run ./fix --done review [--failed backlog] [--once]
+                                 takes each issue a role of yours works as it comes,
+                                 runs the program on it, and moves it on
   neotrac move 42 review         where the workflow lets your role
   neotrac link 42 blocked_by 9   or blocks, relates, duplicates, replaces
   neotrac unlink 42 relates 9    takes a link away, both sides
@@ -1454,6 +1649,7 @@ connection, 7 too many requests.
 		if (a.command == "release") return claim(on_issue(a), false);
 		if (a.command == "move") return move(on_issue(a));
 		if (a.command == "comment") return comment(on_issue(a));
+		if (a.command == "work") return work(a);
 		if (a.command == "link") return link(a, true);
 		if (a.command == "unlink") return link(a, false);
 		throw stop(usage, "there's no command " + a.command + "; neotrac help lists them");

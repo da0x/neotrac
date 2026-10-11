@@ -431,6 +431,8 @@ namespace neotrac {
 			::neotrac::projects::priority priority{};
 			std::vector<std::string> assignees{};
 			std::string milestone{};
+			std::string held_by{};
+			time held_until{};
 
 			static issue from(const ember::value& v) {
 				issue out;
@@ -450,6 +452,8 @@ namespace neotrac {
 				out.priority = detail::choice<::neotrac::projects::priority>(v["priority"]);
 				out.assignees = detail::texts(v["assignees"]);
 				out.milestone = detail::text(v["milestone"]);
+				out.held_by = detail::text(v["held_by"]);
+				out.held_until = detail::when(v["held_until"]);
 				return out;
 			}
 		};
@@ -964,6 +968,8 @@ namespace neotrac {
 			std::optional<::neotrac::projects::priority> priority{};
 			std::optional<std::vector<std::string>> assignees{};
 			std::optional<std::string> milestone{};
+			std::optional<std::string> held_by{};
+			std::optional<time> held_until{};
 
 			std::string json() const {
 				std::string out = "{";
@@ -979,6 +985,8 @@ namespace neotrac {
 				if (priority) add("priority", detail::json(std::string(to_string(*priority))));
 				if (assignees) add("assignees", detail::json(*assignees));
 				if (milestone) add("milestone", detail::json(*milestone));
+				if (held_by) add("held_by", detail::json(*held_by));
+				if (held_until) add("held_until", detail::json(*held_until));
 				return out + "}";
 			}
 		};
@@ -997,6 +1005,8 @@ namespace neotrac {
 			std::optional<::neotrac::projects::priority> priority{};
 			std::optional<std::vector<std::string>> assignees{};
 			std::optional<std::string> milestone{};
+			std::optional<std::string> held_by{};
+			std::optional<time> held_until{};
 
 			std::string json() const {
 				std::string out = "{";
@@ -1013,6 +1023,8 @@ namespace neotrac {
 				if (priority) add("priority", detail::json(std::string(to_string(*priority))));
 				if (assignees) add("assignees", detail::json(*assignees));
 				if (milestone) add("milestone", detail::json(*milestone));
+				if (held_by) add("held_by", detail::json(*held_by));
+				if (held_until) add("held_until", detail::json(*held_until));
 				return out + "}";
 			}
 		};
@@ -1031,6 +1043,8 @@ namespace neotrac {
 			std::optional<::neotrac::projects::priority> priority{};
 			std::optional<std::vector<std::string>> assignees{};
 			std::optional<std::string> milestone{};
+			std::optional<std::string> held_by{};
+			std::optional<time> held_until{};
 
 			std::string json() const {
 				std::string out = "{";
@@ -1047,6 +1061,8 @@ namespace neotrac {
 				if (priority) add("priority", detail::json(std::string(to_string(*priority))));
 				if (assignees) add("assignees", detail::json(*assignees));
 				if (milestone) add("milestone", detail::json(*milestone));
+				if (held_by) add("held_by", detail::json(*held_by));
+				if (held_until) add("held_until", detail::json(*held_until));
 				return out + "}";
 			}
 		};
@@ -1093,108 +1109,6 @@ namespace neotrac {
 			}
 		};
 
-		// What issue::move is sent.
-		struct issue_move {
-			std::string id{};
-			std::optional<std::string> project{};
-			std::optional<double> number{};
-			std::optional<std::string> board{};
-			std::optional<std::string> title{};
-			std::optional<std::string> body{};
-			std::optional<std::vector<std::string>> labels{};
-			std::optional<std::string> author{};
-			std::optional<std::string> phase{};
-			std::optional<::neotrac::projects::priority> priority{};
-			std::optional<std::vector<std::string>> assignees{};
-			std::optional<std::string> milestone{};
-
-			std::string json() const {
-				std::string out = "{";
-				auto add = [&](const char* name, const std::string& value) { out += (out.size() > 1 ? "," : "") + detail::json(std::string(name)) + ":" + value; };
-				add("id", detail::json(id));
-				if (project) add("project", detail::json(*project));
-				if (number) add("number", detail::json(*number));
-				if (board) add("board", detail::json(*board));
-				if (title) add("title", detail::json(*title));
-				if (body) add("body", detail::json(*body));
-				if (labels) add("labels", detail::json(*labels));
-				if (author) add("author", detail::json(*author));
-				if (phase) add("phase", detail::json(*phase));
-				if (priority) add("priority", detail::json(std::string(to_string(*priority))));
-				if (assignees) add("assignees", detail::json(*assignees));
-				if (milestone) add("milestone", detail::json(*milestone));
-				return out + "}";
-			}
-		};
-
-		// What issue::claim is sent.
-		struct issue_claim {
-			std::string id{};
-			std::optional<std::string> project{};
-			std::optional<double> number{};
-			std::optional<std::string> board{};
-			std::optional<std::string> title{};
-			std::optional<std::string> body{};
-			std::optional<std::vector<std::string>> labels{};
-			std::optional<std::string> author{};
-			std::optional<std::string> phase{};
-			std::optional<::neotrac::projects::priority> priority{};
-			std::optional<std::vector<std::string>> assignees{};
-			std::optional<std::string> milestone{};
-
-			std::string json() const {
-				std::string out = "{";
-				auto add = [&](const char* name, const std::string& value) { out += (out.size() > 1 ? "," : "") + detail::json(std::string(name)) + ":" + value; };
-				add("id", detail::json(id));
-				if (project) add("project", detail::json(*project));
-				if (number) add("number", detail::json(*number));
-				if (board) add("board", detail::json(*board));
-				if (title) add("title", detail::json(*title));
-				if (body) add("body", detail::json(*body));
-				if (labels) add("labels", detail::json(*labels));
-				if (author) add("author", detail::json(*author));
-				if (phase) add("phase", detail::json(*phase));
-				if (priority) add("priority", detail::json(std::string(to_string(*priority))));
-				if (assignees) add("assignees", detail::json(*assignees));
-				if (milestone) add("milestone", detail::json(*milestone));
-				return out + "}";
-			}
-		};
-
-		// What issue::release is sent.
-		struct issue_release {
-			std::string id{};
-			std::optional<std::string> project{};
-			std::optional<double> number{};
-			std::optional<std::string> board{};
-			std::optional<std::string> title{};
-			std::optional<std::string> body{};
-			std::optional<std::vector<std::string>> labels{};
-			std::optional<std::string> author{};
-			std::optional<std::string> phase{};
-			std::optional<::neotrac::projects::priority> priority{};
-			std::optional<std::vector<std::string>> assignees{};
-			std::optional<std::string> milestone{};
-
-			std::string json() const {
-				std::string out = "{";
-				auto add = [&](const char* name, const std::string& value) { out += (out.size() > 1 ? "," : "") + detail::json(std::string(name)) + ":" + value; };
-				add("id", detail::json(id));
-				if (project) add("project", detail::json(*project));
-				if (number) add("number", detail::json(*number));
-				if (board) add("board", detail::json(*board));
-				if (title) add("title", detail::json(*title));
-				if (body) add("body", detail::json(*body));
-				if (labels) add("labels", detail::json(*labels));
-				if (author) add("author", detail::json(*author));
-				if (phase) add("phase", detail::json(*phase));
-				if (priority) add("priority", detail::json(std::string(to_string(*priority))));
-				if (assignees) add("assignees", detail::json(*assignees));
-				if (milestone) add("milestone", detail::json(*milestone));
-				return out + "}";
-			}
-		};
-
 		// What comment::create is sent.
 		struct comment_create {
 			std::optional<std::string> issue{};
@@ -1227,6 +1141,8 @@ namespace neotrac {
 			std::optional<::neotrac::projects::priority> priority{};
 			std::optional<std::vector<std::string>> assignees{};
 			std::optional<std::string> milestone{};
+			std::optional<std::string> held_by{};
+			std::optional<time> held_until{};
 
 			std::string json() const {
 				std::string out = "{";
@@ -1243,6 +1159,8 @@ namespace neotrac {
 				if (priority) add("priority", detail::json(std::string(to_string(*priority))));
 				if (assignees) add("assignees", detail::json(*assignees));
 				if (milestone) add("milestone", detail::json(*milestone));
+				if (held_by) add("held_by", detail::json(*held_by));
+				if (held_until) add("held_until", detail::json(*held_until));
 				return out + "}";
 			}
 		};
@@ -1263,6 +1181,158 @@ namespace neotrac {
 				if (body) add("body", detail::json(*body));
 				if (author) add("author", detail::json(*author));
 				if (mentioned) add("mentioned", detail::json(*mentioned));
+				return out + "}";
+			}
+		};
+
+		// What issue::claim is sent.
+		struct issue_claim {
+			std::string id{};
+			std::optional<std::string> project{};
+			std::optional<double> number{};
+			std::optional<std::string> board{};
+			std::optional<std::string> title{};
+			std::optional<std::string> body{};
+			std::optional<std::vector<std::string>> labels{};
+			std::optional<std::string> author{};
+			std::optional<std::string> phase{};
+			std::optional<::neotrac::projects::priority> priority{};
+			std::optional<std::vector<std::string>> assignees{};
+			std::optional<std::string> milestone{};
+			std::optional<std::string> held_by{};
+			std::optional<time> held_until{};
+
+			std::string json() const {
+				std::string out = "{";
+				auto add = [&](const char* name, const std::string& value) { out += (out.size() > 1 ? "," : "") + detail::json(std::string(name)) + ":" + value; };
+				add("id", detail::json(id));
+				if (project) add("project", detail::json(*project));
+				if (number) add("number", detail::json(*number));
+				if (board) add("board", detail::json(*board));
+				if (title) add("title", detail::json(*title));
+				if (body) add("body", detail::json(*body));
+				if (labels) add("labels", detail::json(*labels));
+				if (author) add("author", detail::json(*author));
+				if (phase) add("phase", detail::json(*phase));
+				if (priority) add("priority", detail::json(std::string(to_string(*priority))));
+				if (assignees) add("assignees", detail::json(*assignees));
+				if (milestone) add("milestone", detail::json(*milestone));
+				if (held_by) add("held_by", detail::json(*held_by));
+				if (held_until) add("held_until", detail::json(*held_until));
+				return out + "}";
+			}
+		};
+
+		// What issue::renew is sent.
+		struct issue_renew {
+			std::string id{};
+			std::optional<std::string> project{};
+			std::optional<double> number{};
+			std::optional<std::string> board{};
+			std::optional<std::string> title{};
+			std::optional<std::string> body{};
+			std::optional<std::vector<std::string>> labels{};
+			std::optional<std::string> author{};
+			std::optional<std::string> phase{};
+			std::optional<::neotrac::projects::priority> priority{};
+			std::optional<std::vector<std::string>> assignees{};
+			std::optional<std::string> milestone{};
+			std::optional<std::string> held_by{};
+			std::optional<time> held_until{};
+
+			std::string json() const {
+				std::string out = "{";
+				auto add = [&](const char* name, const std::string& value) { out += (out.size() > 1 ? "," : "") + detail::json(std::string(name)) + ":" + value; };
+				add("id", detail::json(id));
+				if (project) add("project", detail::json(*project));
+				if (number) add("number", detail::json(*number));
+				if (board) add("board", detail::json(*board));
+				if (title) add("title", detail::json(*title));
+				if (body) add("body", detail::json(*body));
+				if (labels) add("labels", detail::json(*labels));
+				if (author) add("author", detail::json(*author));
+				if (phase) add("phase", detail::json(*phase));
+				if (priority) add("priority", detail::json(std::string(to_string(*priority))));
+				if (assignees) add("assignees", detail::json(*assignees));
+				if (milestone) add("milestone", detail::json(*milestone));
+				if (held_by) add("held_by", detail::json(*held_by));
+				if (held_until) add("held_until", detail::json(*held_until));
+				return out + "}";
+			}
+		};
+
+		// What issue::release is sent.
+		struct issue_release {
+			std::string id{};
+			std::optional<std::string> project{};
+			std::optional<double> number{};
+			std::optional<std::string> board{};
+			std::optional<std::string> title{};
+			std::optional<std::string> body{};
+			std::optional<std::vector<std::string>> labels{};
+			std::optional<std::string> author{};
+			std::optional<std::string> phase{};
+			std::optional<::neotrac::projects::priority> priority{};
+			std::optional<std::vector<std::string>> assignees{};
+			std::optional<std::string> milestone{};
+			std::optional<std::string> held_by{};
+			std::optional<time> held_until{};
+
+			std::string json() const {
+				std::string out = "{";
+				auto add = [&](const char* name, const std::string& value) { out += (out.size() > 1 ? "," : "") + detail::json(std::string(name)) + ":" + value; };
+				add("id", detail::json(id));
+				if (project) add("project", detail::json(*project));
+				if (number) add("number", detail::json(*number));
+				if (board) add("board", detail::json(*board));
+				if (title) add("title", detail::json(*title));
+				if (body) add("body", detail::json(*body));
+				if (labels) add("labels", detail::json(*labels));
+				if (author) add("author", detail::json(*author));
+				if (phase) add("phase", detail::json(*phase));
+				if (priority) add("priority", detail::json(std::string(to_string(*priority))));
+				if (assignees) add("assignees", detail::json(*assignees));
+				if (milestone) add("milestone", detail::json(*milestone));
+				if (held_by) add("held_by", detail::json(*held_by));
+				if (held_until) add("held_until", detail::json(*held_until));
+				return out + "}";
+			}
+		};
+
+		// What issue::move is sent.
+		struct issue_move {
+			std::string id{};
+			std::optional<std::string> project{};
+			std::optional<double> number{};
+			std::optional<std::string> board{};
+			std::optional<std::string> title{};
+			std::optional<std::string> body{};
+			std::optional<std::vector<std::string>> labels{};
+			std::optional<std::string> author{};
+			std::optional<std::string> phase{};
+			std::optional<::neotrac::projects::priority> priority{};
+			std::optional<std::vector<std::string>> assignees{};
+			std::optional<std::string> milestone{};
+			std::optional<std::string> held_by{};
+			std::optional<time> held_until{};
+
+			std::string json() const {
+				std::string out = "{";
+				auto add = [&](const char* name, const std::string& value) { out += (out.size() > 1 ? "," : "") + detail::json(std::string(name)) + ":" + value; };
+				add("id", detail::json(id));
+				if (project) add("project", detail::json(*project));
+				if (number) add("number", detail::json(*number));
+				if (board) add("board", detail::json(*board));
+				if (title) add("title", detail::json(*title));
+				if (body) add("body", detail::json(*body));
+				if (labels) add("labels", detail::json(*labels));
+				if (author) add("author", detail::json(*author));
+				if (phase) add("phase", detail::json(*phase));
+				if (priority) add("priority", detail::json(std::string(to_string(*priority))));
+				if (assignees) add("assignees", detail::json(*assignees));
+				if (milestone) add("milestone", detail::json(*milestone));
+				if (held_by) add("held_by", detail::json(*held_by));
+				if (held_until) add("held_until", detail::json(*held_until));
 				return out + "}";
 			}
 		};
@@ -2144,6 +2214,9 @@ namespace neotrac {
 			::neotrac::projects::priority priority{};
 			std::vector<std::string> assignees{};
 			std::vector<std::string> assigned{};
+			std::string held_by{};
+			std::string holder{};
+			time held_until{};
 			std::string milestone{};
 			std::string milestone_title{};
 			std::string board{};
@@ -2238,6 +2311,9 @@ namespace neotrac {
 				out.priority = detail::choice<::neotrac::projects::priority>(v["priority"]);
 				out.assignees = detail::texts(v["assignees"]);
 				out.assigned = detail::texts(v["assigned"]);
+				out.held_by = detail::text(v["held_by"]);
+				out.holder = detail::text(v["holder"]);
+				out.held_until = detail::when(v["held_until"]);
 				out.milestone = detail::text(v["milestone"]);
 				out.milestone_title = detail::text(v["milestone_title"]);
 				out.board = detail::text(v["board"]);
@@ -2257,6 +2333,62 @@ namespace neotrac {
 				return out;
 			}
 			static std::string path(const std::string& of) { return "views/projects::issue_page:" + of; }
+		};
+
+		struct issue_work {
+			bool exists = false;  // whether it's been made, and may be read
+			struct items_row {
+				std::string id{};
+				std::string project{};
+				double number{};
+				std::string board{};
+				std::string title{};
+				std::string body{};
+				std::vector<std::string> labels{};
+				std::string author{};
+				std::string phase{};
+				::neotrac::projects::priority priority{};
+				std::vector<std::string> assignees{};
+				std::string milestone{};
+				std::string phase_title{};
+				std::vector<std::string> phase_worked_by{};
+				std::string held_by{};
+				std::string held_by_name{};
+				time held_until{};
+				static items_row from(const ember::value& v) {
+					items_row out;
+					out.id = detail::text(v["id"]);
+					out.project = detail::text(v["project"]);
+					out.number = detail::number(v["number"]);
+					out.board = detail::text(v["board"]);
+					out.title = detail::text(v["title"]);
+					out.body = detail::text(v["body"]);
+					out.labels = detail::texts(v["labels"]);
+					out.author = detail::text(v["author"]);
+					out.phase = detail::text(v["phase"]);
+					out.priority = detail::choice<::neotrac::projects::priority>(v["priority"]);
+					out.assignees = detail::texts(v["assignees"]);
+					out.milestone = detail::text(v["milestone"]);
+					out.phase_title = detail::text(v["phase.title"]);
+					out.phase_worked_by = detail::texts(v["phase.worked_by"]);
+					out.held_by = detail::text(v["held_by"]);
+					out.held_by_name = detail::text(v["held_by.name"]);
+					out.held_until = detail::when(v["held_until"]);
+					return out;
+				}
+			};
+			std::vector<items_row> items{};
+
+			static struct issue_work from(const ember::snapshot& s) {
+				struct issue_work out;
+				out.exists = s.exists;
+				const ember::value& v = s.data;
+				if (v["items"].is_array()) {
+					for (const auto& row : v["items"].as_array()) out.items.push_back(items_row::from(row));
+				}
+				return out;
+			}
+			static std::string path(const std::string& of) { return "views/projects::issue_work:" + of; }
 		};
 
 		struct milestone_page {
@@ -3050,18 +3182,6 @@ namespace neotrac {
 		std::string link_delete(const projects::link_delete& sent) {
 			return detail::text(ember::parse_json(post("/api/projects/link/delete", sent.json()))["id"]);
 		}
-		// issue::move: the id of what it changed, or refused.
-		std::string issue_move(const projects::issue_move& sent) {
-			return detail::text(ember::parse_json(post("/api/projects/issue/move", sent.json()))["id"]);
-		}
-		// issue::claim: the id of what it changed, or refused.
-		std::string issue_claim(const projects::issue_claim& sent) {
-			return detail::text(ember::parse_json(post("/api/projects/issue/claim", sent.json()))["id"]);
-		}
-		// issue::release: the id of what it changed, or refused.
-		std::string issue_release(const projects::issue_release& sent) {
-			return detail::text(ember::parse_json(post("/api/projects/issue/release", sent.json()))["id"]);
-		}
 		// comment::create: the id of what it changed, or refused.
 		std::string comment_create(const projects::comment_create& sent) {
 			return detail::text(ember::parse_json(post("/api/projects/comment/create", sent.json()))["id"]);
@@ -3073,6 +3193,22 @@ namespace neotrac {
 		// comment::delete: the id of what it changed, or refused.
 		std::string comment_delete(const projects::comment_delete& sent) {
 			return detail::text(ember::parse_json(post("/api/projects/comment/delete", sent.json()))["id"]);
+		}
+		// issue::claim: the id of what it changed, or refused.
+		std::string issue_claim(const projects::issue_claim& sent) {
+			return detail::text(ember::parse_json(post("/api/projects/issue/claim", sent.json()))["id"]);
+		}
+		// issue::renew: the id of what it changed, or refused.
+		std::string issue_renew(const projects::issue_renew& sent) {
+			return detail::text(ember::parse_json(post("/api/projects/issue/renew", sent.json()))["id"]);
+		}
+		// issue::release: the id of what it changed, or refused.
+		std::string issue_release(const projects::issue_release& sent) {
+			return detail::text(ember::parse_json(post("/api/projects/issue/release", sent.json()))["id"]);
+		}
+		// issue::move: the id of what it changed, or refused.
+		std::string issue_move(const projects::issue_move& sent) {
+			return detail::text(ember::parse_json(post("/api/projects/issue/move", sent.json()))["id"]);
 		}
 		// milestone::create: the id of what it changed, or refused.
 		std::string milestone_create(const projects::milestone_create& sent) {
@@ -3212,6 +3348,7 @@ namespace neotrac {
 		}
 		live<projects::board_page> board_page(const std::string& board) { connect(); return {*store_, projects::board_page::path(board)}; }
 		live<projects::issue_page> issue_page(const std::string& issue) { connect(); return {*store_, projects::issue_page::path(issue)}; }
+		live<projects::issue_work> issue_work(const std::string& role) { connect(); return {*store_, projects::issue_work::path(role)}; }
 		live<projects::milestone_page> milestone_page(const std::string& milestone) { connect(); return {*store_, projects::milestone_page::path(milestone)}; }
 		live<projects::all> all() { connect(); return {*store_, projects::all::path()}; }
 		// What it shows the one signed in.

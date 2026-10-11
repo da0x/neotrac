@@ -114,26 +114,14 @@ namespace projects {
 		}
 	}
 
-	// Along a step from the phase it's in, that one of the person's roles may take.
-	command issue::move {
-		changes phase
-		require "your role doesn't move an issue from there to there" {
-			exists(step where from == was issue.phase && to == issue.phase && held(roles))
-		}
-	}
-
-	// Taking an issue in a phase a role of yours works, that nobody else has taken,
-	// so two never work it at once.
-	command issue::claim {
-		require held(phase.worked_by)  "this phase isn't worked by a role you hold"
-		require assignees == none || assignees has me  "someone else has taken it"
-		add me to assignees
-	}
-
-	// Letting it go, for someone else to take.
-	command issue::release {
-		require assignees has me  "it isn't yours"
-		remove me from assignees
+	// How an issue moves: along a step from the phase it's in that one of the
+	// person's roles may take (workflow.one). Whoever works a phase takes an issue in
+	// it for half an hour at a time, renewing while they work, so two never work it at
+	// once, and one who stops working it lets it go by itself.
+	define workflow issue by phase {
+		worked by worked_by
+		steps step
+		lease 30 minutes
 	}
 
 	command comment::create
@@ -159,6 +147,9 @@ namespace projects {
 		priority = issue.priority
 		assignees = issue.assignees
 		assigned = issue.assignees.name
+		held_by = issue.held_by
+		holder = issue.held_by.name
+		held_until = issue.held_until
 		milestone = issue.milestone
 		milestone_title = issue.milestone.title
 		board = issue.board
@@ -198,12 +189,14 @@ namespace projects {
 		}
 		side {
 			issue::move along issue_page.steps
-			issue::claim "Take it" when !(issue_page.assignees has me)
-			issue::release "Let it go" when issue_page.assignees has me
+			issue::claim "Take it" when issue_page.held_by != me
+			issue::release "Let it go" when issue_page.held_by == me
 			details issue_page {
 				tint by priority
 				phase_title "Phase"
 				assigned "Assigned to"
+				holder "Held by"
+				held_until "Until"
 				milestone_title "Milestone"
 				priority "Priority"
 				labels "Labels"

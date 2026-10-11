@@ -20,6 +20,21 @@ $ neotrac move 12 review
 says which roles work it in its board's **Workflow**; a service holds the role its
 project gave it. It moves an issue only where the workflow lets its role.
 
+Taking an issue holds it for half an hour, so nobody else works it; `neotrac work`
+renews the hold while its program runs, and one that stops, like a laptop gone to
+sleep, lets it go by itself. Moving it on ends the hold.
+
+```
+$ neotrac work --run ./investigate --done review --failed backlog
+```
+
+`work` waits for issues in the phases its roles work, takes each as it comes, and
+runs the program on it: the issue as JSON on its input, the same as `neotrac show 42
+--json`, in a folder of its own, `$WORK_DIR`. When the program finishes, what it wrote
+last is commented on the issue, and the issue moves to `--done`; when it fails, what
+it wrote to stderr is, and the issue moves to `--failed`, or is let go for another to
+take. `--once` stops after one.
+
 Commands read as a verb and what it acts on: `neotrac list issues`, `neotrac edit page
 how_to_build`. At a terminal, leaving out which one opens a list to pick it from, moved
 through with the arrows or `j` and `k`, and `new` and `edit` open your editor
@@ -39,7 +54,8 @@ what it means and gives what it writes as flags instead, and is never asked anyt
 | `neotrac edit project\|issue\|page\|milestone [which]` | changes one |
 | `neotrac delete project [p]` | deletes it and all it holds, once you type its address; a program says `--confirm <address>` |
 | `neotrac queue [--all] [--watch]` | what's waiting for you; `--watch` keeps it up to date as issues come and go |
-| `neotrac claim 42`, `neotrac release 42` | take an issue so nobody else works it, or let it go |
+| `neotrac claim 42`, `neotrac release 42` | hold an issue for half an hour so nobody else works it, or let it go |
+| `neotrac work --run ./program --done review [--failed backlog] [--once]` | works each issue as it comes, with the program |
 | `neotrac move 42 review` | move it, by its phase's name or title |
 | `neotrac comment 42` | comment, in your editor, or with `-m "…"`, or on stdin |
 | `neotrac link 42 blocked_by 9` | one issue bearing on another: `blocks`, `blocked_by`, `relates`, `duplicates`, `replaces`; neotrac keeps the other side |
