@@ -15,7 +15,7 @@ namespace projects at / {
 		name           text  required
 		summary        markdown
 		visibility     enum  public | private = visibility::public
-		takes_reports  boolean = false
+		takes_reports  boolean  "Private reports" = false
 		// The preset its first board starts from (boards.one). start is where its
 		// issues started before projects had boards, which its first board took.
 		workflow       workflow = workflow::basic
@@ -361,7 +361,12 @@ namespace projects at / {
 			status
 		}
 		form project::create "Create project" {
-			slug  name  summary  visibility  takes_reports  workflow "Start from"
+			slug  name  summary  visibility
+			takes_reports {
+				hint "Anyone signed in can send this project a private report, like a security"
+					"problem. Only the project's people and whoever sent it can read it."
+			}
+			workflow "Start from"
 		}
 	}
 
@@ -374,7 +379,7 @@ namespace projects at / {
 			project::update "Edit project" icon edit form "Save" {
 				name  summary  visibility  takes_reports
 			}
-			link /:project/settings "Settings"
+			link /:project/settings "Settings" icon settings
 		}
 		subtitle "{project_page.summary}"
 		// Each board as a card: how its issues stand, stage by stage, and the two
@@ -415,7 +420,7 @@ namespace projects at / {
 				link /:project/wiki "Open the wiki"
 			}
 			section "People" {
-				link /:project/people "Who works on it"
+				link /:project/settings/people "Who works on it"
 				link /:project/report "Report a problem privately"
 				link /:project/reports "Reports, for its people"
 			}
@@ -427,17 +432,28 @@ namespace projects at / {
 		timeline project_page.timeline link /:project/:issue
 	}
 
-	// A project's settings: what it's called and who may read it, who works on it,
-	// and, for its maintainers, deleting it.
+	// A project's settings, as GitHub has a repository's: a menu down the side, and a
+	// page for each part. General is what it's called and who may read it, and, for
+	// its maintainers, deleting it; then who works on it, the roles they hold, and the
+	// services that work beside them.
+	header /:project/settings {
+		menu {
+			link /:project/settings "General"
+			link /:project/settings/people "People"
+			link /:project/settings/roles "Roles"
+			link /:project/settings/services "Services"
+		}
+	}
+
 	screen "Settings" /:project/settings {
-		under /:project "{project_page.name}"
-		section "The project" {
-			project::update "Edit project" icon edit form "Save" {
-				name  summary  visibility  takes_reports
+		section "General" {
+			form project::update "Save" {
+				name  summary  visibility
+				takes_reports {
+					hint "Anyone signed in can send this project a private report, like a security"
+						"problem. Only the project's people and whoever sent it can read it."
+				}
 			}
-			link /:project/people "People"
-			link /:project/roles "Roles"
-			link /:project/services "Services"
 		}
 		section "Delete this project" color red {
 			text "Deleting it deletes its issues, boards, milestones, wiki and reports,"
@@ -473,44 +489,25 @@ namespace projects at / {
 	}
 
 	// The project's people, and beside them its roles and its services.
-	screen "People" /:project/people {
-		layout two_columns
-		main {
-			table project_page.members {
-				person "Name"
-				role.title "Role"
-				delete "Remove" when person != me
-			}
-			confirm member::delete "Take this role away from them?"
-			invitation::create "Add someone" form "Invite" {
-				email "Email"  role
-			}
-			text "They join once they sign in with that email. Tell them, and send them here."
-			table invitations.invited {
-				hide when empty
-				email "Invited"
-				role.title "Role"
-				delete "Withdraw"
-			}
+	screen "People" /:project/settings/people {
+		table project_page.members {
+			person "Name"
+			role.title "Role"
+			delete "Remove" when person != me
 		}
-		side {
-			section "Roles" {
-				table project_page.roles link /:project/roles/:role {
-					title "Role"
-				}
-				link /:project/roles "What each allows"
-			}
-			section "Services" {
-				text "Programs that work beside you, like an AI agent."
-				table services.services link /:project/services {
-					hide when empty
-					title "Service"
-					role.title "Role"
-				}
-				link /:project/services "Services and their keys"
-			}
+		confirm member::delete "Take this role away from them?"
+		invitation::create "Add someone" form "Invite" {
+			email "Email"  role
+		}
+		text "They join once they sign in with that email. Tell them, and send them here."
+		table invitations.invited {
+			hide when empty
+			email "Invited"
+			role.title "Role"
+			delete "Withdraw"
 		}
 	}
+
 
 	// A role's own page, where what it allows is changed.
 	view role_page per role {
@@ -518,8 +515,8 @@ namespace projects at / {
 		name  title  may
 	}
 
-	screen "Roles" /:project/roles {
-		table project_page.roles link /:project/roles/:role {
+	screen "Roles" /:project/settings/roles {
+		table project_page.roles link /:project/settings/roles/:role {
 			title "Role"
 		}
 		role::create "New role" form "Create role" {
@@ -527,7 +524,7 @@ namespace projects at / {
 		}
 	}
 
-	screen "{role_page.title}" /:project/roles/:role {
+	screen "{role_page.title}" /:project/settings/roles/:role {
 		role::update "Edit" form "Save" {
 			title  may "Allows"
 		}

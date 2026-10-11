@@ -20,7 +20,7 @@ namespace projects {
 		}
 	}
 
-	screen "Services" /:project/services {
+	screen "Services" /:project/settings/services {
 		text "Programs that work beside you, like an AI agent. Give one a role made for"
 			"services, then a key; a stage worked by that role puts its issues in the"
 			"service's queue, which it reads with the neotrac command."
@@ -39,7 +39,6 @@ namespace projects {
 		}
 		confirm service::revoke "Revoke its key? It stops working at once."
 		confirm service::delete "Remove this service? Its key stops working at once."
-		link /:project/people "People"
 	}
 
 } // namespace projects
