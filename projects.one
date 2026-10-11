@@ -435,26 +435,44 @@ namespace projects at / {
 		}
 	}
 
-	screen "People" /:project/people {
-		table project_page.members {
-			person.picture ""
-			person.name "Name"
-			role.title "Role"
-			delete "Remove" when person != me
+	// The project's people, and beside them its roles and its services.
+	screen "People" /:project/people layout two_columns {
+		main {
+			table project_page.members {
+				person.picture ""
+				person.name "Name"
+				role.title "Role"
+				delete "Remove" when person != me
+			}
+			confirm member::delete "Take this role away from them?"
+			invitation::create "Add someone" form "Invite" {
+				email "Email"  role
+			}
+			text "They join once they sign in with that email. Tell them, and send them here."
+			table invitations.invited {
+				hide when empty
+				email "Invited"
+				role.title "Role"
+				delete "Withdraw"
+			}
 		}
-		confirm member::delete "Take this role away from them?"
-		invitation::create "Add someone" form "Invite" {
-			email "Email"  role
+		side {
+			section "Roles" {
+				table project_page.roles link /:project/roles/:role {
+					title "Role"
+				}
+				link /:project/roles "What each allows"
+			}
+			section "Services" {
+				text "Programs that work beside you, like an AI agent."
+				table services.services link /:project/services {
+					hide when empty
+					title "Service"
+					role.title "Role"
+				}
+				link /:project/services "Services and their keys"
+			}
 		}
-		text "They join once they sign in with that email. Tell them, and send them here."
-		table invitations.invited {
-			hide when empty
-			email "Invited"
-			role.title "Role"
-			delete "Withdraw"
-		}
-		link /:project/roles "Roles, and what each allows"
-		link /:project/services "Services, programs that work beside you"
 	}
 
 	// A role's own page, where what it allows is changed.
