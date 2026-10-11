@@ -432,6 +432,7 @@ namespace neotrac {
 			std::vector<std::string> assignees{};
 			std::string milestone{};
 			std::vector<std::string> attachments{};
+			double position{};
 			std::string held_by{};
 			time held_until{};
 
@@ -454,6 +455,7 @@ namespace neotrac {
 				out.assignees = detail::texts(v["assignees"]);
 				out.milestone = detail::text(v["milestone"]);
 				out.attachments = detail::texts(v["attachments"]);
+				out.position = detail::number(v["position"]);
 				out.held_by = detail::text(v["held_by"]);
 				out.held_until = detail::when(v["held_until"]);
 				return out;
@@ -971,6 +973,7 @@ namespace neotrac {
 			std::optional<std::vector<std::string>> assignees{};
 			std::optional<std::string> milestone{};
 			std::optional<std::vector<std::string>> attachments{};
+			std::optional<double> position{};
 			std::optional<std::string> held_by{};
 			std::optional<time> held_until{};
 
@@ -989,6 +992,7 @@ namespace neotrac {
 				if (assignees) add("assignees", detail::json(*assignees));
 				if (milestone) add("milestone", detail::json(*milestone));
 				if (attachments) add("attachments", detail::json(*attachments));
+				if (position) add("position", detail::json(*position));
 				if (held_by) add("held_by", detail::json(*held_by));
 				if (held_until) add("held_until", detail::json(*held_until));
 				return out + "}";
@@ -1010,6 +1014,7 @@ namespace neotrac {
 			std::optional<std::vector<std::string>> assignees{};
 			std::optional<std::string> milestone{};
 			std::optional<std::vector<std::string>> attachments{};
+			std::optional<double> position{};
 			std::optional<std::string> held_by{};
 			std::optional<time> held_until{};
 
@@ -1029,6 +1034,7 @@ namespace neotrac {
 				if (assignees) add("assignees", detail::json(*assignees));
 				if (milestone) add("milestone", detail::json(*milestone));
 				if (attachments) add("attachments", detail::json(*attachments));
+				if (position) add("position", detail::json(*position));
 				if (held_by) add("held_by", detail::json(*held_by));
 				if (held_until) add("held_until", detail::json(*held_until));
 				return out + "}";
@@ -1050,6 +1056,7 @@ namespace neotrac {
 			std::optional<std::vector<std::string>> assignees{};
 			std::optional<std::string> milestone{};
 			std::optional<std::vector<std::string>> attachments{};
+			std::optional<double> position{};
 			std::optional<std::string> held_by{};
 			std::optional<time> held_until{};
 
@@ -1069,6 +1076,7 @@ namespace neotrac {
 				if (assignees) add("assignees", detail::json(*assignees));
 				if (milestone) add("milestone", detail::json(*milestone));
 				if (attachments) add("attachments", detail::json(*attachments));
+				if (position) add("position", detail::json(*position));
 				if (held_by) add("held_by", detail::json(*held_by));
 				if (held_until) add("held_until", detail::json(*held_until));
 				return out + "}";
@@ -1090,6 +1098,7 @@ namespace neotrac {
 			std::optional<std::vector<std::string>> assignees{};
 			std::optional<std::string> milestone{};
 			std::optional<std::vector<std::string>> attachments{};
+			std::optional<double> position{};
 			std::optional<std::string> held_by{};
 			std::optional<time> held_until{};
 
@@ -1109,6 +1118,7 @@ namespace neotrac {
 				if (assignees) add("assignees", detail::json(*assignees));
 				if (milestone) add("milestone", detail::json(*milestone));
 				if (attachments) add("attachments", detail::json(*attachments));
+				if (position) add("position", detail::json(*position));
 				if (held_by) add("held_by", detail::json(*held_by));
 				if (held_until) add("held_until", detail::json(*held_until));
 				return out + "}";
@@ -1190,6 +1200,7 @@ namespace neotrac {
 			std::optional<std::vector<std::string>> assignees{};
 			std::optional<std::string> milestone{};
 			std::optional<std::vector<std::string>> attachments{};
+			std::optional<double> position{};
 			std::optional<std::string> held_by{};
 			std::optional<time> held_until{};
 
@@ -1209,6 +1220,7 @@ namespace neotrac {
 				if (assignees) add("assignees", detail::json(*assignees));
 				if (milestone) add("milestone", detail::json(*milestone));
 				if (attachments) add("attachments", detail::json(*attachments));
+				if (position) add("position", detail::json(*position));
 				if (held_by) add("held_by", detail::json(*held_by));
 				if (held_until) add("held_until", detail::json(*held_until));
 				return out + "}";
@@ -1250,6 +1262,7 @@ namespace neotrac {
 			std::optional<std::vector<std::string>> assignees{};
 			std::optional<std::string> milestone{};
 			std::optional<std::vector<std::string>> attachments{};
+			std::optional<double> position{};
 			std::optional<std::string> held_by{};
 			std::optional<time> held_until{};
 
@@ -1269,6 +1282,7 @@ namespace neotrac {
 				if (assignees) add("assignees", detail::json(*assignees));
 				if (milestone) add("milestone", detail::json(*milestone));
 				if (attachments) add("attachments", detail::json(*attachments));
+				if (position) add("position", detail::json(*position));
 				if (held_by) add("held_by", detail::json(*held_by));
 				if (held_until) add("held_until", detail::json(*held_until));
 				return out + "}";
@@ -1290,6 +1304,7 @@ namespace neotrac {
 			std::optional<std::vector<std::string>> assignees{};
 			std::optional<std::string> milestone{};
 			std::optional<std::vector<std::string>> attachments{};
+			std::optional<double> position{};
 			std::optional<std::string> held_by{};
 			std::optional<time> held_until{};
 
@@ -1309,6 +1324,7 @@ namespace neotrac {
 				if (assignees) add("assignees", detail::json(*assignees));
 				if (milestone) add("milestone", detail::json(*milestone));
 				if (attachments) add("attachments", detail::json(*attachments));
+				if (position) add("position", detail::json(*position));
 				if (held_by) add("held_by", detail::json(*held_by));
 				if (held_until) add("held_until", detail::json(*held_until));
 				return out + "}";
@@ -1330,6 +1346,7 @@ namespace neotrac {
 			std::optional<std::vector<std::string>> assignees{};
 			std::optional<std::string> milestone{};
 			std::optional<std::vector<std::string>> attachments{};
+			std::optional<double> position{};
 			std::optional<std::string> held_by{};
 			std::optional<time> held_until{};
 
@@ -1349,6 +1366,7 @@ namespace neotrac {
 				if (assignees) add("assignees", detail::json(*assignees));
 				if (milestone) add("milestone", detail::json(*milestone));
 				if (attachments) add("attachments", detail::json(*attachments));
+				if (position) add("position", detail::json(*position));
 				if (held_by) add("held_by", detail::json(*held_by));
 				if (held_until) add("held_until", detail::json(*held_until));
 				return out + "}";
@@ -1370,6 +1388,7 @@ namespace neotrac {
 			std::optional<std::vector<std::string>> assignees{};
 			std::optional<std::string> milestone{};
 			std::optional<std::vector<std::string>> attachments{};
+			std::optional<double> position{};
 			std::optional<std::string> held_by{};
 			std::optional<time> held_until{};
 
@@ -1389,6 +1408,7 @@ namespace neotrac {
 				if (assignees) add("assignees", detail::json(*assignees));
 				if (milestone) add("milestone", detail::json(*milestone));
 				if (attachments) add("attachments", detail::json(*attachments));
+				if (position) add("position", detail::json(*position));
 				if (held_by) add("held_by", detail::json(*held_by));
 				if (held_until) add("held_until", detail::json(*held_until));
 				return out + "}";
@@ -2148,11 +2168,13 @@ namespace neotrac {
 				std::string stage_title{};
 				::neotrac::projects::priority priority{};
 				time updated_at{};
+				double position{};
 				std::string author{};
 				std::string author_picture{};
 				std::string author_name{};
 				std::vector<std::string> assignees{};
 				std::vector<std::string> assignees_name{};
+				std::vector<std::string> assignees_picture{};
 				std::string milestone{};
 				static issues_row from(const ember::value& v) {
 					issues_row out;
@@ -2164,11 +2186,13 @@ namespace neotrac {
 					out.stage_title = detail::text(v["stage.title"]);
 					out.priority = detail::choice<::neotrac::projects::priority>(v["priority"]);
 					out.updated_at = detail::when(v["updated_at"]);
+					out.position = detail::number(v["position"]);
 					out.author = detail::text(v["author"]);
 					out.author_picture = detail::text(v["author.picture"]);
 					out.author_name = detail::text(v["author.name"]);
 					out.assignees = detail::texts(v["assignees"]);
 					out.assignees_name = detail::texts(v["assignees.name"]);
+					out.assignees_picture = detail::texts(v["assignees.picture"]);
 					out.milestone = detail::text(v["milestone"]);
 					return out;
 				}
@@ -2243,7 +2267,7 @@ namespace neotrac {
 				out.title = detail::text(v["title"]);
 				out.start = detail::text(v["start"]);
 				out.followers = detail::texts(v["followers"]);
-				out.project_name = detail::text(v["project_name"]);
+				out.project_name = detail::text(v["project.name"]);
 				if (v["issues"].is_array()) {
 					for (const auto& row : v["issues"].as_array()) out.issues.push_back(issues_row::from(row));
 				}
@@ -2271,9 +2295,9 @@ namespace neotrac {
 			std::string stage_title{};
 			::neotrac::projects::priority priority{};
 			std::vector<std::string> assignees{};
-			std::vector<std::string> assigned{};
+			std::vector<std::string> assignees_name{};
 			std::string held_by{};
-			std::string holder{};
+			std::string held_by_name{};
 			time held_until{};
 			std::string milestone{};
 			std::string milestone_title{};
@@ -2366,18 +2390,18 @@ namespace neotrac {
 				out.body = detail::text(v["body"]);
 				out.labels = detail::texts(v["labels"]);
 				out.stage = detail::text(v["stage"]);
-				out.stage_title = detail::text(v["stage_title"]);
+				out.stage_title = detail::text(v["stage.title"]);
 				out.priority = detail::choice<::neotrac::projects::priority>(v["priority"]);
 				out.assignees = detail::texts(v["assignees"]);
-				out.assigned = detail::texts(v["assigned"]);
+				out.assignees_name = detail::texts(v["assignees.name"]);
 				out.held_by = detail::text(v["held_by"]);
-				out.holder = detail::text(v["holder"]);
+				out.held_by_name = detail::text(v["held_by.name"]);
 				out.held_until = detail::when(v["held_until"]);
 				out.milestone = detail::text(v["milestone"]);
-				out.milestone_title = detail::text(v["milestone_title"]);
+				out.milestone_title = detail::text(v["milestone.title"]);
 				out.attachments = detail::texts(v["attachments"]);
 				out.board = detail::text(v["board"]);
-				out.board_title = detail::text(v["board_title"]);
+				out.board_title = detail::text(v["board.title"]);
 				if (v["links"].is_array()) {
 					for (const auto& row : v["links"].as_array()) out.links.push_back(links_row::from(row));
 				}
@@ -2411,6 +2435,7 @@ namespace neotrac {
 				std::vector<std::string> assignees{};
 				std::string milestone{};
 				std::vector<std::string> attachments{};
+				double position{};
 				std::string stage_title{};
 				std::vector<std::string> stage_worked_by{};
 				std::string held_by{};
@@ -2431,6 +2456,7 @@ namespace neotrac {
 					out.assignees = detail::texts(v["assignees"]);
 					out.milestone = detail::text(v["milestone"]);
 					out.attachments = detail::texts(v["attachments"]);
+					out.position = detail::number(v["position"]);
 					out.stage_title = detail::text(v["stage.title"]);
 					out.stage_worked_by = detail::texts(v["stage.worked_by"]);
 					out.held_by = detail::text(v["held_by"]);
@@ -2465,6 +2491,7 @@ namespace neotrac {
 				std::string stage_title{};
 				::neotrac::projects::priority priority{};
 				std::vector<std::string> assignees_name{};
+				std::vector<std::string> assignees_picture{};
 				static issues_row from(const ember::value& v) {
 					issues_row out;
 					out.id = detail::text(v["id"]);
@@ -2473,6 +2500,7 @@ namespace neotrac {
 					out.stage_title = detail::text(v["stage.title"]);
 					out.priority = detail::choice<::neotrac::projects::priority>(v["priority"]);
 					out.assignees_name = detail::texts(v["assignees.name"]);
+					out.assignees_picture = detail::texts(v["assignees.picture"]);
 					return out;
 				}
 			};

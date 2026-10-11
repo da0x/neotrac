@@ -35,16 +35,12 @@ namespace projects {
 	}
 
 	view board_page per board {
-		readers member
-		public when board.project.visibility == visibility::public
-		title = board.title
-		start = board.start
-		followers = board.followers
-		project_name = board.project.name
+		title  start  followers  project.name
 		issues = each issue in board {
 			order by position
 			number  title  labels  stage  stage.title  priority  updated_at  position
-			author  author.picture  author.name  assignees  assignees.name  milestone
+			author  author.picture  author.name  assignees  assignees.name  assignees.picture
+			milestone
 		}
 		// The project's milestones, soonest first, as a track above its issues.
 		milestones = each milestone where project == board.project {
@@ -66,7 +62,7 @@ namespace projects {
 			board::follow "Follow" icon follow when !(board_page.followers has me)
 			board::unfollow "Stop following" icon following when board_page.followers has me
 			issue::create "New issue" icon add form "Open issue" {
-				title  body "Description"  assignees "Assigned to"  milestone  priority  labels  attachments
+				title  body  assignees  milestone  priority  labels  attachments
 			}
 			link /:project/boards/:board/workflow "Workflow" icon workflow
 			board::update "Edit board" icon edit form "Save" {
@@ -82,19 +78,18 @@ namespace projects {
 			reorder position
 			page 25
 			tint by priority
-			number "#"
+			number
 			title
 			labels
-			assignees.name "Assigned to"
-			author.picture ""
-			author.name "Opened by"
+			assignees
+			author "Opened by"
 		}
 		board board_page.issues by stage over board_page.stages link /:project/:issue {
 			move issue::move along board_page.steps
 			reorder position
 			tint by priority
 			title
-			number "#"  labels  assignees.name
+			number  labels  assignees
 		}
 		link /:project "All boards"
 	}

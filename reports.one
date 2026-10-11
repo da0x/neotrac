@@ -46,9 +46,7 @@ namespace projects {
 	view report_page per report {
 		readers member
 		readers report.author
-		title = report.title
-		body = report.body
-		status = report.status
+		title  body  status
 		replies = each reply in report {
 			order by created_at
 			author.picture  author.name  body  created_at
@@ -84,8 +82,7 @@ namespace projects {
 		table project_reports link /:project/reports/:report {
 			title
 			status
-			author.picture ""
-			author.name "Filed by"
+			author "Filed by"
 			created_at "Filed"
 		}
 	}
@@ -95,8 +92,7 @@ namespace projects {
 		markdown "{report_page.body}"
 		report::resolve
 		table report_page.replies {
-			author.picture ""
-			author.name "From"
+			author "From"
 			body
 			created_at "Written"
 		}

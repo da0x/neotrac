@@ -26,10 +26,7 @@ namespace projects {
 	command page::delete
 
 	view wiki_page per page {
-		readers member
-		public when page.project.visibility == visibility::public
-		title = page.title
-		body = page.body
+		title  body
 		history = each change in page {
 			order by created_at
 			field  before  after  action  created_by.name  created_at

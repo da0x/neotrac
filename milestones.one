@@ -19,14 +19,10 @@ namespace projects {
 	command milestone::delete
 
 	view milestone_page per milestone {
-		readers member
-		public when milestone.project.visibility == visibility::public
-		title = milestone.title
-		due = milestone.due
-		description = milestone.description
+		title  due  description
 		issues = each issue in milestone {
 			order by number descending
-			number  title  stage.title  priority  assignees.name
+			number  title  stage.title  priority  assignees.name  assignees.picture
 		}
 	}
 
@@ -44,7 +40,8 @@ namespace projects {
 		}
 	}
 
-	screen "{milestone_page.title}" /:project/milestones/:milestone under /:project/roadmap "Roadmap" {
+	screen "{milestone_page.title}" /:project/milestones/:milestone {
+		under /:project/roadmap "Roadmap"
 		heading {
 			milestone::update "Edit milestone" icon edit form "Save" {
 				title  due "Due"  description
@@ -54,10 +51,10 @@ namespace projects {
 		table milestone_page.issues link /:project/:issue {
 			search title
 			tint by priority
-			number "#"
+			number
 			title
 			stage.title "Stage"
-			assignees.name "Assigned to"
+			assignees
 		}
 	}
 

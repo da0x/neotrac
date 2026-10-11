@@ -8,6 +8,9 @@
 namespace projects at / {
 
 	entity project {
+		// Who may read what's in it: its members, and anyone once it's public.
+		readers member
+		public when visibility == visibility::public
 		slug           text  required  unique  key
 		name           text  required
 		summary        markdown
@@ -242,12 +245,7 @@ namespace projects at / {
 	}
 
 	view project_page per project {
-		readers member
-		public when project.visibility == visibility::public
-		name = project.name
-		summary = project.summary
-		visibility = project.visibility
-		takes_reports = project.takes_reports
+		name  summary  visibility  takes_reports
 		boards = each board in project {
 			order by position
 			name  title
@@ -297,8 +295,8 @@ namespace projects at / {
 			link /about "Why neotrac"
 		}
 		timeline news.changes "What's new" link /:project/:issue {
-			new since news.seen
-			seen reader::create
+			new when created_at > news.seen
+			on open dispatch reader::create
 		}
 		table mine link /:project {
 			project.name "Your projects"
@@ -306,7 +304,7 @@ namespace projects at / {
 		}
 		table assigned link /:project/:issue {
 			hide when empty
-			number "#"
+			number
 			title "Assigned to you"
 			project.name "Project"
 			stage.title "Stage"
@@ -367,7 +365,8 @@ namespace projects at / {
 		}
 	}
 
-	screen "{project_page.name}" /:project layout two_columns {
+	screen "{project_page.name}" /:project {
+		layout two_columns
 		heading {
 			board::create "New board" icon add form "Create board" {
 				title  workflow "Start from"
@@ -430,7 +429,8 @@ namespace projects at / {
 
 	// A project's settings: what it's called and who may read it, who works on it,
 	// and, for its maintainers, deleting it.
-	screen "Settings" /:project/settings under /:project "{project_page.name}" {
+	screen "Settings" /:project/settings {
+		under /:project "{project_page.name}"
 		section "The project" {
 			project::update "Edit project" icon edit form "Save" {
 				name  summary  visibility  takes_reports
@@ -473,11 +473,11 @@ namespace projects at / {
 	}
 
 	// The project's people, and beside them its roles and its services.
-	screen "People" /:project/people layout two_columns {
+	screen "People" /:project/people {
+		layout two_columns
 		main {
 			table project_page.members {
-				person.picture ""
-				person.name "Name"
+				person "Name"
 				role.title "Role"
 				delete "Remove" when person != me
 			}
@@ -515,9 +515,7 @@ namespace projects at / {
 	// A role's own page, where what it allows is changed.
 	view role_page per role {
 		readers member
-		name = role.name
-		title = role.title
-		may = role.may
+		name  title  may
 	}
 
 	screen "Roles" /:project/roles {

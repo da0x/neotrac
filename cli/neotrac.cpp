@@ -465,11 +465,11 @@ namespace {
 	void print_issue(const session& s, const projects::issue_page& page, bool history) {
 		std::printf("#%.0f %s\n", page.number, page.title.c_str());
 		std::printf("%s on %s, %s priority", page.stage_title.c_str(), page.board_title.c_str(), projects::to_string(page.priority));
-		if (!page.assigned.empty()) {
+		if (!page.assignees_name.empty()) {
 			std::printf(", assigned to");
-			for (std::size_t i = 0; i < page.assigned.size(); ++i) std::printf("%s %s", i ? "," : "", page.assigned[i].c_str());
+			for (std::size_t i = 0; i < page.assignees_name.size(); ++i) std::printf("%s %s", i ? "," : "", page.assignees_name[i].c_str());
 		}
-		if (held(page)) std::printf(", held by %s until %s", page.holder.c_str(), clock_of(page.held_until).c_str());
+		if (held(page)) std::printf(", held by %s until %s", page.held_by_name.c_str(), clock_of(page.held_until).c_str());
 		if (!page.labels.empty()) {
 			std::printf("; labels");
 			for (const auto& l : page.labels) std::printf(" %s", l.c_str());
@@ -499,7 +499,7 @@ namespace {
 	std::string issue_json(const session& s, const projects::issue_page& page) {
 		std::string out = "{\"number\":" + json(page.number) + ",\"title\":" + json(page.title) + ",\"body\":" + json(page.body) + ",\"stage\":" +
 		                  json(page.stage_title) + ",\"board\":" + json(page.board_title) + ",\"priority\":" + json(std::string(projects::to_string(page.priority))) +
-		                  ",\"labels\":" + json(page.labels) + ",\"assigned\":" + json(page.assigned) + ",\"held_by\":" + json(held(page) ? page.holder : std::string()) + ",\"milestone\":" + json(page.milestone_title) + ",\"attachments\":[";
+		                  ",\"labels\":" + json(page.labels) + ",\"assigned\":" + json(page.assignees_name) + ",\"held_by\":" + json(held(page) ? page.held_by_name : std::string()) + ",\"milestone\":" + json(page.milestone_title) + ",\"attachments\":[";
 		for (std::size_t i = 0; i < page.attachments.size(); ++i) {
 			out += (i ? "," : "") + std::string("{\"name\":") + json(file_name(page.attachments[i])) + ",\"path\":" + json(page.attachments[i]) + "}";
 		}
