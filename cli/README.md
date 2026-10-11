@@ -16,7 +16,7 @@ $ neotrac comment 12 -m "Found it: a nil map on save."
 $ neotrac move 12 review
 ```
 
-`queue` lists the issues in the phases a role of yours works, free or yours. A phase
+`queue` lists the issues in the stages a role of yours works, free or yours. A stage
 says which roles work it in its board's **Workflow**; a service holds the role its
 project gave it. It moves an issue only where the workflow lets its role.
 
@@ -28,7 +28,7 @@ sleep, lets it go by itself. Moving it on ends the hold.
 $ neotrac work --run ./investigate --done review --failed backlog
 ```
 
-`work` waits for issues in the phases its roles work, takes each as it comes, and
+`work` waits for issues in the stages its roles work, takes each as it comes, and
 runs the program on it: the issue as JSON on its input, the same as `neotrac show 42
 --json`, in a folder of its own, `$WORK_DIR`. When the program finishes, what it wrote
 last is commented on the issue, and the issue moves to `--done`; when it fails, what
@@ -48,7 +48,7 @@ what it means and gives what it writes as flags instead, and is never asked anyt
 | `neotrac login --key` | signs in as a service, with its key, read without showing it, or from `NEOTRAC_KEY` |
 | `neotrac whoami`, `neotrac logout` | who's signed in, with their projects and roles; signing out |
 | `neotrac select project [p]`, `neotrac select board [b]` | the project, and the board in it, your commands work in, kept until `neotrac unselect project` or `board`; `--project` and `--board` work in another for one command |
-| `neotrac list projects\|boards\|issues\|pages\|milestones\|phases\|people` | what there is; `list projects --all` adds every public project |
+| `neotrac list projects\|boards\|issues\|pages\|milestones\|stages\|people` | what there is; `list projects --all` adds every public project |
 | `neotrac show project\|board\|issue\|page\|milestone [which]` | one of them; `neotrac show 42 [--history] [--watch]` is an issue, its comments, and the moves you can make |
 | `neotrac new project\|issue\|page\|milestone` | makes one |
 | `neotrac edit project\|issue\|page\|milestone [which]` | changes one |
@@ -56,7 +56,7 @@ what it means and gives what it writes as flags instead, and is never asked anyt
 | `neotrac queue [--all] [--watch]` | what's waiting for you; `--watch` keeps it up to date as issues come and go |
 | `neotrac claim 42`, `neotrac release 42` | hold an issue for half an hour so nobody else works it, or let it go |
 | `neotrac work --run ./program --done review [--failed backlog] [--once]` | works each issue as it comes, with the program |
-| `neotrac move 42 review` | move it, by its phase's name or title |
+| `neotrac move 42 review` | move it, by its stage's name or title |
 | `neotrac comment 42` | comment, in your editor, or with `-m "…"`, or on stdin |
 | `neotrac link 42 blocked_by 9` | one issue bearing on another: `blocks`, `blocked_by`, `relates`, `duplicates`, `replaces`; neotrac keeps the other side |
 | `neotrac unlink 42 relates 9` | takes a link away, and its other side |

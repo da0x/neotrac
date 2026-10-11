@@ -16,13 +16,13 @@ namespace projects at / {
 		// The preset its first board starts from (boards.one). start is where its
 		// issues started before projects had boards, which its first board took.
 		workflow       workflow = workflow::basic
-		start          phase
+		start          stage
 	}
 
 	// Each project has its own roles, which it changes, or adds to, in its settings,
 	// with no deploy; these are the two it starts with. The language keeps them as
 	// role records, and a person's place in a project as a member record for each
-	// role they hold. Which steps between phases each role may take is the
+	// role they hold. Which steps between stages each role may take is the
 	// project's to say.
 
 	// Runs the project and its settings.
@@ -38,9 +38,9 @@ namespace projects at / {
 		role::delete
 		board::create
 		board::update
-		phase::create
-		phase::update
-		phase::delete
+		stage::create
+		stage::update
+		stage::delete
 		step::create
 		step::update
 		step::delete
@@ -85,7 +85,7 @@ namespace projects at / {
 		page::update
 	}
 
-	// A program, like an AI agent, that works the issues in the phases its role
+	// A program, like an AI agent, that works the issues in the stages its role
 	// works: it takes one, says what it found, and moves it on where the workflow lets
 	// it. It's given in Services, and signs in with its key.
 	define role agent "Agent" in project for services {
@@ -127,8 +127,8 @@ namespace projects at / {
 		each step where project == id {
 			dispatch step::delete
 		}
-		each phase where project == id {
-			dispatch phase::delete
+		each stage where project == id {
+			dispatch stage::delete
 		}
 		each board where project == id {
 			dispatch board::delete
@@ -187,7 +187,7 @@ namespace projects at / {
 	view assigned per user {
 		each issue where assignees has me {
 			order by number descending
-			project  number  title  project.name  phase.title
+			project  number  title  project.name  stage.title
 		}
 	}
 
@@ -250,7 +250,7 @@ namespace projects at / {
 			name  title
 		}
 		issues = each issue in project {
-			number  title  labels  board  milestone  phase  phase.title  phase.position
+			number  title  labels  board  milestone  stage  stage.title  stage.position
 		}
 		milestones = each milestone in project {
 			order by due
@@ -303,7 +303,7 @@ namespace projects at / {
 			number "#"
 			title "Assigned to you"
 			project.name "Project"
-			phase.title "Phase"
+			stage.title "Stage"
 		}
 		table followed link /:project/boards/:board {
 			hide when empty
@@ -338,7 +338,7 @@ namespace projects at / {
 			link /:project/settings "Settings"
 		}
 		subtitle "{project_page.summary}"
-		// Each board as a card: how its issues stand, phase by phase, and the two
+		// Each board as a card: how its issues stand, stage by stage, and the two
 		// ways it's most often looked at.
 		main {
 			// Every issue by its number, title or labels, and every wiki page by its title.
@@ -348,7 +348,7 @@ namespace projects at / {
 			}
 			cards project_page.boards link /:project/boards/:board {
 				title
-				tally project_page.issues by board and phase
+				tally project_page.issues by board and stage
 				filter "Assigned to me" assignees == me  color blue
 				filter "High priority" priority == priority::high  color red
 				filter "Changed this week" updated_at > 7 days ago  color green

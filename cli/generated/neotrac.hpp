@@ -427,7 +427,7 @@ namespace neotrac {
 			std::string body{};
 			std::vector<std::string> labels{};
 			std::string author{};
-			std::string phase{};
+			std::string stage{};
 			::neotrac::projects::priority priority{};
 			std::vector<std::string> assignees{};
 			std::string milestone{};
@@ -448,7 +448,7 @@ namespace neotrac {
 				out.body = detail::text(v["body"]);
 				out.labels = detail::texts(v["labels"]);
 				out.author = detail::text(v["author"]);
-				out.phase = detail::text(v["phase"]);
+				out.stage = detail::text(v["stage"]);
 				out.priority = detail::choice<::neotrac::projects::priority>(v["priority"]);
 				out.assignees = detail::texts(v["assignees"]);
 				out.milestone = detail::text(v["milestone"]);
@@ -789,7 +789,7 @@ namespace neotrac {
 		};
 		inline std::string page_id(const std::string& project, const std::string& name) { return key({key_part(project), key_part(name)}); }
 
-		struct phase {
+		struct stage {
 			std::string id{};
 			time created_at{};
 			std::string created_by{};
@@ -802,8 +802,8 @@ namespace neotrac {
 			double position{};
 			std::vector<std::string> worked_by{};
 
-			static phase from(const ember::value& v) {
-				phase out;
+			static stage from(const ember::value& v) {
+				stage out;
 				out.id = detail::text(v["id"]);
 				out.created_at = detail::when(v["created_at"]);
 				out.created_by = detail::text(v["created_by"]);
@@ -818,7 +818,7 @@ namespace neotrac {
 				return out;
 			}
 		};
-		inline std::string phase_id(const std::string& board, const std::string& name) { return key({key_part(board), key_part(name)}); }
+		inline std::string stage_id(const std::string& board, const std::string& name) { return key({key_part(board), key_part(name)}); }
 
 		struct step {
 			std::string id{};
@@ -964,7 +964,7 @@ namespace neotrac {
 			std::optional<std::string> body{};
 			std::optional<std::vector<std::string>> labels{};
 			std::optional<std::string> author{};
-			std::optional<std::string> phase{};
+			std::optional<std::string> stage{};
 			std::optional<::neotrac::projects::priority> priority{};
 			std::optional<std::vector<std::string>> assignees{};
 			std::optional<std::string> milestone{};
@@ -981,7 +981,7 @@ namespace neotrac {
 				if (body) add("body", detail::json(*body));
 				if (labels) add("labels", detail::json(*labels));
 				if (author) add("author", detail::json(*author));
-				if (phase) add("phase", detail::json(*phase));
+				if (stage) add("stage", detail::json(*stage));
 				if (priority) add("priority", detail::json(std::string(to_string(*priority))));
 				if (assignees) add("assignees", detail::json(*assignees));
 				if (milestone) add("milestone", detail::json(*milestone));
@@ -1001,7 +1001,7 @@ namespace neotrac {
 			std::optional<std::string> body{};
 			std::optional<std::vector<std::string>> labels{};
 			std::optional<std::string> author{};
-			std::optional<std::string> phase{};
+			std::optional<std::string> stage{};
 			std::optional<::neotrac::projects::priority> priority{};
 			std::optional<std::vector<std::string>> assignees{};
 			std::optional<std::string> milestone{};
@@ -1019,7 +1019,7 @@ namespace neotrac {
 				if (body) add("body", detail::json(*body));
 				if (labels) add("labels", detail::json(*labels));
 				if (author) add("author", detail::json(*author));
-				if (phase) add("phase", detail::json(*phase));
+				if (stage) add("stage", detail::json(*stage));
 				if (priority) add("priority", detail::json(std::string(to_string(*priority))));
 				if (assignees) add("assignees", detail::json(*assignees));
 				if (milestone) add("milestone", detail::json(*milestone));
@@ -1039,7 +1039,7 @@ namespace neotrac {
 			std::optional<std::string> body{};
 			std::optional<std::vector<std::string>> labels{};
 			std::optional<std::string> author{};
-			std::optional<std::string> phase{};
+			std::optional<std::string> stage{};
 			std::optional<::neotrac::projects::priority> priority{};
 			std::optional<std::vector<std::string>> assignees{};
 			std::optional<std::string> milestone{};
@@ -1057,7 +1057,7 @@ namespace neotrac {
 				if (body) add("body", detail::json(*body));
 				if (labels) add("labels", detail::json(*labels));
 				if (author) add("author", detail::json(*author));
-				if (phase) add("phase", detail::json(*phase));
+				if (stage) add("stage", detail::json(*stage));
 				if (priority) add("priority", detail::json(std::string(to_string(*priority))));
 				if (assignees) add("assignees", detail::json(*assignees));
 				if (milestone) add("milestone", detail::json(*milestone));
@@ -1137,7 +1137,7 @@ namespace neotrac {
 			std::optional<std::string> body{};
 			std::optional<std::vector<std::string>> labels{};
 			std::optional<std::string> author{};
-			std::optional<std::string> phase{};
+			std::optional<std::string> stage{};
 			std::optional<::neotrac::projects::priority> priority{};
 			std::optional<std::vector<std::string>> assignees{};
 			std::optional<std::string> milestone{};
@@ -1155,7 +1155,7 @@ namespace neotrac {
 				if (body) add("body", detail::json(*body));
 				if (labels) add("labels", detail::json(*labels));
 				if (author) add("author", detail::json(*author));
-				if (phase) add("phase", detail::json(*phase));
+				if (stage) add("stage", detail::json(*stage));
 				if (priority) add("priority", detail::json(std::string(to_string(*priority))));
 				if (assignees) add("assignees", detail::json(*assignees));
 				if (milestone) add("milestone", detail::json(*milestone));
@@ -1195,7 +1195,7 @@ namespace neotrac {
 			std::optional<std::string> body{};
 			std::optional<std::vector<std::string>> labels{};
 			std::optional<std::string> author{};
-			std::optional<std::string> phase{};
+			std::optional<std::string> stage{};
 			std::optional<::neotrac::projects::priority> priority{};
 			std::optional<std::vector<std::string>> assignees{};
 			std::optional<std::string> milestone{};
@@ -1213,7 +1213,7 @@ namespace neotrac {
 				if (body) add("body", detail::json(*body));
 				if (labels) add("labels", detail::json(*labels));
 				if (author) add("author", detail::json(*author));
-				if (phase) add("phase", detail::json(*phase));
+				if (stage) add("stage", detail::json(*stage));
 				if (priority) add("priority", detail::json(std::string(to_string(*priority))));
 				if (assignees) add("assignees", detail::json(*assignees));
 				if (milestone) add("milestone", detail::json(*milestone));
@@ -1233,7 +1233,7 @@ namespace neotrac {
 			std::optional<std::string> body{};
 			std::optional<std::vector<std::string>> labels{};
 			std::optional<std::string> author{};
-			std::optional<std::string> phase{};
+			std::optional<std::string> stage{};
 			std::optional<::neotrac::projects::priority> priority{};
 			std::optional<std::vector<std::string>> assignees{};
 			std::optional<std::string> milestone{};
@@ -1251,7 +1251,7 @@ namespace neotrac {
 				if (body) add("body", detail::json(*body));
 				if (labels) add("labels", detail::json(*labels));
 				if (author) add("author", detail::json(*author));
-				if (phase) add("phase", detail::json(*phase));
+				if (stage) add("stage", detail::json(*stage));
 				if (priority) add("priority", detail::json(std::string(to_string(*priority))));
 				if (assignees) add("assignees", detail::json(*assignees));
 				if (milestone) add("milestone", detail::json(*milestone));
@@ -1271,7 +1271,7 @@ namespace neotrac {
 			std::optional<std::string> body{};
 			std::optional<std::vector<std::string>> labels{};
 			std::optional<std::string> author{};
-			std::optional<std::string> phase{};
+			std::optional<std::string> stage{};
 			std::optional<::neotrac::projects::priority> priority{};
 			std::optional<std::vector<std::string>> assignees{};
 			std::optional<std::string> milestone{};
@@ -1289,7 +1289,7 @@ namespace neotrac {
 				if (body) add("body", detail::json(*body));
 				if (labels) add("labels", detail::json(*labels));
 				if (author) add("author", detail::json(*author));
-				if (phase) add("phase", detail::json(*phase));
+				if (stage) add("stage", detail::json(*stage));
 				if (priority) add("priority", detail::json(std::string(to_string(*priority))));
 				if (assignees) add("assignees", detail::json(*assignees));
 				if (milestone) add("milestone", detail::json(*milestone));
@@ -1309,7 +1309,7 @@ namespace neotrac {
 			std::optional<std::string> body{};
 			std::optional<std::vector<std::string>> labels{};
 			std::optional<std::string> author{};
-			std::optional<std::string> phase{};
+			std::optional<std::string> stage{};
 			std::optional<::neotrac::projects::priority> priority{};
 			std::optional<std::vector<std::string>> assignees{};
 			std::optional<std::string> milestone{};
@@ -1327,7 +1327,7 @@ namespace neotrac {
 				if (body) add("body", detail::json(*body));
 				if (labels) add("labels", detail::json(*labels));
 				if (author) add("author", detail::json(*author));
-				if (phase) add("phase", detail::json(*phase));
+				if (stage) add("stage", detail::json(*stage));
 				if (priority) add("priority", detail::json(std::string(to_string(*priority))));
 				if (assignees) add("assignees", detail::json(*assignees));
 				if (milestone) add("milestone", detail::json(*milestone));
@@ -1909,8 +1909,8 @@ namespace neotrac {
 			}
 		};
 
-		// What phase::create is sent.
-		struct phase_create {
+		// What stage::create is sent.
+		struct stage_create {
 			std::optional<std::string> board{};
 			std::optional<std::string> name{};
 			std::optional<std::string> project{};
@@ -1931,8 +1931,8 @@ namespace neotrac {
 			}
 		};
 
-		// What phase::update is sent.
-		struct phase_update {
+		// What stage::update is sent.
+		struct stage_update {
 			std::string id{};
 			std::optional<std::string> board{};
 			std::optional<std::string> name{};
@@ -1955,8 +1955,8 @@ namespace neotrac {
 			}
 		};
 
-		// What phase::delete is sent.
-		struct phase_delete {
+		// What stage::delete is sent.
+		struct stage_delete {
 			std::string id{};
 			std::optional<std::string> board{};
 			std::optional<std::string> name{};
@@ -2086,8 +2086,8 @@ namespace neotrac {
 				double number{};
 				std::string title{};
 				std::vector<std::string> labels{};
-				std::string phase{};
-				std::string phase_title{};
+				std::string stage{};
+				std::string stage_title{};
 				::neotrac::projects::priority priority{};
 				time updated_at{};
 				std::string author{};
@@ -2102,8 +2102,8 @@ namespace neotrac {
 					out.number = detail::number(v["number"]);
 					out.title = detail::text(v["title"]);
 					out.labels = detail::texts(v["labels"]);
-					out.phase = detail::text(v["phase"]);
-					out.phase_title = detail::text(v["phase.title"]);
+					out.stage = detail::text(v["stage"]);
+					out.stage_title = detail::text(v["stage.title"]);
 					out.priority = detail::choice<::neotrac::projects::priority>(v["priority"]);
 					out.updated_at = detail::when(v["updated_at"]);
 					out.author = detail::text(v["author"]);
@@ -2131,15 +2131,15 @@ namespace neotrac {
 				}
 			};
 			std::vector<milestones_row> milestones{};
-			struct phases_row {
+			struct stages_row {
 				std::string id{};
 				std::string name{};
 				std::string title{};
 				double position{};
 				std::vector<std::string> worked_by{};
 				std::vector<std::string> worked_by_title{};
-				static phases_row from(const ember::value& v) {
-					phases_row out;
+				static stages_row from(const ember::value& v) {
+					stages_row out;
 					out.id = detail::text(v["id"]);
 					out.name = detail::text(v["name"]);
 					out.title = detail::text(v["title"]);
@@ -2149,7 +2149,7 @@ namespace neotrac {
 					return out;
 				}
 			};
-			std::vector<phases_row> phases{};
+			std::vector<stages_row> stages{};
 			struct steps_row {
 				std::string id{};
 				std::string from_{};
@@ -2192,8 +2192,8 @@ namespace neotrac {
 				if (v["milestones"].is_array()) {
 					for (const auto& row : v["milestones"].as_array()) out.milestones.push_back(milestones_row::from(row));
 				}
-				if (v["phases"].is_array()) {
-					for (const auto& row : v["phases"].as_array()) out.phases.push_back(phases_row::from(row));
+				if (v["stages"].is_array()) {
+					for (const auto& row : v["stages"].as_array()) out.stages.push_back(stages_row::from(row));
 				}
 				if (v["steps"].is_array()) {
 					for (const auto& row : v["steps"].as_array()) out.steps.push_back(steps_row::from(row));
@@ -2209,8 +2209,8 @@ namespace neotrac {
 			std::string title{};
 			std::string body{};
 			std::vector<std::string> labels{};
-			std::string phase{};
-			std::string phase_title{};
+			std::string stage{};
+			std::string stage_title{};
 			::neotrac::projects::priority priority{};
 			std::vector<std::string> assignees{};
 			std::vector<std::string> assigned{};
@@ -2306,8 +2306,8 @@ namespace neotrac {
 				out.title = detail::text(v["title"]);
 				out.body = detail::text(v["body"]);
 				out.labels = detail::texts(v["labels"]);
-				out.phase = detail::text(v["phase"]);
-				out.phase_title = detail::text(v["phase_title"]);
+				out.stage = detail::text(v["stage"]);
+				out.stage_title = detail::text(v["stage_title"]);
 				out.priority = detail::choice<::neotrac::projects::priority>(v["priority"]);
 				out.assignees = detail::texts(v["assignees"]);
 				out.assigned = detail::texts(v["assigned"]);
@@ -2346,12 +2346,12 @@ namespace neotrac {
 				std::string body{};
 				std::vector<std::string> labels{};
 				std::string author{};
-				std::string phase{};
+				std::string stage{};
 				::neotrac::projects::priority priority{};
 				std::vector<std::string> assignees{};
 				std::string milestone{};
-				std::string phase_title{};
-				std::vector<std::string> phase_worked_by{};
+				std::string stage_title{};
+				std::vector<std::string> stage_worked_by{};
 				std::string held_by{};
 				std::string held_by_name{};
 				time held_until{};
@@ -2365,12 +2365,12 @@ namespace neotrac {
 					out.body = detail::text(v["body"]);
 					out.labels = detail::texts(v["labels"]);
 					out.author = detail::text(v["author"]);
-					out.phase = detail::text(v["phase"]);
+					out.stage = detail::text(v["stage"]);
 					out.priority = detail::choice<::neotrac::projects::priority>(v["priority"]);
 					out.assignees = detail::texts(v["assignees"]);
 					out.milestone = detail::text(v["milestone"]);
-					out.phase_title = detail::text(v["phase.title"]);
-					out.phase_worked_by = detail::texts(v["phase.worked_by"]);
+					out.stage_title = detail::text(v["stage.title"]);
+					out.stage_worked_by = detail::texts(v["stage.worked_by"]);
 					out.held_by = detail::text(v["held_by"]);
 					out.held_by_name = detail::text(v["held_by.name"]);
 					out.held_until = detail::when(v["held_until"]);
@@ -2400,7 +2400,7 @@ namespace neotrac {
 				std::string id{};
 				double number{};
 				std::string title{};
-				std::string phase_title{};
+				std::string stage_title{};
 				::neotrac::projects::priority priority{};
 				std::vector<std::string> assignees_name{};
 				static issues_row from(const ember::value& v) {
@@ -2408,7 +2408,7 @@ namespace neotrac {
 					out.id = detail::text(v["id"]);
 					out.number = detail::number(v["number"]);
 					out.title = detail::text(v["title"]);
-					out.phase_title = detail::text(v["phase.title"]);
+					out.stage_title = detail::text(v["stage.title"]);
 					out.priority = detail::choice<::neotrac::projects::priority>(v["priority"]);
 					out.assignees_name = detail::texts(v["assignees.name"]);
 					return out;
@@ -2467,7 +2467,7 @@ namespace neotrac {
 				double number{};
 				std::string title{};
 				std::string project_name{};
-				std::string phase_title{};
+				std::string stage_title{};
 				static rows_row from(const ember::value& v) {
 					rows_row out;
 					out.id = detail::text(v["id"]);
@@ -2475,7 +2475,7 @@ namespace neotrac {
 					out.number = detail::number(v["number"]);
 					out.title = detail::text(v["title"]);
 					out.project_name = detail::text(v["project.name"]);
-					out.phase_title = detail::text(v["phase.title"]);
+					out.stage_title = detail::text(v["stage.title"]);
 					return out;
 				}
 			};
@@ -2631,9 +2631,9 @@ namespace neotrac {
 				std::vector<std::string> labels{};
 				std::string board{};
 				std::string milestone{};
-				std::string phase{};
-				std::string phase_title{};
-				double phase_position{};
+				std::string stage{};
+				std::string stage_title{};
+				double stage_position{};
 				static issues_row from(const ember::value& v) {
 					issues_row out;
 					out.id = detail::text(v["id"]);
@@ -2642,9 +2642,9 @@ namespace neotrac {
 					out.labels = detail::texts(v["labels"]);
 					out.board = detail::text(v["board"]);
 					out.milestone = detail::text(v["milestone"]);
-					out.phase = detail::text(v["phase"]);
-					out.phase_title = detail::text(v["phase.title"]);
-					out.phase_position = detail::number(v["phase.position"]);
+					out.stage = detail::text(v["stage"]);
+					out.stage_title = detail::text(v["stage.title"]);
+					out.stage_position = detail::number(v["stage.position"]);
 					return out;
 				}
 			};
@@ -3318,17 +3318,17 @@ namespace neotrac {
 		std::string page_delete(const projects::page_delete& sent) {
 			return detail::text(ember::parse_json(post("/api/projects/page/delete", sent.json()))["id"]);
 		}
-		// phase::create: the id of what it changed, or refused.
-		std::string phase_create(const projects::phase_create& sent) {
-			return detail::text(ember::parse_json(post("/api/projects/phase/create", sent.json()))["id"]);
+		// stage::create: the id of what it changed, or refused.
+		std::string stage_create(const projects::stage_create& sent) {
+			return detail::text(ember::parse_json(post("/api/projects/stage/create", sent.json()))["id"]);
 		}
-		// phase::update: the id of what it changed, or refused.
-		std::string phase_update(const projects::phase_update& sent) {
-			return detail::text(ember::parse_json(post("/api/projects/phase/update", sent.json()))["id"]);
+		// stage::update: the id of what it changed, or refused.
+		std::string stage_update(const projects::stage_update& sent) {
+			return detail::text(ember::parse_json(post("/api/projects/stage/update", sent.json()))["id"]);
 		}
-		// phase::delete: the id of what it changed, or refused.
-		std::string phase_delete(const projects::phase_delete& sent) {
-			return detail::text(ember::parse_json(post("/api/projects/phase/delete", sent.json()))["id"]);
+		// stage::delete: the id of what it changed, or refused.
+		std::string stage_delete(const projects::stage_delete& sent) {
+			return detail::text(ember::parse_json(post("/api/projects/stage/delete", sent.json()))["id"]);
 		}
 		// step::create: the id of what it changed, or refused.
 		std::string step_create(const projects::step_create& sent) {

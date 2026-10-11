@@ -21,12 +21,12 @@ users. See `LICENSE`.
   executive matters, each a card on the project's page with how its issues stand,
   and links that open it filtered: assigned to me, high priority, or changed this
   week. Anyone signed in follows a board, and finds it on their front page.
-- **Workflows** of a board's own: the phases its issues go through, and which role may
-  move an issue from which phase to which, edited as a grid or a diagram, with no
+- **Workflows** of a board's own: the stages its issues go through, and which role may
+  move an issue from which stage to which, edited as a grid or a diagram, with no
   deploy. A board starts from a preset: basic, software development, editorial, bugs, architecture
   decisions (ADRs), or custom.
 - **Issues**, numbered within their project, like neotrac.org/neotrac/12, shown as a
-  table with a tab for each phase or as a board whose cards are dragged along the
+  table with a tab for each stage or as a board whose cards are dragged along the
   moves a person's roles allow, each colored by its priority as Trac's were. Each
   has comments, where @username tells someone, a priority, labels, and a history
   of every change, which the project's timeline gathers. An issue moves to another
@@ -46,7 +46,7 @@ users. See `LICENSE`.
 - **Private reports** of problems, like a security hole, read only by the project's
   people and whoever filed each one.
 - **Services** that work beside people: programs, like an AI agent, a project gives
-  the Agent role and a key. A phase says which roles work it; a service takes an
+  the Agent role and a key. A stage says which roles work it; a service takes an
   issue in one, holding it for half an hour at a time, comments, and moves it on
   where the workflow lets it, from the `neotrac` command in `cli/`, whose `neotrac
   work` runs a program on each issue as it comes.
@@ -59,7 +59,7 @@ One `.one` file for each part:
 - `projects.one`: projects, their people and roles, the front page, and a project's
   page.
 - `boards.one`: boards, a board's page, and following one.
-- `workflow.one`: phases, the moves between them, the presets a board starts from,
+- `workflow.one`: stages, the moves between them, the presets a board starts from,
   and a board's Workflow page.
 - `issues.one`: issues, their comments and history, and an issue's page.
 - `reports.one`: problems reported to a project privately.

@@ -12,9 +12,9 @@ namespace projects {
 		project   project  required  key
 		name      text     required  key = slug(title)
 		title     text     required
-		// The preset it started from, and the phase new issues start in.
+		// The preset it started from, and the stage new issues start in.
 		workflow  workflow = workflow::basic
-		start     phase
+		start     stage
 		position  number
 		// Who follows it, to find it on their front page.
 		followers  list of user
@@ -43,7 +43,7 @@ namespace projects {
 		project_name = board.project.name
 		issues = each issue in board {
 			order by number descending
-			number  title  labels  phase  phase.title  priority  updated_at
+			number  title  labels  stage  stage.title  priority  updated_at
 			author  author.picture  author.name  assignees  assignees.name  milestone
 		}
 		// The project's milestones, soonest first, as a track above its issues.
@@ -51,7 +51,7 @@ namespace projects {
 			order by due
 			name  title  due
 		}
-		phases = each phase in board {
+		stages = each stage in board {
 			order by position
 			name  title  position  worked_by  worked_by.title
 		}
@@ -73,12 +73,12 @@ namespace projects {
 				title
 			}
 		}
-		table board_page.issues by phase over board_page.phases link /:project/:issue {
+		table board_page.issues by stage over board_page.stages link /:project/:issue {
 			// The milestones as a timeline: picking one shows only its issues.
 			track milestone over board_page.milestones {
 				due "Due"
 			}
-			search title labels phase.title priority
+			search title labels stage.title priority
 			sort by number descending
 			page 25
 			tint by priority
@@ -89,7 +89,7 @@ namespace projects {
 			author.picture ""
 			author.name "Opened by"
 		}
-		board board_page.issues by phase over board_page.phases link /:project/:issue {
+		board board_page.issues by stage over board_page.stages link /:project/:issue {
 			move issue::move along board_page.steps
 			tint by priority
 			title

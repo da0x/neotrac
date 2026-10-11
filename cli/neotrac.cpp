@@ -3,7 +3,7 @@
 
 // neotrac: neotrac's projects, boards, issues, wiki and milestones on the command
 // line. A service, like an AI agent, signs in with the key a project gave it; a person
-// signs in through their browser. It lists the issues in the phases a role of theirs
+// signs in through their browser. It lists the issues in the stages a role of theirs
 // works, takes one, comments, and moves it on where the workflow lets it; and lists,
 // shows, makes, edits and links the rest, picked from a list and written in the
 // person's editor at a terminal (terminal.hpp), or named and given as flags by a
@@ -274,10 +274,10 @@ namespace {
 		return n;
 	}
 
-	// One issue waiting in a phase a role of yours works, and who holds it, if its
+	// One issue waiting in a stage a role of yours works, and who holds it, if its
 	// lease hasn't run out.
 	struct waiting {
-		std::string id, title, phase_title, board_title, priority, holder;
+		std::string id, title, stage_title, board_title, priority, holder;
 		double number = 0;
 		bool yours = false;
 	};
@@ -301,7 +301,7 @@ namespace {
 				bool held = !issue.held_by.empty() && issue.held_until > now;
 				bool yours = held && issue.held_by == s.who.id;
 				if (!all && held && !yours) continue;
-				out.push_back({issue.id, issue.title, issue.phase_title, titles.at(issue.board), projects::to_string(issue.priority),
+				out.push_back({issue.id, issue.title, issue.stage_title, titles.at(issue.board), projects::to_string(issue.priority),
 				               held ? issue.held_by_name : "", issue.number, yours});
 			}
 		}
@@ -316,7 +316,7 @@ namespace {
 		for (std::size_t i = 0; i < q.size(); ++i) {
 			const auto& w = q[i];
 			out += (i ? "," : "") + std::string("{\"number\":") + json(w.number) + ",\"id\":" + json(w.id) + ",\"title\":" + json(w.title) +
-			       ",\"priority\":" + json(w.priority) + ",\"phase\":" + json(w.phase_title) + ",\"board\":" + json(w.board_title) +
+			       ",\"priority\":" + json(w.priority) + ",\"stage\":" + json(w.stage_title) + ",\"board\":" + json(w.board_title) +
 			       ",\"held_by\":" + json(w.holder) + ",\"yours\":" + json(w.yours) + "}";
 		}
 		return out + "]";
@@ -329,7 +329,7 @@ namespace {
 		}
 		for (const auto& w : q) {
 			std::string who = w.yours ? "yours" : w.holder.empty() ? "free" : "held by " + w.holder;
-			std::printf("#%-5.0f %-8s %-12s %-40s %s\n", w.number, w.priority.c_str(), w.phase_title.c_str(), w.title.substr(0, 40).c_str(), who.c_str());
+			std::printf("#%-5.0f %-8s %-12s %-40s %s\n", w.number, w.priority.c_str(), w.stage_title.c_str(), w.title.substr(0, 40).c_str(), who.c_str());
 		}
 	}
 
@@ -418,7 +418,7 @@ namespace {
 	std::vector<const projects::issue_page::steps_row*> moves_of(const session& s, const projects::issue_page& page) {
 		std::vector<const projects::issue_page::steps_row*> out;
 		for (const auto& step : page.steps) {
-			if (step.from_ == page.phase && shares(step.roles, s.roles)) out.push_back(&step);
+			if (step.from_ == page.stage && shares(step.roles, s.roles)) out.push_back(&step);
 		}
 		return out;
 	}
@@ -440,7 +440,7 @@ namespace {
 
 	void print_issue(const session& s, const projects::issue_page& page, bool history) {
 		std::printf("#%.0f %s\n", page.number, page.title.c_str());
-		std::printf("%s on %s, %s priority", page.phase_title.c_str(), page.board_title.c_str(), projects::to_string(page.priority));
+		std::printf("%s on %s, %s priority", page.stage_title.c_str(), page.board_title.c_str(), projects::to_string(page.priority));
 		if (!page.assigned.empty()) {
 			std::printf(", assigned to");
 			for (std::size_t i = 0; i < page.assigned.size(); ++i) std::printf("%s %s", i ? "," : "", page.assigned[i].c_str());
@@ -468,8 +468,8 @@ namespace {
 	}
 
 	std::string issue_json(const session& s, const projects::issue_page& page) {
-		std::string out = "{\"number\":" + json(page.number) + ",\"title\":" + json(page.title) + ",\"body\":" + json(page.body) + ",\"phase\":" +
-		                  json(page.phase_title) + ",\"board\":" + json(page.board_title) + ",\"priority\":" + json(std::string(projects::to_string(page.priority))) +
+		std::string out = "{\"number\":" + json(page.number) + ",\"title\":" + json(page.title) + ",\"body\":" + json(page.body) + ",\"stage\":" +
+		                  json(page.stage_title) + ",\"board\":" + json(page.board_title) + ",\"priority\":" + json(std::string(projects::to_string(page.priority))) +
 		                  ",\"labels\":" + json(page.labels) + ",\"assigned\":" + json(page.assigned) + ",\"held_by\":" + json(held(page) ? page.holder : std::string()) + ",\"milestone\":" + json(page.milestone_title) + ",\"links\":[";
 		for (std::size_t i = 0; i < page.links.size(); ++i) {
 			out += (i ? "," : "") + std::string("{\"relation\":") + json(std::string(projects::to_string(page.links[i].relation))) +
@@ -532,13 +532,13 @@ namespace {
 		return out;
 	}
 
-	// The phase of an issue's board by its name, title or id.
-	std::string phase_named(session& s, const projects::issue_page& page, const std::string& word) {
+	// The stage of an issue's board by its name, title or id.
+	std::string stage_named(session& s, const projects::issue_page& page, const std::string& word) {
 		auto board = s.app->board_page(page.board).get();
-		for (const auto& phase : board.phases) {
-			if (lower(phase.name) == lower(word) || lower(phase.title) == lower(word) || phase.id == word) return phase.id;
+		for (const auto& stage : board.stages) {
+			if (lower(stage.name) == lower(word) || lower(stage.title) == lower(word) || stage.id == word) return stage.id;
 		}
-		throw stop(usage, "there's no phase " + word + " on " + page.board_title);
+		throw stop(usage, "there's no stage " + word + " on " + page.board_title);
 	}
 
 	// Works one issue it holds: runs the program with the issue as JSON on its input,
@@ -602,7 +602,7 @@ namespace {
 				std::string said = tail_of(out_path, 40);
 				if (!said.empty()) s.app->comment_create({.issue = id, .body = said});
 				projects::issue_move sent{.id = id};
-				sent.phase = phase_named(s, page, done_word);
+				sent.stage = stage_named(s, page, done_word);
 				s.app->issue_move(sent);
 				std::fprintf(stderr, "%s: done, moved to %s\n", number.c_str(), done_word.c_str());
 			} else {
@@ -611,7 +611,7 @@ namespace {
 				s.app->comment_create({.issue = id, .body = program + " " + why + (said.empty() ? "." : ":\n\n```\n" + said + "\n```")});
 				if (!failed_word.empty()) {
 					projects::issue_move sent{.id = id};
-					sent.phase = phase_named(s, page, failed_word);
+					sent.stage = stage_named(s, page, failed_word);
 					s.app->issue_move(sent);
 					std::fprintf(stderr, "%s: failed, moved to %s\n", number.c_str(), failed_word.c_str());
 				} else {
@@ -630,7 +630,7 @@ namespace {
 		std::filesystem::remove_all(root, ignored);
 	}
 
-	// Works the issues in phases a role of yours works, one at a time, as they come:
+	// Works the issues in stages a role of yours works, one at a time, as they come:
 	// takes one, runs the program on it, and moves it on. --once stops after one.
 	int work(const asked& a) {
 		auto s = sign_in(a);
@@ -694,25 +694,25 @@ namespace {
 		std::string id = issue_of(s, a);
 		if (a.words.size() < 2) throw stop(usage, "say where to, like neotrac move 42 review");
 		auto page = read_issue(s, id, a.words[0]);
-		// The phase by its name, its title, or its id, among the issue's board's.
+		// The stage by its name, its title, or its id, among the issue's board's.
 		std::string wanted = lower(a.words[1]);
 		auto board = s.app->board_page(page.board).get();
-		const projects::board_page::phases_row* to = nullptr;
-		for (const auto& phase : board.phases) {
-			if (lower(phase.name) == wanted || lower(phase.title) == wanted || phase.id == a.words[1]) to = &phase;
+		const projects::board_page::stages_row* to = nullptr;
+		for (const auto& stage : board.stages) {
+			if (lower(stage.name) == wanted || lower(stage.title) == wanted || stage.id == a.words[1]) to = &stage;
 		}
 		auto moves = moves_of(s, page);
 		std::string allowed;
 		for (const auto* m : moves) allowed += (allowed.empty() ? "" : ", ") + lower(m->to_title);
-		if (allowed.empty()) allowed = "none from " + page.phase_title;
-		if (!to) throw stop(usage, "there's no phase " + a.words[1] + " on " + page.board_title + "; you can move it to: " + allowed);
+		if (allowed.empty()) allowed = "none from " + page.stage_title;
+		if (!to) throw stop(usage, "there's no stage " + a.words[1] + " on " + page.board_title + "; you can move it to: " + allowed);
 		if (std::ranges::none_of(moves, [&](const auto* m) { return m->to == to->id; })) {
-			throw stop(said_no, "your role doesn't move an issue from " + page.phase_title + " to " + to->title + "; you can move it to: " + allowed);
+			throw stop(said_no, "your role doesn't move an issue from " + page.stage_title + " to " + to->title + "; you can move it to: " + allowed);
 		}
 		projects::issue_move sent{.id = id};
-		sent.phase = to->id;
+		sent.stage = to->id;
 		s.app->issue_move(sent);
-		if (a.has("json")) std::printf("{\"id\":%s,\"phase\":%s}\n", json(id).c_str(), json(to->title).c_str());
+		if (a.has("json")) std::printf("{\"id\":%s,\"stage\":%s}\n", json(id).c_str(), json(to->title).c_str());
 		else std::printf("Moved %s to %s.\n", a.words[0].c_str(), to->title.c_str());
 		return done;
 	}
@@ -827,7 +827,7 @@ namespace {
 		static const std::map<std::string, std::string> nouns{
 		    {"project", "project"}, {"projects", "project"}, {"board", "board"}, {"boards", "board"}, {"issue", "issue"},
 		    {"issues", "issue"}, {"page", "page"}, {"pages", "page"}, {"wiki", "page"}, {"milestone", "milestone"},
-		    {"milestones", "milestone"}, {"phase", "phase"}, {"phases", "phase"}, {"people", "person"}, {"person", "person"},
+		    {"milestones", "milestone"}, {"stage", "stage"}, {"stages", "stage"}, {"people", "person"}, {"person", "person"},
 		    {"members", "person"}};
 		auto it = nouns.find(lower(word));
 		return it == nouns.end() ? "" : it->second;
@@ -1055,7 +1055,7 @@ namespace {
 		return done;
 	}
 
-	// ---- Boards and phases -------------------------------------------------------------
+	// ---- Boards and stages -------------------------------------------------------------
 
 	std::vector<std::pair<std::string, std::string>> board_choices(const projects::project_page& page) {
 		std::vector<std::pair<std::string, std::string>> out;
@@ -1099,18 +1099,18 @@ namespace {
 		auto page = s.app->board_page(board).get();
 		if (!page.exists) throw stop(not_found, "there's no board " + board + " you may read");
 		std::map<std::string, int> counted;
-		for (const auto& i : page.issues) ++counted[i.phase];
+		for (const auto& i : page.issues) ++counted[i.stage];
 		if (a.has("json")) {
-			std::string out = "{\"board\":" + json(board) + ",\"title\":" + json(page.title) + ",\"phases\":[";
-			for (std::size_t i = 0; i < page.phases.size(); ++i) {
-				out += (i ? "," : "") + std::string("{\"phase\":") + json(page.phases[i].name) + ",\"title\":" + json(page.phases[i].title) +
-				       ",\"issues\":" + std::to_string(counted[page.phases[i].id]) + ",\"worked_by\":" + json(page.phases[i].worked_by_title) + "}";
+			std::string out = "{\"board\":" + json(board) + ",\"title\":" + json(page.title) + ",\"stages\":[";
+			for (std::size_t i = 0; i < page.stages.size(); ++i) {
+				out += (i ? "," : "") + std::string("{\"stage\":") + json(page.stages[i].name) + ",\"title\":" + json(page.stages[i].title) +
+				       ",\"issues\":" + std::to_string(counted[page.stages[i].id]) + ",\"worked_by\":" + json(page.stages[i].worked_by_title) + "}";
 			}
 			std::puts((out + "]}").c_str());
 			return done;
 		}
 		std::printf("%s, in %s\n\n", page.title.c_str(), page.project_name.c_str());
-		for (const auto& p : page.phases) {
+		for (const auto& p : page.stages) {
 			std::printf("  %s %4d issue%s", padded(p.title, 24).c_str(), counted[p.id], counted[p.id] == 1 ? " " : "s");
 			if (!p.worked_by_title.empty()) std::printf("  worked by %s", joined(p.worked_by_title).c_str());
 			std::printf("\n");
@@ -1118,18 +1118,18 @@ namespace {
 		return done;
 	}
 
-	int list_phases(const asked& a, session& s) {
+	int list_stages(const asked& a, session& s) {
 		auto project = project_of(s);
 		auto page = s.app->board_page(board_of(a, s, project)).get();
 		if (a.has("json")) {
 			std::string out = "[";
-			for (std::size_t i = 0; i < page.phases.size(); ++i) {
-				out += (i ? "," : "") + std::string("{\"phase\":") + json(page.phases[i].name) + ",\"title\":" + json(page.phases[i].title) + "}";
+			for (std::size_t i = 0; i < page.stages.size(); ++i) {
+				out += (i ? "," : "") + std::string("{\"stage\":") + json(page.stages[i].name) + ",\"title\":" + json(page.stages[i].title) + "}";
 			}
 			std::puts((out + "]").c_str());
 			return done;
 		}
-		for (const auto& p : page.phases) std::printf("  %s %s\n", padded(p.name, 20).c_str(), p.title.c_str());
+		for (const auto& p : page.stages) std::printf("  %s %s\n", padded(p.name, 20).c_str(), p.title.c_str());
 		return done;
 	}
 
@@ -1198,26 +1198,26 @@ namespace {
 		auto project = project_of(s);
 		struct row {
 			double number;
-			std::string title, phase;
+			std::string title, stage;
 		};
 		std::vector<row> rows;
 		if (!s.board.empty()) {
 			auto page = s.app->board_page(board_of(a, s, project)).get();
-			for (const auto& i : page.issues) rows.push_back({i.number, i.title, i.phase_title});
+			for (const auto& i : page.issues) rows.push_back({i.number, i.title, i.stage_title});
 		} else {
-			for (const auto& i : project.issues) rows.push_back({i.number, i.title, i.phase_title});
+			for (const auto& i : project.issues) rows.push_back({i.number, i.title, i.stage_title});
 		}
 		std::ranges::sort(rows, [](const row& x, const row& y) { return x.number > y.number; });
 		if (a.has("json")) {
 			std::string out = "[";
 			for (std::size_t i = 0; i < rows.size(); ++i) {
-				out += (i ? "," : "") + std::string("{\"number\":") + json(rows[i].number) + ",\"title\":" + json(rows[i].title) + ",\"phase\":" + json(rows[i].phase) + "}";
+				out += (i ? "," : "") + std::string("{\"number\":") + json(rows[i].number) + ",\"title\":" + json(rows[i].title) + ",\"stage\":" + json(rows[i].stage) + "}";
 			}
 			std::puts((out + "]").c_str());
 			return done;
 		}
 		if (rows.empty()) std::puts("No issues yet.");
-		for (const auto& r : rows) std::printf("#%-5.0f %s %s\n", r.number, padded(r.phase, 14).c_str(), r.title.c_str());
+		for (const auto& r : rows) std::printf("#%-5.0f %s %s\n", r.number, padded(r.stage, 14).c_str(), r.title.c_str());
 		return done;
 	}
 
@@ -1233,7 +1233,7 @@ namespace {
 		std::ranges::sort(sorted, [](const auto* x, const auto* y) { return x->number > y->number; });
 		for (const auto* i : sorted) {
 			std::string number = std::format("{:.0f}", i->number);
-			choices.emplace_back(number, "#" + padded(number, 5) + " " + padded(i->phase_title, 14) + " " + i->title);
+			choices.emplace_back(number, "#" + padded(number, 5) + " " + padded(i->stage_title, 14) + " " + i->title);
 		}
 		return chosen(a, word, "issue", choices);
 	}
@@ -1408,7 +1408,7 @@ namespace {
 		std::printf("%s%s\n", page.title.c_str(), page.due.time_since_epoch().count() ? (", due " + date_of(page.due)).c_str() : "");
 		if (!page.description.empty()) std::printf("\n%s\n", page.description.c_str());
 		if (!page.issues.empty()) std::printf("\n");
-		for (const auto& i : page.issues) std::printf("#%-5.0f %s %s\n", i.number, padded(i.phase_title, 14).c_str(), i.title.c_str());
+		for (const auto& i : page.issues) std::printf("#%-5.0f %s %s\n", i.number, padded(i.stage_title, 14).c_str(), i.title.c_str());
 		return done;
 	}
 
@@ -1449,14 +1449,14 @@ namespace {
 
 	int list(const asked& a) {
 		std::string noun = a.words.empty() ? "" : noun_of(a.words[0]);
-		if (noun.empty()) throw stop(usage, "say what to list: projects, boards, issues, pages, milestones, phases or people");
+		if (noun.empty()) throw stop(usage, "say what to list: projects, boards, issues, pages, milestones, stages or people");
 		auto s = sign_in(a, noun != "project");
 		if (noun == "project") return list_projects(a, s);
 		if (noun == "board") return list_boards(a, s);
 		if (noun == "issue") return list_issues(a, s);
 		if (noun == "page") return list_pages(a, s);
 		if (noun == "milestone") return list_milestones(a, s);
-		if (noun == "phase") return list_phases(a, s);
+		if (noun == "stage") return list_stages(a, s);
 		return list_people(a, s);
 	}
 
@@ -1593,10 +1593,10 @@ What you work in, kept until you change it
   neotrac unselect project|board
 
 Reading
-  neotrac list projects|boards|issues|pages|milestones|phases|people
+  neotrac list projects|boards|issues|pages|milestones|stages|people
   neotrac show project|board|issue|page|milestone [which]
   neotrac show 42 [--history] [--watch]
-  neotrac queue [--all] [--watch]  the issues in phases your roles work
+  neotrac queue [--all] [--watch]  the issues in stages your roles work
 
 Writing, in your editor ($VISUAL, $EDITOR or vi)
   neotrac new project|issue|page|milestone

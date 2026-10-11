@@ -26,11 +26,11 @@ namespace projects {
 		description = milestone.description
 		issues = each issue in milestone {
 			order by number descending
-			number  title  phase.title  priority  assignees.name
+			number  title  stage.title  priority  assignees.name
 		}
 	}
 
-	// Each milestone as a card, soonest first: when it's due, and its issues by phase.
+	// Each milestone as a card, soonest first: when it's due, and its issues by stage.
 	screen "Roadmap" /:project/roadmap {
 		heading {
 			milestone::create "New milestone" form "Add" {
@@ -40,7 +40,7 @@ namespace projects {
 		cards project_page.milestones link /:project/milestones/:milestone {
 			title
 			due "Due"
-			tally project_page.issues by milestone and phase
+			tally project_page.issues by milestone and stage
 		}
 	}
 
@@ -56,7 +56,7 @@ namespace projects {
 			tint by priority
 			number "#"
 			title
-			phase.title "Phase"
+			stage.title "Stage"
 			assignees.name "Assigned to"
 		}
 	}

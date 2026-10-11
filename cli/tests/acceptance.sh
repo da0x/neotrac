@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: GPL-3.0-only
 
 # The neotrac command, end to end, against neotrac's own backend on the Firebase
-# emulators: a person sets up a phase worked by agents, a service with a key works it.
+# emulators: a person sets up a stage worked by agents, a service with a key works it.
 #
 #   1. a project on the bugs workflow, with Investigate worked by Agent, a person's
 #      step into it, and Agent's step out of it to Verifying;
@@ -59,7 +59,7 @@ as() { # as TOKEN COMMAND JSON: a person's command
 person=$(curl -s -X POST -H 'Content-Type: application/json' "$auth/accounts:signUp?key=any" \
 	-d '{"email":"maintainer@example.com","password":"password","displayName":"Maya","returnSecureToken":true}' | python3 -c 'import json,sys; print(json.load(sys.stdin)["idToken"])')
 as "$person" projects/project/create '{"slug":"e2e","name":"E2E","workflow":"bugs","visibility":"private"}' >/dev/null
-as "$person" projects/phase/create '{"board":"e2e-main","project":"e2e","title":"Investigate","worked_by":["e2e-agent"]}' >/dev/null
+as "$person" projects/stage/create '{"board":"e2e-main","project":"e2e","title":"Investigate","worked_by":["e2e-agent"]}' >/dev/null
 as "$person" projects/step/create '{"board":"e2e-main","project":"e2e","from":"e2e-main-reported","to":"e2e-main-investigate","roles":["e2e-maintainer"]}' >/dev/null
 as "$person" projects/step/create '{"board":"e2e-main","project":"e2e","from":"e2e-main-investigate","to":"e2e-main-verifying","roles":["e2e-agent"]}' >/dev/null
 key_of() { # key_of TITLE: a service with Agent, and its key
@@ -81,7 +81,7 @@ check "nothing is waiting before a person moves an issue in" grep -qx '\[\]' "$l
 "$neotrac" queue --watch --json >"$logs/watch" 2>"$logs/watch.err" &
 watching=$!
 sleep 3
-as "$person" projects/issue/move '{"id":"e2e-1","phase":"e2e-main-investigate"}' >/dev/null
+as "$person" projects/issue/move '{"id":"e2e-1","stage":"e2e-main-investigate"}' >/dev/null
 moved=$(date +%s%N)
 for _ in $(seq 1 50); do grep -q '"number":1' "$logs/watch" && break; sleep 0.1; done
 seen=$(date +%s%N)
@@ -124,7 +124,7 @@ check "and lists the moves it can make" grep -q "you can move it to: verifying" 
 NEOTRAC_KEY=$winner "$neotrac" move 1 verifying >"$logs/moved" 2>&1
 check "the move its role can make is made" grep -q "Moved 1 to Verifying" "$logs/moved"
 "$neotrac" show 1 --history >"$logs/show" 2>&1
-check "the history names the service" grep -Eq "^  (Scout|Ranger): phase" "$logs/show"
+check "the history names the service" grep -Eq "^  (Scout|Ranger): stage" "$logs/show"
 
 as "$person" projects/service/revoke '{"id":"e2e-scout"}' >/dev/null
 "$neotrac" whoami >/dev/null 2>&1
@@ -180,7 +180,7 @@ check "and unselected" grep -Eq "^  main " "$logs/boards"
 check "a new issue is opened with its fields" grep -q '"id":"e2e-2"' "$logs/new"
 echo "It's the cache." | "$neotrac" edit issue 2 --body - >/dev/null
 "$neotrac" show issue 2 --json >"$logs/issue2"
-check "an issue is edited, its text from stdin, its fields kept" grep -q '"body":"It'"'"'s the cache.","phase":"Reported","board":"E2E","priority":"high","labels":\["speed","start"\]' "$logs/issue2"
+check "an issue is edited, its text from stdin, its fields kept" grep -q '"body":"It'"'"'s the cache.","stage":"Reported","board":"E2E","priority":"high","labels":\["speed","start"\]' "$logs/issue2"
 "$neotrac" list issues >"$logs/issues"
 check "list issues shows them newest first" test "$(head -1 "$logs/issues" | cut -c1-6)" = "#2    "
 "$neotrac" new page --title "How to build" --body "Run make." >/dev/null
@@ -191,8 +191,8 @@ check "keeping its text" grep -qx "Run make." "$logs/page"
 "$neotrac" new milestone --title "Beta" --due 2026-12-01 >/dev/null
 "$neotrac" list milestones >"$logs/milestones"
 check "a milestone is added with its date" grep -Eq "^  beta +2026-12-01 +Beta$" "$logs/milestones"
-"$neotrac" list phases --json >"$logs/phases"
-check "the board's phases are listed" grep -q '"phase":"investigate"' "$logs/phases"
+"$neotrac" list stages --json >"$logs/stages"
+check "the board's stages are listed" grep -q '"stage":"investigate"' "$logs/stages"
 
 "$neotrac" edit issue 2 --milestone beta >/dev/null
 "$neotrac" link 2 blocked_by 1 >"$logs/link"
@@ -262,13 +262,13 @@ BROWSER_ANSWER=denied timeout 30 "$neotrac" login >/dev/null 2>"$logs/denied"
 check "a login turned down in the browser exits 3" test $? -eq 3
 check "and says so" grep -q "it was turned down in the browser" "$logs/denied"
 
-# A worker: neotrac work takes what's moved into a phase its role works, runs a
+# A worker: neotrac work takes what's moved into a stage its role works, runs a
 # program on it, says what the program wrote, and moves it on, or lets it go when the
 # program fails.
 issue_in_investigate() {
 	local id
 	id=$(as "$person" projects/issue/create "{\"project\":\"e2e\",\"board\":\"e2e-main\",\"title\":\"$1\"}" | python3 -c 'import json,sys; print(json.load(sys.stdin)["id"])')
-	as "$person" projects/issue/move "{\"id\":\"$id\",\"phase\":\"e2e-main-investigate\"}" >/dev/null
+	as "$person" projects/issue/move "{\"id\":\"$id\",\"stage\":\"e2e-main-investigate\"}" >/dev/null
 	echo "${id#e2e-}"
 }
 cat >"$logs/fix" <<'FIX'
@@ -283,14 +283,14 @@ NEOTRAC_KEY=$ranger timeout 60 "$neotrac" work --run "$logs/fix" --done verifyin
 check "a worker takes an issue, runs its program, and finishes" test $? -eq 0
 "$neotrac" show issue "$worked" --json >"$logs/worked.json"
 "$neotrac" show issue "$worked" >"$logs/worked"
-check "moving it where it goes when done" grep -q '"phase":"Verifying"' "$logs/worked.json"
+check "moving it where it goes when done" grep -q '"stage":"Verifying"' "$logs/worked.json"
 check "saying what the program wrote" grep -q "Looked at Flaky test: a race in setup." "$logs/worked"
 check "and holding it no longer" grep -q '"held_by":""' "$logs/worked.json"
 failing=$(issue_in_investigate "Ghost bug")
 NEOTRAC_KEY=$ranger timeout 60 "$neotrac" work --run "$logs/fix" --done verifying --once >/dev/null 2>"$logs/work"
 "$neotrac" show issue "$failing" --json >"$logs/failed.json"
 "$neotrac" show issue "$failing" >"$logs/failed"
-check "a program that fails leaves the issue where it was" grep -q '"phase":"Investigate"' "$logs/failed.json"
+check "a program that fails leaves the issue where it was" grep -q '"stage":"Investigate"' "$logs/failed.json"
 check "saying why" grep -q "can't reproduce Ghost bug" "$logs/failed"
 check "and lets it go, for another to take" grep -q '"held_by":""' "$logs/failed.json"
 

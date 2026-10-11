@@ -29,7 +29,7 @@ that made Trac good, rebuilt for the way we work now.
 - **Every change kept.** An issue's history is its story, and the timeline is the
   project's.
 - **Open by default.** A public project can be read by anyone.
-- **Your team's own workflow.** Boards, phases and who moves what, set on the page,
+- **Your team's own workflow.** Boards, stages and who moves what, set on the page,
   with nothing to deploy.
 - **Free and open source,** under the AGPL, so it stays that way for everyone.
 

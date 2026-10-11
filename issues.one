@@ -4,7 +4,7 @@
 // Issues, numbered within their project: issue 12 of uione is uione-12. Every
 // change to one is kept, and shown as its history.
 //
-// An issue is in one of its project's phases, and moves along the steps between
+// An issue is in one of its project's stages, and moves along the steps between
 // them. Each step names the roles that may take it, so who moves what where is
 // the project's to say, in its settings (workflow.one).
 
@@ -29,7 +29,7 @@ namespace projects {
 		body      markdown
 		labels    list of text
 		author    user      = me
-		phase     phase
+		stage     stage
 		priority  priority  required = priority::normal
 		// Who's working on it, from the project's people.
 		assignees  list of user
@@ -71,19 +71,19 @@ namespace projects {
 		mentioned  list of user = mentions(body)
 	}
 
-	// A new issue starts in the phase its board starts issues in.
+	// A new issue starts in the stage its board starts issues in.
 	command issue::create {
-		phase = board.start
+		stage = board.start
 	}
 
 	command issue::update
 
-	// To another of its project's boards, where it starts in the phase that board
+	// To another of its project's boards, where it starts in the stage that board
 	// starts issues in. Its number, and so its address, stay the same.
 	command issue::transfer {
 		changes board
 		require board.project == project  "pick one of this project's boards"
-		phase = board.start
+		stage = board.start
 	}
 
 	command link::create {
@@ -114,11 +114,11 @@ namespace projects {
 		}
 	}
 
-	// How an issue moves: along a step from the phase it's in that one of the
-	// person's roles may take (workflow.one). Whoever works a phase takes an issue in
+	// How an issue moves: along a step from the stage it's in that one of the
+	// person's roles may take (workflow.one). Whoever works a stage takes an issue in
 	// it for half an hour at a time, renewing while they work, so two never work it at
 	// once, and one who stops working it lets it go by itself.
-	define workflow issue by phase {
+	define workflow issue by stage {
 		worked by worked_by
 		steps step
 		lease 30 minutes
@@ -142,8 +142,8 @@ namespace projects {
 		title = issue.title
 		body = issue.body
 		labels = issue.labels
-		phase = issue.phase
-		phase_title = issue.phase.title
+		stage = issue.stage
+		stage_title = issue.stage.title
 		priority = issue.priority
 		assignees = issue.assignees
 		assigned = issue.assignees.name
@@ -193,7 +193,7 @@ namespace projects {
 			issue::release "Let it go" when issue_page.held_by == me
 			details issue_page {
 				tint by priority
-				phase_title "Phase"
+				stage_title "Stage"
 				assigned "Assigned to"
 				holder "Held by"
 				held_until "Until"

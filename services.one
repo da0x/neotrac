@@ -22,7 +22,7 @@ namespace projects {
 
 	screen "Services" /:project/services {
 		text "Programs that work beside you, like an AI agent. Give one a role made for"
-			"services, then a key; a phase worked by that role puts its issues in the"
+			"services, then a key; a stage worked by that role puts its issues in the"
 			"service's queue, which it reads with the neotrac command."
 		table services.services {
 			hide when empty
