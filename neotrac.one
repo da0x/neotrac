@@ -19,7 +19,7 @@ project neotrac {
 	analytics       google
 	
 	environment production {
-		domain    "neotrac.org"
+		domain    "neotrac.org" "www.neotrac.org"
 		firebase  "neotrac"
 	}
 }
