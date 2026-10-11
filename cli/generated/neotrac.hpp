@@ -2025,6 +2025,7 @@ namespace neotrac {
 				std::string author_name{};
 				std::vector<std::string> assignees{};
 				std::vector<std::string> assignees_name{};
+				std::string milestone{};
 				static issues_row from(const ember::value& v) {
 					issues_row out;
 					out.id = detail::text(v["id"]);
@@ -2040,10 +2041,26 @@ namespace neotrac {
 					out.author_name = detail::text(v["author.name"]);
 					out.assignees = detail::texts(v["assignees"]);
 					out.assignees_name = detail::texts(v["assignees.name"]);
+					out.milestone = detail::text(v["milestone"]);
 					return out;
 				}
 			};
 			std::vector<issues_row> issues{};
+			struct milestones_row {
+				std::string id{};
+				std::string name{};
+				std::string title{};
+				time due{};
+				static milestones_row from(const ember::value& v) {
+					milestones_row out;
+					out.id = detail::text(v["id"]);
+					out.name = detail::text(v["name"]);
+					out.title = detail::text(v["title"]);
+					out.due = detail::when(v["due"]);
+					return out;
+				}
+			};
+			std::vector<milestones_row> milestones{};
 			struct phases_row {
 				std::string id{};
 				std::string name{};
@@ -2101,6 +2118,9 @@ namespace neotrac {
 				out.project_name = detail::text(v["project_name"]);
 				if (v["issues"].is_array()) {
 					for (const auto& row : v["issues"].as_array()) out.issues.push_back(issues_row::from(row));
+				}
+				if (v["milestones"].is_array()) {
+					for (const auto& row : v["milestones"].as_array()) out.milestones.push_back(milestones_row::from(row));
 				}
 				if (v["phases"].is_array()) {
 					for (const auto& row : v["phases"].as_array()) out.phases.push_back(phases_row::from(row));

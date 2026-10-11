@@ -187,6 +187,12 @@ check "and linked to another" grep -q '"links":\[{"relation":"blocked_by","to":1
 check "linking it again changes nothing" grep -qx "#2 already blocked_by #1." "$logs/again"
 "$neotrac" show issue 1 --json >"$logs/other"
 check "the other side is kept, said from there" grep -q '"links":\[{"relation":"blocks","to":2}\]' "$logs/other"
+"$neotrac" link 1 relates 2 >/dev/null
+"$neotrac" unlink 2 relates 1 >"$logs/unlink"
+"$neotrac" show issue 1 --json >"$logs/unlinked"
+check "unlinking takes both sides away" grep -q '"links":\[{"relation":"blocks","to":2}\]' "$logs/unlinked"
+check "and says so" grep -qx "#2 no longer relates #1." "$logs/unlink"
+check "unlinking what isn't linked changes nothing" bash -c '! "$0" unlink 2 relates 1 >/dev/null 2>&1' "$neotrac"
 
 # At a terminal: a list to pick from, and the person's editor.
 cat >"$logs/editor" <<'EDITOR'

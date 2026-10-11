@@ -1335,11 +1335,12 @@ namespace {
 	}
 
 	// One issue bearing on another: neotrac link 12 blocked_by 9. neotrac keeps the
-	// other side too, said from there.
-	int link(const asked& a) {
+	// other side too, said from there. neotrac unlink 12 blocked_by 9 takes both away.
+	int link(const asked& a, bool making) {
 		auto s = sign_in(a);
 		asked on = on_issue(a);
-		if (on.words.size() < 3) throw stop(usage, "say how, like neotrac link 12 blocks 13, or blocked_by, relates, duplicates, replaces");
+		std::string verb = making ? "link" : "unlink";
+		if (on.words.size() < 3) throw stop(usage, "say how, like neotrac " + verb + " 12 blocks 13, or blocked_by, relates, duplicates, replaces");
 		std::string how = lower(on.words[1]);
 		std::ranges::replace(how, '-', '_');
 		projects::relation relation{};
@@ -1350,11 +1351,24 @@ namespace {
 		std::string to = projects::issue_id(s.project, issue_number(on.words[2]));
 		auto page = read_issue(s, from, on.words[0]);
 		for (const auto& l : page.links) {
+			if (l.to == to && l.relation == relation && !making) {
+				projects::link_delete gone;
+				gone.id = l.id;
+				s.app->link_delete(gone);
+				if (a.has("json")) std::printf("{\"id\":%s,\"deleted\":true}\n", json(l.id).c_str());
+				else std::printf("#%s no longer %s #%s.\n", on.words[0].c_str(), projects::to_string(relation), on.words[2].c_str());
+				return done;
+			}
 			if (l.to == to && l.relation == relation) {
 				if (a.has("json")) std::printf("{\"id\":%s,\"made\":false}\n", json(l.id).c_str());
 				else std::printf("#%s already %s #%s.\n", on.words[0].c_str(), projects::to_string(relation), on.words[2].c_str());
 				return done;
 			}
+		}
+		if (!making) {
+			if (a.has("json")) std::printf("{\"deleted\":false}\n");
+			else std::printf("#%s isn't %s #%s.\n", on.words[0].c_str(), projects::to_string(relation), on.words[2].c_str());
+			return other;
 		}
 		projects::link_create sent;
 		sent.project = s.project;
@@ -1402,6 +1416,7 @@ Working an issue
   neotrac claim 42, neotrac release 42
   neotrac move 42 review         where the workflow lets your role
   neotrac link 42 blocked_by 9   or blocks, relates, duplicates, replaces
+  neotrac unlink 42 relates 9    takes a link away, both sides
 
 At a terminal, leaving out which one picks it from a list (arrows or j/k, Enter).
 A program names it instead, and gives what it writes as flags: --title, --body
@@ -1439,7 +1454,8 @@ connection, 7 too many requests.
 		if (a.command == "release") return claim(on_issue(a), false);
 		if (a.command == "move") return move(on_issue(a));
 		if (a.command == "comment") return comment(on_issue(a));
-		if (a.command == "link") return link(a);
+		if (a.command == "link") return link(a, true);
+		if (a.command == "unlink") return link(a, false);
 		throw stop(usage, "there's no command " + a.command + "; neotrac help lists them");
 	}
 

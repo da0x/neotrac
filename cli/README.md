@@ -43,6 +43,7 @@ what it means and gives what it writes as flags instead, and is never asked anyt
 | `neotrac move 42 review` | move it, by its phase's name or title |
 | `neotrac comment 42` | comment, in your editor, or with `-m "…"`, or on stdin |
 | `neotrac link 42 blocked_by 9` | one issue bearing on another: `blocks`, `blocked_by`, `relates`, `duplicates`, `replaces`; neotrac keeps the other side |
+| `neotrac unlink 42 relates 9` | takes a link away, and its other side |
 
 The flags for writing are `--title`, `--body` (`-` reads it from stdin), `--priority`,
 `--labels a,b`, `--milestone`, `--due 2026-11-30`, `--name`, `--visibility`, `--slug`
