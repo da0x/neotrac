@@ -28,8 +28,9 @@ users. See `LICENSE`.
 - **Issues**, numbered within their project, like neotrac.org/neotrac/12, shown as a
   table with a tab for each stage or as a board whose cards are dragged along the
   moves a person's roles allow, each colored by its priority as Trac's were. Each
-  has comments, where @username tells someone, a priority, labels, and a history
-  of every change, which the project's timeline gathers. An issue moves to another
+  has comments, where @username tells someone, a priority, labels, attachments,
+  like a screenshot or a log, and a history of every change, which the project's
+  timeline gathers. An issue moves to another
   of its project's boards keeping its number, and links to others on any of them:
   it blocks one, relates to another, duplicates or replaces a third.
 - **What's new**: on your front page, every change on the boards you follow and to

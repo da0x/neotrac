@@ -30,10 +30,12 @@ $ neotrac work --run ./investigate --done review --failed backlog
 
 `work` waits for issues in the stages its roles work, takes each as it comes, and
 runs the program on it: the issue as JSON on its input, the same as `neotrac show 42
---json`, in a folder of its own, `$WORK_DIR`. When the program finishes, what it wrote
-last is commented on the issue, and the issue moves to `--done`; when it fails, what
-it wrote to stderr is, and the issue moves to `--failed`, or is let go for another to
-take. `--once` stops after one.
+--json`, in a folder of its own, `$WORK_DIR`, which holds the issue's attachments,
+each under its own name; their paths there are the JSON's `files`. When the program
+finishes, what it put in `$WORK_DIR/out` is attached to the issue, what it wrote last
+is commented on it, and the issue moves to `--done`; when it fails, what it wrote to
+stderr is commented, and the issue moves to `--failed`, or is let go for another to
+take. `--once` stops after one. Files are read whole, so each has to fit in memory.
 
 Commands read as a verb and what it acts on: `neotrac list issues`, `neotrac edit page
 how_to_build`. At a terminal, leaving out which one opens a list to pick it from, moved
@@ -58,6 +60,8 @@ what it means and gives what it writes as flags instead, and is never asked anyt
 | `neotrac work --run ./program --done review [--failed backlog] [--once]` | works each issue as it comes, with the program |
 | `neotrac move 42 review` | move it, by its stage's name or title |
 | `neotrac comment 42` | comment, in your editor, or with `-m "…"`, or on stdin |
+| `neotrac attach 42 log.txt …` | uploads files and attaches them to the issue, beside what's there |
+| `neotrac download 42 [folder]` | saves what's attached to it, in the folder it's run in unless it's said |
 | `neotrac link 42 blocked_by 9` | one issue bearing on another: `blocks`, `blocked_by`, `relates`, `duplicates`, `replaces`; neotrac keeps the other side |
 | `neotrac unlink 42 relates 9` | takes a link away, and its other side |
 

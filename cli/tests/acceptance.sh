@@ -17,10 +17,13 @@
 #   7. once its key is revoked, the next command exits 3;
 #   8. a person logs in through the browser, here a script that presses Authorize,
 #      and a turned-down login exits 3;
-#   9. neotrac work takes an issue moved into Investigate, runs a program on it, and
-#      moves it on, or lets it go when the program fails.
+#   9. neotrac work takes an issue moved into Investigate, runs a program on it, its
+#      attachments beside it, attaches what it made, and moves it on, or lets it go
+#      when the program fails;
+#  10. a file is attached to an issue, listed with it, and downloaded as it was.
 #
-# Needs the emulators (firestore localhost:8080, auth localhost:9099), ../build/api
+# Needs the emulators (firestore localhost:8080, auth localhost:9099, storage
+# localhost:9199), ../build/api
 # from one build, and ./neotrac from make. Project demo-uione is cleared first.
 
 set -u
@@ -194,6 +197,14 @@ check "a milestone is added with its date" grep -Eq "^  beta +2026-12-01 +Beta$"
 "$neotrac" list stages --json >"$logs/stages"
 check "the board's stages are listed" grep -q '"stage":"investigate"' "$logs/stages"
 
+printf 'panic: nil map\n' >"$logs/trace.log"
+"$neotrac" attach 2 "$logs/trace.log" >"$logs/attach" 2>&1
+check "a file is attached to an issue" grep -qx "Attached trace.log to #2." "$logs/attach"
+"$neotrac" show issue 2 --json >"$logs/attached"
+check "and listed with it" grep -q '"attachments":\[{"name":"trace.log","path":"files/' "$logs/attached"
+"$neotrac" download 2 "$logs/got" >/dev/null
+check "and downloaded as it was" cmp -s "$logs/trace.log" "$logs/got/trace.log"
+
 "$neotrac" edit issue 2 --milestone beta >/dev/null
 "$neotrac" link 2 blocked_by 1 >"$logs/link"
 "$neotrac" link issue 2 blocked-by 1 >"$logs/again"
@@ -275,10 +286,18 @@ cat >"$logs/fix" <<'FIX'
 #!/bin/bash
 title=$(python3 -c 'import json,sys; print(json.load(sys.stdin)["title"])')
 [ -d "$WORK_DIR/out" ] || exit 9
-if [ "$title" = "Flaky test" ]; then echo "Looked at $title: a race in setup."; else echo "can't reproduce $title" >&2; exit 1; fi
+if [ "$title" = "Flaky test" ]; then
+	sed 's/^/seen: /' "$WORK_DIR/notes.txt" >"$WORK_DIR/out/report.txt" || exit 8
+	echo "Looked at $title: a race in setup."
+else
+	echo "can't reproduce $title" >&2
+	exit 1
+fi
 FIX
 chmod +x "$logs/fix"
 worked=$(issue_in_investigate "Flaky test")
+echo "fails one run in ten" >"$logs/notes.txt"
+"$neotrac" attach "$worked" "$logs/notes.txt" >/dev/null
 NEOTRAC_KEY=$ranger timeout 60 "$neotrac" work --run "$logs/fix" --done verifying --once >/dev/null 2>"$logs/work"
 check "a worker takes an issue, runs its program, and finishes" test $? -eq 0
 "$neotrac" show issue "$worked" --json >"$logs/worked.json"
@@ -286,6 +305,9 @@ check "a worker takes an issue, runs its program, and finishes" test $? -eq 0
 check "moving it where it goes when done" grep -q '"stage":"Verifying"' "$logs/worked.json"
 check "saying what the program wrote" grep -q "Looked at Flaky test: a race in setup." "$logs/worked"
 check "and holding it no longer" grep -q '"held_by":""' "$logs/worked.json"
+check "attaching what it made beside what it was given" grep -q '"attachments":\[{"name":"notes.txt",[^]]*{"name":"report.txt"' "$logs/worked.json"
+"$neotrac" download "$worked" "$logs/made" >/dev/null
+check "made from the attachment it was given" grep -qx "seen: fails one run in ten" "$logs/made/report.txt"
 failing=$(issue_in_investigate "Ghost bug")
 NEOTRAC_KEY=$ranger timeout 60 "$neotrac" work --run "$logs/fix" --done verifying --once >/dev/null 2>"$logs/work"
 "$neotrac" show issue "$failing" --json >"$logs/failed.json"

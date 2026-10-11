@@ -50,6 +50,7 @@ namespace projects at / {
 		page::update
 		issue::create
 		issue::update
+		issue::attach
 		issue::move
 		issue::transfer
 		issue::claim
@@ -71,6 +72,7 @@ namespace projects at / {
 	define role contributor "Contributor" in project {
 		issue::create
 		issue::update
+		issue::attach
 		issue::move
 		issue::transfer
 		issue::claim
@@ -93,6 +95,7 @@ namespace projects at / {
 		issue::renew
 		issue::release
 		issue::move
+		issue::attach
 		comment::create
 	}
 

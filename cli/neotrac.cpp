@@ -44,7 +44,7 @@ namespace {
 
 	using namespace neotrac;
 
-	constexpr const char* version = "0.4.0";
+	constexpr const char* version = "0.5.0";
 
 	// What went wrong, as the exit code a script reads.
 	enum exit_code : int {
@@ -438,6 +438,30 @@ namespace {
 		return out;
 	}
 
+	// A file's name: the last part of its path.
+	std::string file_name(const std::string& path) { return path.substr(path.find_last_of('/') + 1); }
+
+	// What a file holds, by its name, so a browser shows a picture as one.
+	std::string type_of(const std::string& path) {
+		static const std::map<std::string, std::string> types{
+		    {"png", "image/png"},        {"jpg", "image/jpeg"},     {"jpeg", "image/jpeg"},       {"gif", "image/gif"},       {"webp", "image/webp"},
+		    {"svg", "image/svg+xml"},    {"pdf", "application/pdf"}, {"txt", "text/plain"},        {"log", "text/plain"},      {"md", "text/markdown"},
+		    {"csv", "text/csv"},         {"json", "application/json"}, {"srt", "application/x-subrip"}, {"vtt", "text/vtt"}, {"mp4", "video/mp4"},
+		    {"mov", "video/quicktime"}, {"webm", "video/webm"},      {"mp3", "audio/mpeg"},        {"wav", "audio/wav"},       {"zip", "application/zip"},
+		};
+		auto dot = path.find_last_of('.');
+		auto found = dot == std::string::npos ? types.end() : types.find(lower(path.substr(dot + 1)));
+		return found == types.end() ? "application/octet-stream" : found->second;
+	}
+
+	// Where in a folder a file is kept under its own name, or, where that's taken,
+	// a number and its name.
+	std::string kept_in(const std::string& folder, const std::string& name) {
+		std::string at = folder + "/" + name;
+		for (int n = 1; std::filesystem::exists(at); ++n) at = folder + "/" + std::to_string(n) + "-" + name;
+		return at;
+	}
+
 	void print_issue(const session& s, const projects::issue_page& page, bool history) {
 		std::printf("#%.0f %s\n", page.number, page.title.c_str());
 		std::printf("%s on %s, %s priority", page.stage_title.c_str(), page.board_title.c_str(), projects::to_string(page.priority));
@@ -451,6 +475,11 @@ namespace {
 			for (const auto& l : page.labels) std::printf(" %s", l.c_str());
 		}
 		std::printf("\n\n%s\n", page.body.empty() ? "(no description)" : page.body.c_str());
+		if (!page.attachments.empty()) {
+			std::printf("\nAttached:");
+			for (std::size_t i = 0; i < page.attachments.size(); ++i) std::printf("%s %s", i ? "," : "", file_name(page.attachments[i]).c_str());
+			std::printf("\n");
+		}
 		for (const auto& link : page.links) std::printf("\n%s #%.0f %s", projects::to_string(link.relation), link.to_number, link.to_title.c_str());
 		if (!page.links.empty()) std::printf("\n");
 		for (const auto& c : page.comments) std::printf("\n%s:\n%s\n", c.author_name.c_str(), c.body.c_str());
@@ -470,7 +499,11 @@ namespace {
 	std::string issue_json(const session& s, const projects::issue_page& page) {
 		std::string out = "{\"number\":" + json(page.number) + ",\"title\":" + json(page.title) + ",\"body\":" + json(page.body) + ",\"stage\":" +
 		                  json(page.stage_title) + ",\"board\":" + json(page.board_title) + ",\"priority\":" + json(std::string(projects::to_string(page.priority))) +
-		                  ",\"labels\":" + json(page.labels) + ",\"assigned\":" + json(page.assigned) + ",\"held_by\":" + json(held(page) ? page.holder : std::string()) + ",\"milestone\":" + json(page.milestone_title) + ",\"links\":[";
+		                  ",\"labels\":" + json(page.labels) + ",\"assigned\":" + json(page.assigned) + ",\"held_by\":" + json(held(page) ? page.holder : std::string()) + ",\"milestone\":" + json(page.milestone_title) + ",\"attachments\":[";
+		for (std::size_t i = 0; i < page.attachments.size(); ++i) {
+			out += (i ? "," : "") + std::string("{\"name\":") + json(file_name(page.attachments[i])) + ",\"path\":" + json(page.attachments[i]) + "}";
+		}
+		out += "],\"links\":[";
 		for (std::size_t i = 0; i < page.links.size(); ++i) {
 			out += (i ? "," : "") + std::string("{\"relation\":") + json(std::string(projects::to_string(page.links[i].relation))) +
 			       ",\"to\":" + json(page.links[i].to_number) + "}";
@@ -551,6 +584,12 @@ namespace {
 		if (!::mkdtemp(root.data())) throw stop(other, "couldn't make a folder to work in");
 		std::string folder = root + "/work";
 		std::filesystem::create_directories(folder + "/out");
+		// Its attachments are in its folder, each under its own name.
+		std::vector<std::string> local;
+		for (const auto& path : page.attachments) {
+			local.push_back(kept_in(folder, file_name(path)));
+			s.app->download(path, local.back());
+		}
 		std::string out_path = root + "/stdout", err_path = root + "/stderr";
 		int input[2];
 		if (::pipe(input) != 0) throw stop(other, "couldn't start " + program);
@@ -573,7 +612,9 @@ namespace {
 			::close(input[1]);
 			throw stop(other, "couldn't start " + program);
 		}
-		std::string given = issue_json(s, page) + "\n";
+		std::string given = issue_json(s, page);
+		given.pop_back();
+		given += ",\"files\":" + json(local) + "}\n";
 		(void)!::write(input[1], given.data(), given.size());
 		::close(input[1]);
 		std::fprintf(stderr, "%s %s: working\n", number.c_str(), page.title.c_str());
@@ -599,6 +640,21 @@ namespace {
 			if (lost) {
 				// Nothing to say or move: it isn't this worker's any more.
 			} else if (fine) {
+				// What it wrote in out/ is attached to the issue.
+				std::vector<std::string> made;
+				std::vector<std::filesystem::path> written;
+				for (const auto& entry : std::filesystem::directory_iterator(folder + "/out")) {
+					if (entry.is_regular_file()) written.push_back(entry.path());
+				}
+				std::ranges::sort(written);
+				for (const auto& path : written) made.push_back(s.app->upload(path.string(), type_of(path.string())));
+				if (!made.empty()) {
+					auto now = read_issue(s, id, id);
+					projects::issue_attach sent{.id = id};
+					sent.attachments = now.attachments;
+					sent.attachments->insert(sent.attachments->end(), made.begin(), made.end());
+					s.app->issue_attach(sent);
+				}
 				std::string said = tail_of(out_path, 40);
 				if (!said.empty()) s.app->comment_create({.issue = id, .body = said});
 				projects::issue_move sent{.id = id};
@@ -677,6 +733,51 @@ namespace {
 			if (once) break;
 		}
 		return failed;
+	}
+
+	// Uploads files and attaches them to an issue, beside what's attached already.
+	int attach(const asked& a) {
+		auto s = sign_in(a);
+		std::string id = issue_of(s, a);
+		if (a.words.size() < 2) throw stop(usage, "say which files, like neotrac attach 42 screenshot.png");
+		auto page = read_issue(s, id, a.words[0]);
+		std::vector<std::string> made;
+		for (std::size_t i = 1; i < a.words.size(); ++i) {
+			if (!std::filesystem::is_regular_file(a.words[i])) throw stop(usage, a.words[i] + " isn't a file");
+		}
+		for (std::size_t i = 1; i < a.words.size(); ++i) made.push_back(s.app->upload(a.words[i], type_of(a.words[i])));
+		projects::issue_attach sent{.id = id};
+		sent.attachments = page.attachments;
+		sent.attachments->insert(sent.attachments->end(), made.begin(), made.end());
+		s.app->issue_attach(sent);
+		if (a.has("json")) {
+			std::printf("{\"id\":%s,\"attached\":%s}\n", json(id).c_str(), json(made).c_str());
+		} else {
+			for (const auto& path : made) std::printf("Attached %s to #%s.\n", file_name(path).c_str(), a.words[0].c_str());
+		}
+		return done;
+	}
+
+	// Saves an issue's attachments in a folder, the one it's run in unless it's said.
+	int download(const asked& a) {
+		auto s = sign_in(a);
+		std::string id = issue_of(s, a);
+		auto page = read_issue(s, id, a.words[0]);
+		std::string folder = a.words.size() > 1 ? a.words[1] : ".";
+		std::filesystem::create_directories(folder);
+		std::vector<std::string> saved;
+		for (const auto& path : page.attachments) {
+			saved.push_back(kept_in(folder, file_name(path)));
+			s.app->download(path, saved.back());
+		}
+		if (a.has("json")) {
+			std::printf("{\"id\":%s,\"saved\":%s}\n", json(id).c_str(), json(saved).c_str());
+		} else if (saved.empty()) {
+			std::printf("#%s has nothing attached.\n", a.words[0].c_str());
+		} else {
+			for (const auto& at : saved) std::printf("Saved %s\n", at.c_str());
+		}
+		return done;
 	}
 
 	int claim(const asked& a, bool taking) {
@@ -1602,13 +1703,16 @@ Writing, in your editor ($VISUAL, $EDITOR or vi)
   neotrac new project|issue|page|milestone
   neotrac edit project|issue|page|milestone [which]
   neotrac comment 42             or -m "..." or the comment on stdin
+  neotrac attach 42 log.txt ...  uploads files and attaches them to the issue
+  neotrac download 42 [folder]   saves what's attached to it
   neotrac delete project [p]     asks you to type its address
 
 Working an issue
   neotrac claim 42, neotrac release 42
   neotrac work --run ./fix --done review [--failed backlog] [--once]
                                  takes each issue a role of yours works as it comes,
-                                 runs the program on it, and moves it on
+                                 runs the program on it, its attachments beside it,
+                                 attaches what it writes to out/, and moves it on
   neotrac move 42 review         where the workflow lets your role
   neotrac link 42 blocked_by 9   or blocks, relates, duplicates, replaces
   neotrac unlink 42 relates 9    takes a link away, both sides
@@ -1650,6 +1754,8 @@ connection, 7 too many requests.
 		if (a.command == "move") return move(on_issue(a));
 		if (a.command == "comment") return comment(on_issue(a));
 		if (a.command == "work") return work(a);
+		if (a.command == "attach") return attach(on_issue(a));
+		if (a.command == "download") return download(on_issue(a));
 		if (a.command == "link") return link(a, true);
 		if (a.command == "unlink") return link(a, false);
 		throw stop(usage, "there's no command " + a.command + "; neotrac help lists them");

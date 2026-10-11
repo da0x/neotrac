@@ -35,6 +35,8 @@ namespace projects {
 		assignees  list of user
 		// The milestone it's part of, if any (milestones.one).
 		milestone  milestone
+		// Files that go with it, like a screenshot, a log, or what an agent made.
+		attachments  list of file
 	}
 
 	// How one issue bears on another, said from each side: one blocks another, which
@@ -77,6 +79,12 @@ namespace projects {
 	}
 
 	command issue::update
+
+	// Attaching files, and taking them away, without changing anything else: how an
+	// agent hands back what it made.
+	command issue::attach {
+		changes attachments
+	}
 
 	// To another of its project's boards, where it starts in the stage that board
 	// starts issues in. Its number, and so its address, stay the same.
@@ -152,6 +160,7 @@ namespace projects {
 		held_until = issue.held_until
 		milestone = issue.milestone
 		milestone_title = issue.milestone.title
+		attachments = issue.attachments
 		board = issue.board
 		board_title = issue.board.title
 		// How it bears on others, and they on it, each said from this side.
@@ -200,9 +209,10 @@ namespace projects {
 				milestone_title "Milestone"
 				priority "Priority"
 				labels "Labels"
+				attachments "Attachments"
 			}
 			issue::update "Edit" form "Save" {
-				title  body "Description"  assignees "Assigned to"  milestone  priority  labels
+				title  body "Description"  assignees "Assigned to"  milestone  priority  labels  attachments
 			}
 			link::create "Link an issue" form "Link" {
 				relation "This issue"  to "Issue"
