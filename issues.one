@@ -37,6 +37,9 @@ namespace projects {
 		milestone  milestone
 		// Files that go with it, like a screenshot, a log, or what an agent made.
 		attachments  list of file
+		// Where it is in its board's order, which people drag it into. A new issue
+		// starts at its number, so it comes last, and #1 comes before #2.
+		position  number
 	}
 
 	// How one issue bears on another, said from each side: one blocks another, which
@@ -76,6 +79,7 @@ namespace projects {
 	// A new issue starts in the stage its board starts issues in.
 	command issue::create {
 		stage = board.start
+		position = number
 	}
 
 	command issue::update

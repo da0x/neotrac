@@ -42,8 +42,8 @@ namespace projects {
 		followers = board.followers
 		project_name = board.project.name
 		issues = each issue in board {
-			order by number descending
-			number  title  labels  stage  stage.title  priority  updated_at
+			order by position
+			number  title  labels  stage  stage.title  priority  updated_at  position
 			author  author.picture  author.name  assignees  assignees.name  milestone
 		}
 		// The project's milestones, soonest first, as a track above its issues.
@@ -79,7 +79,7 @@ namespace projects {
 				due "Due"
 			}
 			search title labels stage.title priority
-			sort by number descending
+			reorder position
 			page 25
 			tint by priority
 			number "#"
@@ -91,6 +91,7 @@ namespace projects {
 		}
 		board board_page.issues by stage over board_page.stages link /:project/:issue {
 			move issue::move along board_page.steps
+			reorder position
 			tint by priority
 			title
 			number "#"  labels  assignees.name

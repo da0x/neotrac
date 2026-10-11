@@ -12,6 +12,16 @@ namespace projects {
 	// that named the old one names the new, and the old one goes, by role::delete,
 	// which maintainers may now do. What a later deploy adds to a role reaches every
 	// project by itself; this first one says so here.
+	// Issues are put in order on their boards now. Each issue made before then
+	// starts where a new one would, at its number, so #1 comes first.
+	once "2026-10-11 issue order" {
+		each issue {
+			if position == none {
+				dispatch issue::update { position = number }
+			}
+		}
+	}
+
 	once "2026-10-09 contributor role" {
 		each role where name == "member" {
 			dispatch role::create {
