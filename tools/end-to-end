@@ -337,7 +337,7 @@ def main():
         milestone_id = f"{slug}-first"
         command(token, "issue/update", {"id": issue_id, "milestone": milestone_id})
         until(lambda: ((view("projects::issue_page", issue_id) or {}).get("milestone") == milestone_id), "the issue is part of the milestone")
-        command(token, "milestone/delete", {"id": milestone_id})
+        command(token, "milestone/delete", {"id": milestone_id, "typed": "First"})
         until(lambda: not (view("projects::issue_page", issue_id) or {}).get("milestone"), "the issue is part of no milestone")
         passed("a maintainer deletes a milestone, and its issues stay, part of none")
 
@@ -349,7 +349,7 @@ def main():
         command(token, "link/create", {"project": slug, "from": released["id"], "to": issue_id, "relation": "relates"})
         linked = lambda: any(l.get("to") == released["id"] for l in (view("projects::issue_page", issue_id) or {}).get("links", []))
         until(linked, "the link reaches the first issue")
-        command(token, "board/delete", {"id": releases})
+        command(token, "board/delete", {"id": releases, "typed": "Releases"})
         # A page of what's gone stays, its fields read as none.
         until(lambda: not (view("projects::issue_page", released["id"]) or {}).get("title"), "the deleted board's issue is gone")
         until(lambda: not any(b.get("id") == releases for b in (view("projects::project_page", slug) or {}).get("boards", [])), "the board is gone")
