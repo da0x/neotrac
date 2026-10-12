@@ -1164,6 +1164,44 @@ namespace {
 		return done;
 	}
 
+	// A board, with its issues, or a milestone, its issues staying, once its title is
+	// typed, or given with --confirm.
+	int delete_part(const asked& a, const std::string& noun) {
+		auto s = sign_in(a);
+		auto project = project_of(s);
+		if (a.words.size() < 2) throw stop(usage, "say which, like neotrac delete " + noun + " " + (noun == "board" ? "main" : "beta"));
+		std::string wanted = lower(a.words[1]), id, title;
+		auto pick = [&](const auto& rows) {
+			for (const auto& r : rows) {
+				if (lower(r.name) == wanted || r.id == a.words[1]) id = r.id, title = r.title;
+			}
+			for (const auto& r : rows) {
+				if (id.empty() && lower(r.title) == wanted) id = r.id, title = r.title;
+			}
+		};
+		if (noun == "board") pick(project.boards);
+		else pick(project.milestones);
+		if (id.empty()) throw stop(not_found, "there's no " + noun + " " + a.words[1] + " in " + s.project + "; neotrac list " + noun + "s lists them");
+		std::string typed = a.flag("confirm");
+		if (!a.has("confirm")) {
+			if (!asking(a)) throw stop(usage, "say --confirm \"" + title + "\" to delete it");
+			std::fprintf(stderr, noun == "board" ? "Deleting %s deletes its issues with it. It can't be undone.\n" : "Deleting %s leaves its issues in no milestone.\n", title.c_str());
+			typed = terminal::ask("Type its title, " + title + ", to delete it: ");
+		}
+		if (noun == "board") {
+			projects::board_delete sent{.id = id};
+			sent.typed = typed;
+			s.app->board_delete(sent);
+		} else {
+			projects::milestone_delete sent{.id = id};
+			sent.typed = typed;
+			s.app->milestone_delete(sent);
+		}
+		if (a.has("json")) std::printf("{\"deleted\":%s}\n", json(id).c_str());
+		else std::printf("Deleted %s.\n", title.c_str());
+		return done;
+	}
+
 	int delete_project(const asked& a, session& s) {
 		std::string project = chosen(a, 1, "project", project_choices(s), s.project);
 		std::string typed = a.flag("confirm");
@@ -1639,7 +1677,8 @@ namespace {
 
 	int remove(const asked& a) {
 		std::string noun = a.words.empty() ? "" : noun_of(a.words[0]);
-		if (noun != "project") throw stop(usage, "a project is deleted, with neotrac delete project; the rest goes with it");
+		if (noun == "milestone" || noun == "board") return delete_part(a, noun);
+		if (noun != "project") throw stop(usage, "a project, a board or a milestone is deleted; an issue goes with its board or project");
 		auto s = sign_in(a, false);
 		if (s.who.service) throw stop(said_no, "a service doesn't delete projects");
 		return delete_project(a, s);
@@ -1736,6 +1775,7 @@ Writing, in your editor ($VISUAL, $EDITOR or vi)
   neotrac attach 42 log.txt ...  uploads files and attaches them to the issue
   neotrac download 42 [folder]   saves what's attached to it
   neotrac delete project [p]     asks you to type its address
+  neotrac delete board|milestone b   asks you to type its title
 
 Working an issue
   neotrac claim 42, neotrac release 42

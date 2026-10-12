@@ -912,6 +912,7 @@ namespace neotrac {
 			std::optional<std::string> start{};
 			std::optional<double> position{};
 			std::optional<std::vector<std::string>> followers{};
+			std::optional<std::string> typed{};
 
 			std::string json() const {
 				std::string out = "{";
@@ -924,6 +925,7 @@ namespace neotrac {
 				if (start) add("start", detail::json(*start));
 				if (position) add("position", detail::json(*position));
 				if (followers) add("followers", detail::json(*followers));
+				if (typed) add("typed", detail::json(*typed));
 				return out + "}";
 			}
 		};
@@ -1614,6 +1616,7 @@ namespace neotrac {
 			std::optional<std::string> title{};
 			std::optional<time> due{};
 			std::optional<std::string> description{};
+			std::optional<std::string> typed{};
 
 			std::string json() const {
 				std::string out = "{";
@@ -1624,6 +1627,7 @@ namespace neotrac {
 				if (title) add("title", detail::json(*title));
 				if (due) add("due", detail::json(*due));
 				if (description) add("description", detail::json(*description));
+				if (typed) add("typed", detail::json(*typed));
 				return out + "}";
 			}
 		};
