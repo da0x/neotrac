@@ -222,6 +222,8 @@ namespace projects at / {
 		changes = each change in issue where {
 			board.followers has me || assignees has me || mentioned has me
 			created_by != me
+			// What a deploy changed by itself, like the order issues started in.
+			created_by != none
 		} {
 			order by created_at descending
 			limit 30
