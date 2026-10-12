@@ -21,8 +21,11 @@ namespace projects {
 	}
 
 	command board::update
-	// A board goes with its issues, and its stages and steps.
+	// A board goes with its issues, and its stages and steps, once its title is typed
+	// to say so.
 	command board::delete {
+		input typed text
+		require typed == title  "type the board's title to delete it"
 		each issue where board == id {
 			dispatch issue::delete
 		}
@@ -84,6 +87,9 @@ namespace projects {
 			link /:project/boards/:board/workflow "Workflow" icon workflow
 			board::update "Edit board" icon edit form "Save" {
 				title
+			}
+			board::delete "Delete board" form "Delete it for good" {
+				typed "Its issues are deleted with it. Type its title to confirm"
 			}
 		}
 		table board_page.issues by stage over board_page.stages link /:project/:issue {

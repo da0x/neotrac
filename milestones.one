@@ -16,8 +16,11 @@ namespace projects {
 
 	command milestone::create
 	command milestone::update
-	// A milestone goes, and its issues stay, part of none.
+	// A milestone goes, once its title is typed to say so, and its issues stay, part
+	// of none.
 	command milestone::delete {
+		input typed text
+		require typed == title  "type the milestone's title to delete it"
 		each issue where milestone == id {
 			dispatch issue::update { milestone = none }
 		}
@@ -50,6 +53,9 @@ namespace projects {
 		heading {
 			milestone::update "Edit milestone" icon edit form "Save" {
 				title  due "Due"  description
+			}
+			milestone::delete "Delete milestone" form "Delete it" {
+				typed "Its issues stay, in no milestone. Type its title to confirm"
 			}
 		}
 		subtitle "{milestone_page.description}"
