@@ -99,6 +99,14 @@ build/terminal/out/neotrac
 Each reads neotrac.org live, or the server in `ONE_SERVER`, and signs in through the
 browser the first time.
 
+`tools/end-to-end` runs the backend and the terminal app on the Firebase emulators,
+drives the app by its keys, and checks each change arrive in the view the web app
+reads, and a change from the web arrive in the terminal:
+
+```
+UIONE=~/uione tools/end-to-end
+```
+
 neotrac.org is deployed from the uione studio, at [uione.io](https://uione.io), which
 builds what's pushed here in neotrac's own Google Cloud project.
 

@@ -1,0 +1,321 @@
+#!/usr/bin/env python3
+# Copyright 2026 Daher Alfawares
+# SPDX-License-Identifier: AGPL-3.0-only
+
+# neotrac end to end, on the Firebase emulators, as the apps one build writes run it:
+# the Go backend and the rules from build/, the terminal app driven by its keys in a
+# pseudo-terminal, and each change checked in the view the web app reads, as it
+# arrives. A change made elsewhere, like a comment from the web, is checked arriving
+# in the terminal by itself. Never against production.
+#
+#   UIONE=~/uione tools/end-to-end
+#
+# UIONE is a checkout of uione, for its emulators (tools/emulators/run). The terminal
+# app is built against the libraries the uione installer put beside one, at the
+# version neotrac.one names, or against UIONE_LIBRARIES. It needs pyte
+# (pip install pyte), and one, go, cmake, g++, node and curl.
+
+import fcntl
+import json
+import os
+import pty
+import re
+import select
+import shutil
+import signal
+import struct
+import subprocess
+import sys
+import termios
+import time
+import urllib.parse
+import urllib.request
+
+try:
+    import pyte
+except ImportError:
+    sys.exit("end-to-end: it needs pyte: pip install pyte")
+
+here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+uione = os.environ.get("UIONE") or sys.exit("end-to-end: UIONE names a checkout of uione, for its emulators")
+one = os.environ.get("ONE", "one")
+work = os.path.join(os.environ.get("XDG_CACHE_HOME", os.path.expanduser("~/.cache")), "neotrac-end-to-end")
+firestore, auth, port = "localhost:8080", "localhost:9099", 8092
+server = f"http://localhost:{port}"
+project_id = "demo-uione"
+
+step = 0
+
+
+def passed(what):
+    global step
+    step += 1
+    print(f"ok {step}  {what}", flush=True)
+
+
+def until(check, what, seconds=20):
+    end = time.time() + seconds
+    while True:
+        found = check()
+        if found:
+            return found
+        if time.time() > end:
+            raise SystemExit(f"end-to-end: timed out waiting until {what}")
+        time.sleep(0.2)
+
+
+def run(words, **options):
+    subprocess.run(words, check=True, **options)
+
+
+def call(method, url, body=None, headers=None):
+    data = json.dumps(body).encode() if body is not None else None
+    request = urllib.request.Request(url, data=data, method=method, headers={"Content-Type": "application/json", **(headers or {})})
+    try:
+        with urllib.request.urlopen(request, timeout=10) as answer:
+            body = answer.read()
+            try:
+                return answer.status, json.loads(body or b"null")
+            except ValueError:
+                return answer.status, body.decode(errors="replace")
+    except urllib.error.HTTPError as e:
+        return e.code, e.read().decode()
+    except (urllib.error.URLError, ConnectionError):
+        return 0, None
+
+
+# The view the web app reads, as the emulator holds it now: its fields as plain values.
+def view(name, subject):
+    path = urllib.parse.quote(f"views/{name}:{subject}")
+    status, document = call("GET", f"http://{firestore}/v1/projects/{project_id}/databases/(default)/documents/{path}", headers={"Authorization": "Bearer owner"})
+    return plain({"mapValue": document}) if status == 200 else None
+
+
+def plain(value):
+    if "mapValue" in value:
+        return {k: plain(v) for k, v in value["mapValue"].get("fields", {}).items()}
+    if "arrayValue" in value:
+        return [plain(v) for v in value["arrayValue"].get("values", [])]
+    for kind in ("stringValue", "booleanValue", "timestampValue"):
+        if kind in value:
+            return value[kind]
+    if "integerValue" in value:
+        return int(value["integerValue"])
+    if "doubleValue" in value:
+        return value["doubleValue"]
+    return None
+
+
+# Someone signed in with Google on the Auth emulator: their id, a token for the API,
+# and the refresh token an app keeps.
+def person(sub, name):
+    status, answer = call("POST", f"http://{auth}/identitytoolkit.googleapis.com/v1/accounts:signInWithIdp?key=any", {
+        "postBody": "id_token=" + json.dumps({"sub": sub, "email": f"{sub}@example.com", "email_verified": True, "name": name}) + "&providerId=google.com",
+        "requestUri": "http://localhost", "returnSecureToken": True})
+    if status != 200:
+        raise SystemExit(f"end-to-end: couldn't sign {name} in: {answer}")
+    return answer["localId"], answer["idToken"], answer["refreshToken"]
+
+
+def command(token, name, fields):
+    status, answer = call("POST", f"{server}/api/projects/{name}", fields, {"Authorization": f"Bearer {token}"})
+    if status != 200:
+        raise SystemExit(f"end-to-end: {name} was refused: {answer}")
+    return answer
+
+
+class terminal:
+    """A program in a pseudo-terminal: keys sent to it, and its screen read as text."""
+
+    keys = {"tab": "\t", "enter": "\r", "escape": "\x1b"}
+
+    def __init__(self, words, environment, width=120, height=40):
+        self.screen = pyte.Screen(width, height)
+        self.stream = pyte.ByteStream(self.screen)
+        self.pid, self.fd = pty.fork()
+        if self.pid == 0:
+            os.execvpe(words[0], words, {**os.environ, **environment, "TERM": "xterm-256color"})
+        fcntl.ioctl(self.fd, termios.TIOCSWINSZ, struct.pack("HHHH", height, width, 0, 0))
+
+    def read(self, seconds=0.1):
+        end = time.time() + seconds
+        while time.time() < end:
+            ready, _, _ = select.select([self.fd], [], [], max(0, end - time.time()))
+            if not ready:
+                break
+            try:
+                self.stream.feed(os.read(self.fd, 65536))
+            except OSError:
+                break
+
+    def text(self):
+        self.read()
+        return "\n".join(self.screen.display)
+
+    def press(self, *keys):
+        for key in keys:
+            os.write(self.fd, self.keys.get(key, key).encode())
+            self.read(0.15)
+
+    def type(self, words):
+        for c in words:
+            os.write(self.fd, c.encode())
+            self.read(0.02)
+
+    def shows(self, words, what=None, seconds=20):
+        until(lambda: words in self.text(), what or f"the terminal shows {words!r}", seconds)
+
+    # What has the keyboard, drawn reversed: a button's or a link's words.
+    def focused(self):
+        self.read()
+        rows = []
+        for y in range(self.screen.lines):
+            line = self.screen.buffer[y]
+            cells = "".join(line[x].data if line[x].reverse else "\0" for x in range(self.screen.columns))
+            rows += [part.strip() for part in cells.split("\0") if part.strip()]
+        return " ".join(rows)
+
+    def tab_to(self, words, tries=80):
+        for _ in range(tries):
+            if words in self.focused():
+                return
+            self.press("tab")
+        raise SystemExit(f"end-to-end: tab never reached {words!r}; the screen:\n{self.text()}")
+
+    # Asked to stop, and made to when it hasn't after a few seconds.
+    def close(self):
+        for ending in (signal.SIGTERM, signal.SIGKILL):
+            try:
+                os.kill(self.pid, ending)
+            except ProcessLookupError:
+                return
+            end = time.time() + 3
+            while time.time() < end:
+                try:
+                    if os.waitpid(self.pid, os.WNOHANG)[0]:
+                        return
+                except ChildProcessError:
+                    return
+                time.sleep(0.1)
+
+
+def version():
+    with open(os.path.join(here, "neotrac.one")) as f:
+        return re.search(r'^\s*one\s+"([^"]+)"', f.read(), re.M).group(1)
+
+
+def main():
+    os.makedirs(work, exist_ok=True)
+    build = os.path.join(work, "build")
+    shutil.rmtree(build, ignore_errors=True)
+    run([one, "build", here, "--out", build], stdout=subprocess.DEVNULL)
+    passed("one build wrote the backend, the rules and the terminal app")
+
+    status, _ = call("GET", f"http://{firestore}/")
+    if status == 0:
+        run([os.path.join(uione, "tools/emulators/run")], stdout=subprocess.DEVNULL)
+    run(["node", os.path.join(uione, "tools/emulators/rules.mjs"), os.path.join(build, "firestore.rules")], stdout=subprocess.DEVNULL)
+
+    backend = os.path.join(work, "neotrac-api")
+    run(["go", "mod", "tidy"], cwd=os.path.join(build, "api"), stderr=subprocess.DEVNULL)
+    run(["go", "build", "-o", backend, "."], cwd=os.path.join(build, "api"))
+    api = subprocess.Popen([backend], env={**os.environ, "PORT": str(port), "GOOGLE_CLOUD_PROJECT": project_id,
+                                           "FIRESTORE_EMULATOR_HOST": firestore, "FIREBASE_AUTH_EMULATOR_HOST": auth},
+                           stdout=open(os.path.join(work, "api.log"), "w"), stderr=subprocess.STDOUT)
+    apps = []
+    try:
+        until(lambda: call("GET", f"{server}/health")[0] == 200, "the backend answers")
+        passed("the backend runs on the emulators")
+
+        libraries = os.environ.get("UIONE_LIBRARIES", os.path.expanduser(f"~/.local/share/uione/{version()}"))
+        out = os.path.join(work, "terminal")
+        # UIONE said outright, so a build folder from before doesn't keep the one it had.
+        run(["cmake", "-S", os.path.join(build, "terminal"), "-B", out, "-DCMAKE_BUILD_TYPE=Release", f"-DUIONE={libraries}"],
+            stdout=subprocess.DEVNULL)
+        # g++ now and then crashes on its own: built again then, never past an error in the code.
+        for attempt in range(4):
+            built = subprocess.run(["cmake", "--build", out, "--parallel", "8"], capture_output=True, text=True)
+            if built.returncode == 0:
+                break
+            if "internal compiler error" not in built.stdout + built.stderr or attempt == 3:
+                raise SystemExit("end-to-end: the terminal app didn't compile:\n" + built.stdout[-4000:] + built.stderr[-2000:])
+        passed("the terminal app compiles")
+
+        # Someone with a project of their own, signed in to the app as before.
+        stamp = str(int(time.time()))
+        uid, token, refresh = person("trial-" + stamp, "Rosa Diaz")
+        slug = "trial" + stamp
+        command(token, "project/create", {"slug": slug, "name": "Trial", "workflow": "basic", "visibility": "public"})
+        config = os.path.join(work, "config")
+        os.makedirs(os.path.join(config, "neotrac"), exist_ok=True)
+        kept = os.path.join(config, "neotrac", "credentials")
+        with open(os.open(kept, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600), "w") as f:
+            json.dump({"server": server, "refresh_token": refresh}, f)
+        environment = {"XDG_CONFIG_HOME": config, "ONE_SERVER": server, "ONE_FIREBASE_PROJECT": project_id,
+                       "ONE_FIRESTORE_HOST": firestore, "ONE_AUTH_HOST": auth}
+        app = os.path.join(out, "neotrac")
+        board = until(lambda: ((view("projects::project_page", slug) or {}).get("boards") or [None])[0], "the project's board is made")
+        board_slug = board["id"][len(slug) + 1:]
+
+        # A new issue, through the board's form in the terminal.
+        on_board = terminal([app, f"/{slug}/boards/{board_slug}"], environment)
+        apps.append(on_board)
+        on_board.shows("New issue", "the terminal shows the board")
+        on_board.tab_to("New issue")
+        on_board.press("enter")
+        on_board.shows("Open issue", "the form opens")
+        on_board.type("Ship the terminal app")
+        on_board.tab_to("Open issue")
+        on_board.press("enter")
+        issue = until(lambda: next((i for i in (view("projects::board_page", board["id"]) or {}).get("issues", [])
+                                    if i.get("title") == "Ship the terminal app"), None), "the web's board view has the issue")
+        passed("an issue opened in the terminal arrives in the web's board view")
+        on_board.shows("Ship the terminal app", "the board shows the new issue")
+        passed("and the terminal's board shows it, without being asked")
+
+        # Taking it, moving it along a step, and commenting, on its page.
+        number = int(issue["number"])
+        issue_id = f"{slug}-{number}"
+        page = terminal([app, f"/{slug}/{number}"], environment)
+        apps.append(page)
+        page.shows("Ship the terminal app", "the issue's page opens")
+        page.tab_to("Take it")
+        page.press("enter")
+        until(lambda: ((view("projects::issue_page", issue_id) or {}).get("held_by.name") == "Rosa Diaz"), "the web's issue view says Rosa holds it")
+        page.shows("Let it go", "the terminal offers to let it go")
+        passed("taking the issue in the terminal arrives in the web's view, and the terminal's own")
+
+        page.tab_to("Move to In progress")
+        page.press("enter")
+        until(lambda: ((view("projects::issue_page", issue_id) or {}).get("stage.title") == "In progress"), "the web's issue view says In progress")
+        passed("moving it along a step arrives in the web's view")
+
+        # The comment's field comes just before its button: what has the keyboard is the
+        # field when nothing reversed shows.
+        page.tab_to("Comment")
+        page.press("\x1b[Z")
+        page.type("Built and checked in a terminal.")
+        page.tab_to("Comment")
+        page.press("enter")
+        until(lambda: any(c.get("body") == "Built and checked in a terminal."
+                          for c in (view("projects::issue_page", issue_id) or {}).get("comments", [])), "the web's issue view has the comment")
+        passed("a comment written in the terminal arrives in the web's view")
+
+        # A comment from elsewhere, as the web sends it, arrives in the terminal by itself.
+        command(token, "comment/create", {"issue": issue_id, "body": "Seen from the web."})
+        page.shows("Seen from the web.", "the terminal shows the web's comment")
+        passed("a comment from the web arrives in the terminal by itself")
+    except SystemExit:
+        # What each terminal showed when it failed, to see why.
+        for a in apps:
+            print("--- the terminal showed:\n" + a.text(), file=sys.stderr)
+        raise
+    finally:
+        for a in apps:
+            a.close()
+        api.terminate()
+    print(f"{step} steps pass end to end")
+
+
+if __name__ == "__main__":
+    main()
