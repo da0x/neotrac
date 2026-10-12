@@ -40,6 +40,16 @@ namespace projects {
 		// Where it is in its board's order, which people drag it into. A new issue
 		// starts at its number, so it comes last, and #1 comes before #2.
 		position  number
+		// Why it's closed, from whatever stage it was in; none while it's open.
+		closed  resolution  "Closed"
+		duplicate_of  issue  "Duplicate of"
+	}
+
+	// Why an issue was closed: finished, not to be done, or already asked for.
+	enum resolution {
+		done       "Done"
+		wont_do    "Won't do"
+		duplicate  "Duplicate"
 	}
 
 	// How one issue bears on another, said from each side: one blocks another, which
@@ -98,6 +108,26 @@ namespace projects {
 		stage = board.start
 	}
 
+	// Closed from whatever stage it's in, saying why. It leaves its board's columns
+	// and keeps its stage, so reopening puts it back where it was. A duplicate says
+	// which issue it repeats, linked from both.
+	command issue::close {
+		changes closed  duplicate_of
+		require closed != none  "say why it's closed"
+		require closed != resolution::duplicate || duplicate_of != none  "pick the issue it duplicates"
+		if closed == resolution::duplicate {
+			dispatch link::create {
+				from = id  to = duplicate_of  relation = relation::duplicates
+			}
+		}
+	}
+
+	command issue::reopen {
+		require closed != none  "it's open"
+		closed = none
+		duplicate_of = none
+	}
+
 	command link::create {
 		require to != from  "pick another issue"
 		require from.project == project && to.project == project  "pick one of this project's issues"
@@ -138,10 +168,13 @@ namespace projects {
 
 	command comment::create
 
-	// An issue goes with its comments, only when its project does.
+	// An issue goes with its comments and links, when its board or project does.
 	command issue::delete {
 		each comment where issue == id {
 			dispatch comment::delete
+		}
+		each link where from == id || to == id {
+			dispatch link::delete
 		}
 	}
 
@@ -150,7 +183,7 @@ namespace projects {
 	view issue_page per issue {
 		number  title  body  labels  stage  stage.title  priority  assignees
 		assignees.name  held_by  held_by.name  held_until  milestone
-		milestone.title  attachments  board  board.title
+		milestone.title  attachments  board  board.title  closed  duplicate_of  duplicate_of.number
 		// How it bears on others, and they on it, each said from this side.
 		links = each link where from == issue.id {
 			relation  to  to.number  to.title
@@ -188,10 +221,16 @@ namespace projects {
 		}
 		side {
 			issue::move along issue_page.steps
-			issue::claim "Take it" when issue_page.held_by != me
+			issue::claim "Take it" when issue_page.held_by != me && issue_page.closed == none
 			issue::release "Let it go" when issue_page.held_by == me
+			issue::close "Close" when issue_page.closed == none form "Close" {
+				closed "Why"  duplicate_of "Duplicate of"
+			}
+			issue::reopen "Reopen" when issue_page.closed != none
 			details issue_page {
 				tint by priority
+				closed "Closed"
+				duplicate_of.number "Duplicate of"
 				stage.title "Stage"
 				assignees.name
 				held_by.name "Held by"

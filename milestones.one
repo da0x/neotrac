@@ -16,13 +16,18 @@ namespace projects {
 
 	command milestone::create
 	command milestone::update
-	command milestone::delete
+	// A milestone goes, and its issues stay, part of none.
+	command milestone::delete {
+		each issue where milestone == id {
+			dispatch issue::update { milestone = none }
+		}
+	}
 
 	view milestone_page per milestone {
 		title  due  description
 		issues = each issue in milestone {
 			order by number descending
-			number  title  stage.title  priority  assignees.name  assignees.picture
+			number  title  stage.title  closed  priority  assignees.name  assignees.picture
 		}
 	}
 
@@ -54,6 +59,7 @@ namespace projects {
 			number
 			title
 			stage.title "Stage"
+			closed "Closed"
 			assignees
 		}
 	}

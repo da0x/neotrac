@@ -21,7 +21,18 @@ namespace projects {
 	}
 
 	command board::update
-	command board::delete
+	// A board goes with its issues, and its stages and steps.
+	command board::delete {
+		each issue where board == id {
+			dispatch issue::delete
+		}
+		each step where board == id {
+			dispatch step::delete
+		}
+		each stage where board == id {
+			dispatch stage::delete
+		}
+	}
 
 	// Anyone signed in follows a board, and stops.
 	command board::follow {
@@ -36,11 +47,16 @@ namespace projects {
 
 	view board_page per board {
 		title  start  followers  project.name
-		issues = each issue in board {
+		issues = each issue in board where closed == none {
 			order by position
 			number  title  labels  stage  stage.title  priority  updated_at  position
 			author  author.picture  author.name  assignees  assignees.name  assignees.picture
 			milestone
+		}
+		// What was closed, the last closed first, and why.
+		closed = each issue in board where closed != none {
+			order by updated_at descending
+			number  title  labels  closed  stage.title  priority  updated_at
 		}
 		// The project's milestones, soonest first, as a track above its issues.
 		milestones = each milestone where project == board.project {
@@ -64,6 +80,7 @@ namespace projects {
 			issue::create "New issue" icon add form "Open issue" {
 				title  body  assignees  milestone  priority  labels  attachments
 			}
+			link /:project/boards/:board/closed "Closed"
 			link /:project/boards/:board/workflow "Workflow" icon workflow
 			board::update "Edit board" icon edit form "Save" {
 				title
@@ -92,6 +109,20 @@ namespace projects {
 			number  labels  assignees
 		}
 		link /:project "All boards"
+	}
+
+	screen "{board_page.title}: closed" /:project/boards/:board/closed {
+		under /:project/boards/:board "{board_page.title}"
+		table board_page.closed link /:project/:issue {
+			search title labels
+			page 25
+			tint by priority
+			number
+			title
+			closed "Why"
+			stage.title "Closed in"
+			updated_at "When"
+		}
 	}
 
 } // namespace projects

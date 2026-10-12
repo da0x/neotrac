@@ -305,6 +305,56 @@ def main():
         command(token, "comment/create", {"issue": issue_id, "body": "Seen from the web."})
         page.shows("Seen from the web.", "the terminal shows the web's comment")
         passed("a comment from the web arrives in the terminal by itself")
+
+        # Closed as a duplicate of another, from the stage it's in: it leaves the board's
+        # columns for its closed list, linked to the one it repeats, and keeps its stage.
+        command(token, "issue/create", {"project": slug, "board": board["id"], "title": "Ship a terminal app"})
+        other = until(lambda: next((i for i in (view("projects::board_page", board["id"]) or {}).get("issues", [])
+                                    if i.get("title") == "Ship a terminal app"), None), "the other issue is on the board")
+        status, answer = call("POST", f"{server}/api/projects/issue/close", {"id": issue_id, "closed": "duplicate"}, {"Authorization": f"Bearer {token}"})
+        if status == 200 or "pick the issue it duplicates" not in str(answer):
+            raise SystemExit(f"end-to-end: a duplicate saying of nothing wasn't turned down: {status} {answer}")
+        command(token, "issue/close", {"id": issue_id, "closed": "duplicate", "duplicate_of": other["id"]})
+        until(lambda: ((view("projects::issue_page", issue_id) or {}).get("closed") == "duplicate"), "the web's issue view says it's closed")
+        closed_view = view("projects::board_page", board["id"]) or {}
+        if any(i.get("id") == issue_id for i in closed_view.get("issues", [])) or not any(i.get("id") == issue_id for i in closed_view.get("closed", [])):
+            raise SystemExit(f"end-to-end: the closed issue isn't only in the board's closed list: {closed_view}")
+        if not any(l.get("relation") == "duplicates" and l.get("to") == other["id"] for l in view("projects::issue_page", issue_id).get("links", [])):
+            raise SystemExit("end-to-end: the closed issue isn't linked to the one it duplicates")
+        if view("projects::issue_page", issue_id).get("stage.title") != "In progress":
+            raise SystemExit("end-to-end: closing it changed its stage")
+        page.shows("Reopen", "the terminal offers to reopen it")
+        passed("closing it as a duplicate takes it off the board, links the two, keeps its stage, and reaches the terminal")
+
+        page.tab_to("Reopen")
+        page.press("enter")
+        until(lambda: any(i.get("id") == issue_id for i in (view("projects::board_page", board["id"]) or {}).get("issues", [])),
+              "the reopened issue is back on the board")
+        passed("reopening it in the terminal puts it back on its board, in the stage it was in")
+
+        # A milestone deleted leaves its issues, part of none; a board deleted takes its own.
+        command(token, "milestone/create", {"project": slug, "title": "First"})
+        milestone_id = f"{slug}-first"
+        command(token, "issue/update", {"id": issue_id, "milestone": milestone_id})
+        until(lambda: ((view("projects::issue_page", issue_id) or {}).get("milestone") == milestone_id), "the issue is part of the milestone")
+        command(token, "milestone/delete", {"id": milestone_id})
+        until(lambda: not (view("projects::issue_page", issue_id) or {}).get("milestone"), "the issue is part of no milestone")
+        passed("a maintainer deletes a milestone, and its issues stay, part of none")
+
+        command(token, "board/create", {"project": slug, "title": "Releases"})
+        releases = f"{slug}-releases"
+        until(lambda: view("projects::board_page", releases), "the second board is made")
+        command(token, "issue/create", {"project": slug, "board": releases, "title": "Release one"})
+        released = until(lambda: next(iter((view("projects::board_page", releases) or {}).get("issues", [])), None), "the second board has its issue")
+        command(token, "link/create", {"project": slug, "from": released["id"], "to": issue_id, "relation": "relates"})
+        linked = lambda: any(l.get("to") == released["id"] for l in (view("projects::issue_page", issue_id) or {}).get("links", []))
+        until(linked, "the link reaches the first issue")
+        command(token, "board/delete", {"id": releases})
+        # A page of what's gone stays, its fields read as none.
+        until(lambda: not (view("projects::issue_page", released["id"]) or {}).get("title"), "the deleted board's issue is gone")
+        until(lambda: not any(b.get("id") == releases for b in (view("projects::project_page", slug) or {}).get("boards", [])), "the board is gone")
+        until(lambda: not linked(), "the link to the deleted issue is gone from the other side")
+        passed("a maintainer deletes a board, with its issues and their links")
     except SystemExit:
         # What each terminal showed when it failed, to see why.
         for a in apps:

@@ -790,6 +790,36 @@ namespace {
 		return done;
 	}
 
+	// Closes an issue from whatever stage it's in, saying why, or opens it again.
+	int close(const asked& a) {
+		auto s = sign_in(a);
+		std::string id = issue_of(s, a);
+		if (a.words.size() < 2) throw stop(usage, "say why, like neotrac close 42 done, or wont_do, or duplicate 9");
+		std::string why = lower(a.words[1]);
+		std::ranges::replace(why, '-', '_');
+		projects::issue_close sent{.id = id};
+		projects::resolution resolution{};
+		if (!projects::from_string(why, resolution)) throw stop(usage, a.words[1] + " isn't why an issue closes: done, wont_do or duplicate");
+		sent.closed = resolution;
+		if (resolution == projects::resolution::duplicate) {
+			if (a.words.size() < 3) throw stop(usage, "say which issue it duplicates, like neotrac close 42 duplicate 9");
+			sent.duplicate_of = projects::issue_id(s.project, issue_number(a.words[2]));
+		}
+		s.app->issue_close(sent);
+		if (a.has("json")) std::printf("{\"id\":%s,\"closed\":%s}\n", json(id).c_str(), json(std::string(projects::to_string(resolution))).c_str());
+		else std::printf("Closed %s.\n", a.words[0].c_str());
+		return done;
+	}
+
+	int reopen(const asked& a) {
+		auto s = sign_in(a);
+		std::string id = issue_of(s, a);
+		s.app->issue_reopen({.id = id});
+		if (a.has("json")) std::printf("{\"id\":%s,\"reopened\":true}\n", json(id).c_str());
+		else std::printf("Reopened %s.\n", a.words[0].c_str());
+		return done;
+	}
+
 	int move(const asked& a) {
 		auto s = sign_in(a);
 		std::string id = issue_of(s, a);
@@ -1714,6 +1744,8 @@ Working an issue
                                  runs the program on it, its attachments beside it,
                                  attaches what it writes to out/, and moves it on
   neotrac move 42 review         where the workflow lets your role
+  neotrac close 42 done          or wont_do, or duplicate 9, from any stage
+  neotrac reopen 42              back on its board, in the stage it was in
   neotrac link 42 blocked_by 9   or blocks, relates, duplicates, replaces
   neotrac unlink 42 relates 9    takes a link away, both sides
 
@@ -1752,6 +1784,8 @@ connection, 7 too many requests.
 		if (a.command == "claim") return claim(on_issue(a), true);
 		if (a.command == "release") return claim(on_issue(a), false);
 		if (a.command == "move") return move(on_issue(a));
+		if (a.command == "close") return close(on_issue(a));
+		if (a.command == "reopen") return reopen(on_issue(a));
 		if (a.command == "comment") return comment(on_issue(a));
 		if (a.command == "work") return work(a);
 		if (a.command == "attach") return attach(on_issue(a));

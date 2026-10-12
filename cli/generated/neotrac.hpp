@@ -303,6 +303,23 @@ namespace neotrac {
 			return false;
 		}
 
+		enum class resolution { done, wont_do, duplicate };
+		inline const char* to_string(resolution c) {
+			switch (c) {
+				case resolution::done: return "done";
+				case resolution::wont_do: return "wont_do";
+				case resolution::duplicate: return "duplicate";
+			}
+			return "";
+		}
+		// Reads a choice by its name; one that isn't, like a choice added since, leaves it.
+		inline bool from_string(const std::string& text, resolution& c) {
+			if (text == "done") return c = resolution::done, true;
+			if (text == "wont_do") return c = resolution::wont_do, true;
+			if (text == "duplicate") return c = resolution::duplicate, true;
+			return false;
+		}
+
 		enum class relation { blocks, blocked_by, relates, duplicates, duplicated_by, replaces, replaced_by };
 		inline const char* to_string(relation c) {
 			switch (c) {
@@ -433,6 +450,8 @@ namespace neotrac {
 			std::string milestone{};
 			std::vector<std::string> attachments{};
 			double position{};
+			::neotrac::projects::resolution closed{};
+			std::string duplicate_of{};
 			std::string held_by{};
 			time held_until{};
 
@@ -456,6 +475,8 @@ namespace neotrac {
 				out.milestone = detail::text(v["milestone"]);
 				out.attachments = detail::texts(v["attachments"]);
 				out.position = detail::number(v["position"]);
+				out.closed = detail::choice<::neotrac::projects::resolution>(v["closed"]);
+				out.duplicate_of = detail::text(v["duplicate_of"]);
 				out.held_by = detail::text(v["held_by"]);
 				out.held_until = detail::when(v["held_until"]);
 				return out;
@@ -974,6 +995,8 @@ namespace neotrac {
 			std::optional<std::string> milestone{};
 			std::optional<std::vector<std::string>> attachments{};
 			std::optional<double> position{};
+			std::optional<::neotrac::projects::resolution> closed{};
+			std::optional<std::string> duplicate_of{};
 			std::optional<std::string> held_by{};
 			std::optional<time> held_until{};
 
@@ -993,6 +1016,8 @@ namespace neotrac {
 				if (milestone) add("milestone", detail::json(*milestone));
 				if (attachments) add("attachments", detail::json(*attachments));
 				if (position) add("position", detail::json(*position));
+				if (closed) add("closed", detail::json(std::string(to_string(*closed))));
+				if (duplicate_of) add("duplicate_of", detail::json(*duplicate_of));
 				if (held_by) add("held_by", detail::json(*held_by));
 				if (held_until) add("held_until", detail::json(*held_until));
 				return out + "}";
@@ -1015,6 +1040,8 @@ namespace neotrac {
 			std::optional<std::string> milestone{};
 			std::optional<std::vector<std::string>> attachments{};
 			std::optional<double> position{};
+			std::optional<::neotrac::projects::resolution> closed{};
+			std::optional<std::string> duplicate_of{};
 			std::optional<std::string> held_by{};
 			std::optional<time> held_until{};
 
@@ -1035,6 +1062,8 @@ namespace neotrac {
 				if (milestone) add("milestone", detail::json(*milestone));
 				if (attachments) add("attachments", detail::json(*attachments));
 				if (position) add("position", detail::json(*position));
+				if (closed) add("closed", detail::json(std::string(to_string(*closed))));
+				if (duplicate_of) add("duplicate_of", detail::json(*duplicate_of));
 				if (held_by) add("held_by", detail::json(*held_by));
 				if (held_until) add("held_until", detail::json(*held_until));
 				return out + "}";
@@ -1057,6 +1086,8 @@ namespace neotrac {
 			std::optional<std::string> milestone{};
 			std::optional<std::vector<std::string>> attachments{};
 			std::optional<double> position{};
+			std::optional<::neotrac::projects::resolution> closed{};
+			std::optional<std::string> duplicate_of{};
 			std::optional<std::string> held_by{};
 			std::optional<time> held_until{};
 
@@ -1077,6 +1108,8 @@ namespace neotrac {
 				if (milestone) add("milestone", detail::json(*milestone));
 				if (attachments) add("attachments", detail::json(*attachments));
 				if (position) add("position", detail::json(*position));
+				if (closed) add("closed", detail::json(std::string(to_string(*closed))));
+				if (duplicate_of) add("duplicate_of", detail::json(*duplicate_of));
 				if (held_by) add("held_by", detail::json(*held_by));
 				if (held_until) add("held_until", detail::json(*held_until));
 				return out + "}";
@@ -1099,6 +1132,8 @@ namespace neotrac {
 			std::optional<std::string> milestone{};
 			std::optional<std::vector<std::string>> attachments{};
 			std::optional<double> position{};
+			std::optional<::neotrac::projects::resolution> closed{};
+			std::optional<std::string> duplicate_of{};
 			std::optional<std::string> held_by{};
 			std::optional<time> held_until{};
 
@@ -1119,6 +1154,100 @@ namespace neotrac {
 				if (milestone) add("milestone", detail::json(*milestone));
 				if (attachments) add("attachments", detail::json(*attachments));
 				if (position) add("position", detail::json(*position));
+				if (closed) add("closed", detail::json(std::string(to_string(*closed))));
+				if (duplicate_of) add("duplicate_of", detail::json(*duplicate_of));
+				if (held_by) add("held_by", detail::json(*held_by));
+				if (held_until) add("held_until", detail::json(*held_until));
+				return out + "}";
+			}
+		};
+
+		// What issue::close is sent.
+		struct issue_close {
+			std::string id{};
+			std::optional<std::string> project{};
+			std::optional<double> number{};
+			std::optional<std::string> board{};
+			std::optional<std::string> title{};
+			std::optional<std::string> body{};
+			std::optional<std::vector<std::string>> labels{};
+			std::optional<std::string> author{};
+			std::optional<std::string> stage{};
+			std::optional<::neotrac::projects::priority> priority{};
+			std::optional<std::vector<std::string>> assignees{};
+			std::optional<std::string> milestone{};
+			std::optional<std::vector<std::string>> attachments{};
+			std::optional<double> position{};
+			std::optional<::neotrac::projects::resolution> closed{};
+			std::optional<std::string> duplicate_of{};
+			std::optional<std::string> held_by{};
+			std::optional<time> held_until{};
+
+			std::string json() const {
+				std::string out = "{";
+				auto add = [&](const char* name, const std::string& value) { out += (out.size() > 1 ? "," : "") + detail::json(std::string(name)) + ":" + value; };
+				add("id", detail::json(id));
+				if (project) add("project", detail::json(*project));
+				if (number) add("number", detail::json(*number));
+				if (board) add("board", detail::json(*board));
+				if (title) add("title", detail::json(*title));
+				if (body) add("body", detail::json(*body));
+				if (labels) add("labels", detail::json(*labels));
+				if (author) add("author", detail::json(*author));
+				if (stage) add("stage", detail::json(*stage));
+				if (priority) add("priority", detail::json(std::string(to_string(*priority))));
+				if (assignees) add("assignees", detail::json(*assignees));
+				if (milestone) add("milestone", detail::json(*milestone));
+				if (attachments) add("attachments", detail::json(*attachments));
+				if (position) add("position", detail::json(*position));
+				if (closed) add("closed", detail::json(std::string(to_string(*closed))));
+				if (duplicate_of) add("duplicate_of", detail::json(*duplicate_of));
+				if (held_by) add("held_by", detail::json(*held_by));
+				if (held_until) add("held_until", detail::json(*held_until));
+				return out + "}";
+			}
+		};
+
+		// What issue::reopen is sent.
+		struct issue_reopen {
+			std::string id{};
+			std::optional<std::string> project{};
+			std::optional<double> number{};
+			std::optional<std::string> board{};
+			std::optional<std::string> title{};
+			std::optional<std::string> body{};
+			std::optional<std::vector<std::string>> labels{};
+			std::optional<std::string> author{};
+			std::optional<std::string> stage{};
+			std::optional<::neotrac::projects::priority> priority{};
+			std::optional<std::vector<std::string>> assignees{};
+			std::optional<std::string> milestone{};
+			std::optional<std::vector<std::string>> attachments{};
+			std::optional<double> position{};
+			std::optional<::neotrac::projects::resolution> closed{};
+			std::optional<std::string> duplicate_of{};
+			std::optional<std::string> held_by{};
+			std::optional<time> held_until{};
+
+			std::string json() const {
+				std::string out = "{";
+				auto add = [&](const char* name, const std::string& value) { out += (out.size() > 1 ? "," : "") + detail::json(std::string(name)) + ":" + value; };
+				add("id", detail::json(id));
+				if (project) add("project", detail::json(*project));
+				if (number) add("number", detail::json(*number));
+				if (board) add("board", detail::json(*board));
+				if (title) add("title", detail::json(*title));
+				if (body) add("body", detail::json(*body));
+				if (labels) add("labels", detail::json(*labels));
+				if (author) add("author", detail::json(*author));
+				if (stage) add("stage", detail::json(*stage));
+				if (priority) add("priority", detail::json(std::string(to_string(*priority))));
+				if (assignees) add("assignees", detail::json(*assignees));
+				if (milestone) add("milestone", detail::json(*milestone));
+				if (attachments) add("attachments", detail::json(*attachments));
+				if (position) add("position", detail::json(*position));
+				if (closed) add("closed", detail::json(std::string(to_string(*closed))));
+				if (duplicate_of) add("duplicate_of", detail::json(*duplicate_of));
 				if (held_by) add("held_by", detail::json(*held_by));
 				if (held_until) add("held_until", detail::json(*held_until));
 				return out + "}";
@@ -1201,6 +1330,8 @@ namespace neotrac {
 			std::optional<std::string> milestone{};
 			std::optional<std::vector<std::string>> attachments{};
 			std::optional<double> position{};
+			std::optional<::neotrac::projects::resolution> closed{};
+			std::optional<std::string> duplicate_of{};
 			std::optional<std::string> held_by{};
 			std::optional<time> held_until{};
 
@@ -1221,6 +1352,8 @@ namespace neotrac {
 				if (milestone) add("milestone", detail::json(*milestone));
 				if (attachments) add("attachments", detail::json(*attachments));
 				if (position) add("position", detail::json(*position));
+				if (closed) add("closed", detail::json(std::string(to_string(*closed))));
+				if (duplicate_of) add("duplicate_of", detail::json(*duplicate_of));
 				if (held_by) add("held_by", detail::json(*held_by));
 				if (held_until) add("held_until", detail::json(*held_until));
 				return out + "}";
@@ -1263,6 +1396,8 @@ namespace neotrac {
 			std::optional<std::string> milestone{};
 			std::optional<std::vector<std::string>> attachments{};
 			std::optional<double> position{};
+			std::optional<::neotrac::projects::resolution> closed{};
+			std::optional<std::string> duplicate_of{};
 			std::optional<std::string> held_by{};
 			std::optional<time> held_until{};
 
@@ -1283,6 +1418,8 @@ namespace neotrac {
 				if (milestone) add("milestone", detail::json(*milestone));
 				if (attachments) add("attachments", detail::json(*attachments));
 				if (position) add("position", detail::json(*position));
+				if (closed) add("closed", detail::json(std::string(to_string(*closed))));
+				if (duplicate_of) add("duplicate_of", detail::json(*duplicate_of));
 				if (held_by) add("held_by", detail::json(*held_by));
 				if (held_until) add("held_until", detail::json(*held_until));
 				return out + "}";
@@ -1305,6 +1442,8 @@ namespace neotrac {
 			std::optional<std::string> milestone{};
 			std::optional<std::vector<std::string>> attachments{};
 			std::optional<double> position{};
+			std::optional<::neotrac::projects::resolution> closed{};
+			std::optional<std::string> duplicate_of{};
 			std::optional<std::string> held_by{};
 			std::optional<time> held_until{};
 
@@ -1325,6 +1464,8 @@ namespace neotrac {
 				if (milestone) add("milestone", detail::json(*milestone));
 				if (attachments) add("attachments", detail::json(*attachments));
 				if (position) add("position", detail::json(*position));
+				if (closed) add("closed", detail::json(std::string(to_string(*closed))));
+				if (duplicate_of) add("duplicate_of", detail::json(*duplicate_of));
 				if (held_by) add("held_by", detail::json(*held_by));
 				if (held_until) add("held_until", detail::json(*held_until));
 				return out + "}";
@@ -1347,6 +1488,8 @@ namespace neotrac {
 			std::optional<std::string> milestone{};
 			std::optional<std::vector<std::string>> attachments{};
 			std::optional<double> position{};
+			std::optional<::neotrac::projects::resolution> closed{};
+			std::optional<std::string> duplicate_of{};
 			std::optional<std::string> held_by{};
 			std::optional<time> held_until{};
 
@@ -1367,6 +1510,8 @@ namespace neotrac {
 				if (milestone) add("milestone", detail::json(*milestone));
 				if (attachments) add("attachments", detail::json(*attachments));
 				if (position) add("position", detail::json(*position));
+				if (closed) add("closed", detail::json(std::string(to_string(*closed))));
+				if (duplicate_of) add("duplicate_of", detail::json(*duplicate_of));
 				if (held_by) add("held_by", detail::json(*held_by));
 				if (held_until) add("held_until", detail::json(*held_until));
 				return out + "}";
@@ -1389,6 +1534,8 @@ namespace neotrac {
 			std::optional<std::string> milestone{};
 			std::optional<std::vector<std::string>> attachments{};
 			std::optional<double> position{};
+			std::optional<::neotrac::projects::resolution> closed{};
+			std::optional<std::string> duplicate_of{};
 			std::optional<std::string> held_by{};
 			std::optional<time> held_until{};
 
@@ -1409,6 +1556,8 @@ namespace neotrac {
 				if (milestone) add("milestone", detail::json(*milestone));
 				if (attachments) add("attachments", detail::json(*attachments));
 				if (position) add("position", detail::json(*position));
+				if (closed) add("closed", detail::json(std::string(to_string(*closed))));
+				if (duplicate_of) add("duplicate_of", detail::json(*duplicate_of));
 				if (held_by) add("held_by", detail::json(*held_by));
 				if (held_until) add("held_until", detail::json(*held_until));
 				return out + "}";
@@ -2198,6 +2347,29 @@ namespace neotrac {
 				}
 			};
 			std::vector<issues_row> issues{};
+			struct closed_row {
+				std::string id{};
+				double number{};
+				std::string title{};
+				std::vector<std::string> labels{};
+				::neotrac::projects::resolution closed{};
+				std::string stage_title{};
+				::neotrac::projects::priority priority{};
+				time updated_at{};
+				static closed_row from(const ember::value& v) {
+					closed_row out;
+					out.id = detail::text(v["id"]);
+					out.number = detail::number(v["number"]);
+					out.title = detail::text(v["title"]);
+					out.labels = detail::texts(v["labels"]);
+					out.closed = detail::choice<::neotrac::projects::resolution>(v["closed"]);
+					out.stage_title = detail::text(v["stage.title"]);
+					out.priority = detail::choice<::neotrac::projects::priority>(v["priority"]);
+					out.updated_at = detail::when(v["updated_at"]);
+					return out;
+				}
+			};
+			std::vector<closed_row> closed{};
 			struct milestones_row {
 				std::string id{};
 				std::string name{};
@@ -2271,6 +2443,9 @@ namespace neotrac {
 				if (v["issues"].is_array()) {
 					for (const auto& row : v["issues"].as_array()) out.issues.push_back(issues_row::from(row));
 				}
+				if (v["closed"].is_array()) {
+					for (const auto& row : v["closed"].as_array()) out.closed.push_back(closed_row::from(row));
+				}
 				if (v["milestones"].is_array()) {
 					for (const auto& row : v["milestones"].as_array()) out.milestones.push_back(milestones_row::from(row));
 				}
@@ -2304,6 +2479,9 @@ namespace neotrac {
 			std::vector<std::string> attachments{};
 			std::string board{};
 			std::string board_title{};
+			::neotrac::projects::resolution closed{};
+			std::string duplicate_of{};
+			double duplicate_of_number{};
 			struct links_row {
 				std::string id{};
 				::neotrac::projects::relation relation{};
@@ -2402,6 +2580,9 @@ namespace neotrac {
 				out.attachments = detail::texts(v["attachments"]);
 				out.board = detail::text(v["board"]);
 				out.board_title = detail::text(v["board.title"]);
+				out.closed = detail::choice<::neotrac::projects::resolution>(v["closed"]);
+				out.duplicate_of = detail::text(v["duplicate_of"]);
+				out.duplicate_of_number = detail::number(v["duplicate_of.number"]);
 				if (v["links"].is_array()) {
 					for (const auto& row : v["links"].as_array()) out.links.push_back(links_row::from(row));
 				}
@@ -2436,6 +2617,8 @@ namespace neotrac {
 				std::string milestone{};
 				std::vector<std::string> attachments{};
 				double position{};
+				::neotrac::projects::resolution closed{};
+				std::string duplicate_of{};
 				std::string stage_title{};
 				std::vector<std::string> stage_worked_by{};
 				std::string held_by{};
@@ -2457,6 +2640,8 @@ namespace neotrac {
 					out.milestone = detail::text(v["milestone"]);
 					out.attachments = detail::texts(v["attachments"]);
 					out.position = detail::number(v["position"]);
+					out.closed = detail::choice<::neotrac::projects::resolution>(v["closed"]);
+					out.duplicate_of = detail::text(v["duplicate_of"]);
 					out.stage_title = detail::text(v["stage.title"]);
 					out.stage_worked_by = detail::texts(v["stage.worked_by"]);
 					out.held_by = detail::text(v["held_by"]);
@@ -2489,6 +2674,7 @@ namespace neotrac {
 				double number{};
 				std::string title{};
 				std::string stage_title{};
+				::neotrac::projects::resolution closed{};
 				::neotrac::projects::priority priority{};
 				std::vector<std::string> assignees_name{};
 				std::vector<std::string> assignees_picture{};
@@ -2498,6 +2684,7 @@ namespace neotrac {
 					out.number = detail::number(v["number"]);
 					out.title = detail::text(v["title"]);
 					out.stage_title = detail::text(v["stage.title"]);
+					out.closed = detail::choice<::neotrac::projects::resolution>(v["closed"]);
 					out.priority = detail::choice<::neotrac::projects::priority>(v["priority"]);
 					out.assignees_name = detail::texts(v["assignees.name"]);
 					out.assignees_picture = detail::texts(v["assignees.picture"]);
@@ -3306,6 +3493,14 @@ namespace neotrac {
 		// issue::transfer: the id of what it changed, or refused.
 		std::string issue_transfer(const projects::issue_transfer& sent) {
 			return detail::text(ember::parse_json(post("/api/projects/issue/transfer", sent.json()))["id"]);
+		}
+		// issue::close: the id of what it changed, or refused.
+		std::string issue_close(const projects::issue_close& sent) {
+			return detail::text(ember::parse_json(post("/api/projects/issue/close", sent.json()))["id"]);
+		}
+		// issue::reopen: the id of what it changed, or refused.
+		std::string issue_reopen(const projects::issue_reopen& sent) {
+			return detail::text(ember::parse_json(post("/api/projects/issue/reopen", sent.json()))["id"]);
 		}
 		// link::create: the id of what it changed, or refused.
 		std::string link_create(const projects::link_create& sent) {

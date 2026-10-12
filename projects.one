@@ -41,6 +41,7 @@ namespace projects at / {
 		role::delete
 		board::create
 		board::update
+		board::delete
 		stage::create
 		stage::update
 		stage::delete
@@ -49,10 +50,13 @@ namespace projects at / {
 		step::delete
 		milestone::create
 		milestone::update
+		milestone::delete
 		page::create
 		page::update
 		issue::create
 		issue::update
+		issue::close
+		issue::reopen
 		issue::attach
 		issue::move
 		issue::transfer
@@ -75,6 +79,8 @@ namespace projects at / {
 	define role contributor "Contributor" in project {
 		issue::create
 		issue::update
+		issue::close
+		issue::reopen
 		issue::attach
 		issue::move
 		issue::transfer
@@ -154,12 +160,10 @@ namespace projects at / {
 	}
 
 	// What goes with a project, deleted only by deleting it: no role grants these,
-	// so no person deletes them one by one.
+	// so no person deletes them one by one. Boards and milestones a maintainer deletes.
 	define service neotrac "neotrac" {
 		issue::delete
 		comment::delete
-		board::delete
-		milestone::delete
 		page::delete
 		report::delete
 		reply::delete
@@ -191,7 +195,7 @@ namespace projects at / {
 
 	// The issues a person is working on, in any project, newest first.
 	view assigned per user {
-		each issue where assignees has me {
+		each issue where assignees has me && closed == none {
 			order by number descending
 			project  number  title  project.name  stage.title
 		}
@@ -250,7 +254,8 @@ namespace projects at / {
 			order by position
 			name  title
 		}
-		issues = each issue in project {
+		// What's open, counted by board and stage, and by milestone on the roadmap.
+		issues = each issue in project where closed == none {
 			number  title  labels  board  milestone  stage  stage.title  stage.position
 		}
 		milestones = each milestone in project {
