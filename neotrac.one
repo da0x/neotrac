@@ -7,11 +7,11 @@
 import one
 
 project neotrac {
-	one             "0.9.8"
+	one             "0.10.0"
+	target          web desktop terminal
 	region          "us-east4"
 	ui              radix
-	signin          google
-	signin          github
+	signin          google github
 	icon            "assets/icon.svg"
 	theme           neotrac
 	appearance      light

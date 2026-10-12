@@ -87,6 +87,18 @@ program that deploys them into `build/`. The backend builds against the publishe
 `one` library, and the web app installs uione's packages from npm, both at the version
 `neotrac.one` names.
 
+It writes a desktop app and a terminal app from the same screens too, in
+`build/desktop` and `build/terminal`, against the libraries the uione installer puts
+in `~/.local/share/uione/<version>`:
+
+```
+cmake -S build/terminal -B build/terminal/out && cmake --build build/terminal/out
+build/terminal/out/neotrac
+```
+
+Each reads neotrac.org live, or the server in `ONE_SERVER`, and signs in through the
+browser the first time.
+
 neotrac.org is deployed from the uione studio, at [uione.io](https://uione.io), which
 builds what's pushed here in neotrac's own Google Cloud project.
 
