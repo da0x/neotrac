@@ -54,7 +54,7 @@ namespace projects {
 			milestone::update "Edit milestone" icon edit form "Save" {
 				title  due "Due"  description
 			}
-			milestone::delete "Delete milestone" form "Delete it" {
+			milestone::delete "Delete milestone" icon delete form "Delete it" {
 				typed "Its issues stay, in no milestone. Type its title to confirm"
 			}
 		}

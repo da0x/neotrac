@@ -83,12 +83,12 @@ namespace projects {
 			issue::create "New issue" icon add form "Open issue" {
 				title  body  assignees  milestone  priority  labels  attachments
 			}
-			link /:project/boards/:board/closed "Closed"
+			link /:project/boards/:board/closed "Closed" icon archive
 			link /:project/boards/:board/workflow "Workflow" icon workflow
 			board::update "Edit board" icon edit form "Save" {
 				title
 			}
-			board::delete "Delete board" form "Delete it for good" {
+			board::delete "Delete board" icon delete form "Delete it for good" {
 				typed "Its issues are deleted with it. Type its title to confirm"
 			}
 		}
