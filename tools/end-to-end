@@ -332,6 +332,25 @@ def main():
               "the reopened issue is back on the board")
         passed("reopening it in the terminal puts it back on its board, in the stage it was in")
 
+        # A file attached from the terminal, written where it is in the issue's Edit form:
+        # uploaded as it's saved, and added to what the issue holds.
+        attached = os.path.join(work, "terminal screenshot.txt")
+        with open(attached, "w") as f:
+            f.write("what the terminal showed\n")
+        page.tab_to("Edit")
+        page.press("enter")
+        page.shows("Files to attach", "the Edit form asks for files")
+        # Attachments is the form's last field, just before Save.
+        page.tab_to("Save")
+        page.press("\x1b[Z")
+        page.type(attached)
+        page.tab_to("Save")
+        page.press("enter")
+        until(lambda: any(str(path).endswith("terminal screenshot.txt") for path in (view("projects::issue_page", issue_id) or {}).get("attachments") or []),
+              "the web's issue view has the file attached")
+        page.shows("screenshot.txt", "the terminal names the file attached")
+        passed("a file attached in the terminal is uploaded, and the web's view and the terminal's own name it")
+
         # A milestone deleted leaves its issues, part of none; a board deleted takes its own.
         command(token, "milestone/create", {"project": slug, "title": "First"})
         milestone_id = f"{slug}-first"
