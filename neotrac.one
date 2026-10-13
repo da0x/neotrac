@@ -13,7 +13,7 @@ project neotrac {
 	ui              radix
 	signin          google github
 	icon            "assets/icon.svg"
-	theme           neotrac
+	theme           triadic_97065
 	appearance      light
 	accessibility   menu
 	analytics       google

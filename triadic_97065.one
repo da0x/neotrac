@@ -1,0 +1,16 @@
+// Triadic 97065: a theme made from a palette in uione.io's theme generator.
+
+import one
+
+define theme triadic_97065 "Triadic 97065" {
+	page     #f2fdfb  dark #02110e
+	surface  #fbfffe  dark #071b19
+	sunken   #e0f3f0  dark #000a08
+	ink      #02201d  dark #e6f1ef
+	muted    #685e76  dark #afa6bb
+	line     #cae0dc  dark #213834
+	accent   #955808  dark #f5982a
+	danger   #c03816  dark #fe7555
+	success  #428511  dark #81c75c
+	warning  #9f6c00  dark #feb42e
+}
