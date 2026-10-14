@@ -28,7 +28,7 @@ namespace projects {
 
 	view milestone_page per milestone {
 		title  due  description
-		issues = each issue in milestone {
+		issues = each issue in milestone where board.visibility == visibility::public {
 			order by number descending
 			number  title  stage.title  closed  priority  assignees.name  assignees.picture
 		}

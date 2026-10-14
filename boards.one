@@ -9,6 +9,13 @@ namespace projects {
 
 	// A board of a project, named from its title when it's made.
 	entity board {
+		// Read by its project's people; by everyone too while both it and its project
+		// are public.
+		readers member
+		public when {
+			visibility == visibility::public
+			project.visibility == visibility::public
+		}
 		project   project  required  key
 		name      text     required  key = slug(title)
 		title     text     required
@@ -16,6 +23,8 @@ namespace projects {
 		workflow  workflow = workflow::basic
 		start     stage
 		position  number
+		// A private board is read by the project's people alone, even in a public project.
+		visibility  enum  public | private = visibility::public
 		// Who follows it, to find it on their front page.
 		followers  list of user
 	}
@@ -49,7 +58,7 @@ namespace projects {
 	}
 
 	view board_page per board {
-		title  start  followers  project.name
+		title  start  visibility  followers  project.name
 		issues = each issue in board where closed == none {
 			order by position
 			number  title  labels  stage  stage.title  priority  updated_at  position
@@ -87,6 +96,9 @@ namespace projects {
 			link /:project/boards/:board/workflow "Workflow" icon workflow
 			board::update "Edit board" icon edit form "Save" {
 				title
+				visibility "Who sees it" {
+					hint "A private board, its issues and their history are seen by the project's people alone."
+				}
 			}
 			board::delete "Delete board" icon delete form "Delete it for good" {
 				typed "Its issues are deleted with it. Type its title to confirm"

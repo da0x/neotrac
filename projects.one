@@ -250,14 +250,24 @@ namespace projects at / {
 		}
 	}
 
+	// A project's private boards, read by its people alone: what its public page
+	// leaves out.
+	view private_boards per project {
+		readers member
+		boards = each board in project where visibility == visibility::private {
+			order by position
+			name  title
+		}
+	}
+
 	view project_page per project {
 		name  summary  visibility  takes_reports
-		boards = each board in project {
+		boards = each board in project where visibility == visibility::public {
 			order by position
 			name  title
 		}
 		// What's open, counted by board and stage, and by milestone on the roadmap.
-		issues = each issue in project where closed == none {
+		issues = each issue in project where closed == none && board.visibility == visibility::public {
 			number  title  labels  board  milestone  stage  stage.title  stage.position
 		}
 		milestones = each milestone in project {
@@ -276,14 +286,14 @@ namespace projects at / {
 			order by name
 			name  title  may
 		}
-		timeline = each change in issue in project {
+		timeline = each change in issue in project where board.visibility == visibility::public {
 			order by created_at descending
 			limit 100
 			issue  issue.number  issue.title
 			field  before  after  action  created_by.name  created_at
 		}
 		// The latest few, for the project's own page.
-		recent = each change in issue in project {
+		recent = each change in issue in project where board.visibility == visibility::public {
 			order by created_at descending
 			limit 5
 			issue  issue.number  issue.title
@@ -382,6 +392,9 @@ namespace projects at / {
 		heading {
 			board::create "New board" icon add form "Create board" {
 				title  workflow "Start from"
+				visibility "Who sees it" {
+					hint "A private board, its issues and their history are seen by the project's people alone."
+				}
 			}
 			project::update "Edit project" icon edit form "Save" {
 				name  summary  visibility  takes_reports
@@ -403,6 +416,10 @@ namespace projects at / {
 				filter "Assigned to me" assignees == me  color blue
 				filter "High priority" priority == priority::high  color red
 				filter "Changed this week" updated_at > 7 days ago  color green
+			}
+			table private_boards.boards link /:project/boards/:board {
+				hide when empty
+				title "Private boards"
 			}
 			timeline project_page.recent "Recent activity" link /:project/:issue
 			link /:project/timeline "All activity"

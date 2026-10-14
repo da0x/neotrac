@@ -131,6 +131,8 @@ namespace projects {
 	command link::create {
 		require to != from  "pick another issue"
 		require from.project == project && to.project == project  "pick one of this project's issues"
+		// A public issue never names one on a private board.
+		require from.board.visibility == to.board.visibility  "link it to an issue on a board that's private or public as its own is"
 		// The other side, said from there. The link made for it has a pair, so it
 		// makes no other.
 		if pair == none {
