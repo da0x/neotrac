@@ -743,8 +743,8 @@ namespace {
 		std::signal(SIGTERM, [](int) { stopping = 1; });
 		std::set<std::string> tried;  // taken by someone else as it was asked for; tried again once it changes
 		std::string seen;
-		// What waits, until an issue comes into the queue or leaves it, like the one it
-		// waits on moving on: its own let-go changes the queue, so that doesn't count.
+		// What waits, until an issue comes into the queue, leaves it, or moves within it,
+		// like the one it waits on moving on: its own let-go doesn't move it, so that doesn't count.
 		std::set<std::string> parked;
 		std::string parked_with;
 		// What it's just worked, not worked again while the queue still shows it, as it
@@ -757,14 +757,16 @@ namespace {
 			auto q = queue_of(s, works, titles, false);
 			std::string now = queue_json(q);
 			if (now != seen) tried.clear(), seen = now;
+			// What's in the whole queue, and where: one waiting is tried again once
+			// anything moves, like what it waits on going from another stage to its end.
+			std::string ids;
+			for (const auto& w : q) ids += w.id + ":" + w.stage + " ";
 			// Only what's in its stage and says it's its kind, when it's told: --stage
-			// to_do --label package takes the packages just added, and no site.
+			// to_do --label packages takes the packages just added, and no website.
 			std::erase_if(q, [&](const waiting& w) {
 				if (!only_stage.empty() && !w.stage.ends_with("-" + only_stage) && lower(w.stage_title) != lower(only_stage)) return true;
 				return !only_label.empty() && !std::ranges::contains(w.labels, only_label);
 			});
-			std::string ids;
-			for (const auto& w : q) ids += w.id + " ";
 			if (ids != parked_with) parked.clear();
 			std::erase_if(finished, [&](const auto& f) {
 				return std::ranges::none_of(q, [&](const waiting& w) { return w.id == f.first; }) || std::chrono::steady_clock::now() - f.second > std::chrono::seconds(30);
