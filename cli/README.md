@@ -62,7 +62,7 @@ what it means and gives what it writes as flags instead, and is never asked anyt
 | `neotrac comment 42` | comment, in your editor, or with `-m "…"`, or on stdin |
 | `neotrac attach 42 log.txt …` | uploads files and attaches them to the issue, beside what's there |
 | `neotrac download 42 [folder]` | saves what's attached to it, in the folder it's run in unless it's said |
-| `neotrac link 42 blocked_by 9` | one issue bearing on another: `blocks`, `blocked_by`, `relates`, `duplicates`, `replaces`; neotrac keeps the other side |
+| `neotrac link 42 depends_on 9` | one issue bearing on another: `depends_on`, `needed_by`, `relates`, `duplicates`, `replaces`; neotrac keeps the other side |
 | `neotrac unlink 42 relates 9` | takes a link away, and its other side |
 
 The flags for writing are `--title`, `--body` (`-` reads it from stdin), `--priority`,

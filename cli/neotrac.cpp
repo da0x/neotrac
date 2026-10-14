@@ -2034,18 +2034,21 @@ namespace {
 		return out;
 	}
 
-	// One issue bearing on another: neotrac link 12 blocked_by 9. neotrac keeps the
+	// One issue bearing on another: neotrac link 12 depends_on 9. neotrac keeps the
 	// other side too, said from there. neotrac unlink 12 blocked_by 9 takes both away.
 	int link(const asked& a, bool making) {
 		auto s = sign_in(a);
 		asked on = on_issue(a);
 		std::string verb = making ? "link" : "unlink";
-		if (on.words.size() < 3) throw stop(usage, "say how, like neotrac " + verb + " 12 blocks 13, or blocked_by, relates, duplicates, replaces");
+		if (on.words.size() < 3) throw stop(usage, "say how, like neotrac " + verb + " 12 depends_on 13, or needed_by, relates, duplicates, replaces");
 		std::string how = lower(on.words[1]);
 		std::ranges::replace(how, '-', '_');
+		// As its page says them: depends on is kept as blocked by, needed by as blocks.
+		if (how == "depends_on") how = "blocked_by";
+		if (how == "needed_by") how = "blocks";
 		projects::relation relation{};
 		if (!projects::from_string(how, relation)) {
-			throw stop(usage, on.words[1] + " isn't how issues bear on each other: blocks, blocked_by, relates, duplicates, duplicated_by, replaces or replaced_by");
+			throw stop(usage, on.words[1] + " isn't how issues bear on each other: depends_on, needed_by, relates, duplicates, duplicated_by, replaces or replaced_by");
 		}
 		std::string from = projects::issue_id(s.project, issue_number(on.words[0]));
 		std::string to = projects::issue_id(s.project, issue_number(on.words[2]));
@@ -2136,7 +2139,7 @@ Working an issue
   neotrac transfer 42 main       to another of the project's boards, with its history
   neotrac close 42 done          or wont_do, or duplicate 9, from any stage
   neotrac reopen 42              back on its board, in the stage it was in
-  neotrac link 42 blocked_by 9   or blocks, relates, duplicates, replaces
+  neotrac link 42 depends_on 9   or needed_by, relates, duplicates, replaces
   neotrac unlink 42 relates 9    takes a link away, both sides
 
 At a terminal, leaving out which one picks it from a list (arrows or j/k, Enter).

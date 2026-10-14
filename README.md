@@ -32,7 +32,7 @@ users. See `LICENSE`.
   like a screenshot or a log, and a history of every change, which the project's
   timeline gathers. An issue moves to another
   of its project's boards keeping its number, and links to others on any of them:
-  it blocks one, relates to another, duplicates or replaces a third.
+  it depends on one, relates to another, duplicates or replaces a third.
 - **What's new**: on your front page, every change on the boards you follow and to
   the issues assigned to you, leaving out your own, and only from projects you may
   read. What came since you last looked is marked, and counted beside neotrac's

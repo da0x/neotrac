@@ -66,8 +66,9 @@ namespace projects {
 	// How one issue bears on another, said from each side: one blocks another, which
 	// is blocked by it.
 	enum relation {
-		blocks         "Blocks"
-		blocked_by     "Blocked by"
+		// Said as what waits on what, which holds until the other has succeeded.
+		blocks         "Needed by"
+		blocked_by     "Depends on"
 		relates        "Relates to"
 		duplicates     "Duplicates"
 		duplicated_by  "Duplicated by"
