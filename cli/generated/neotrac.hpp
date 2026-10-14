@@ -417,20 +417,22 @@ namespace neotrac {
 			return false;
 		}
 
-		enum class board_style { kanban, canvas, pipeline };
+		enum class board_style { list, board, pipeline, whiteboard };
 		inline const char* to_string(board_style c) {
 			switch (c) {
-				case board_style::kanban: return "kanban";
-				case board_style::canvas: return "canvas";
+				case board_style::list: return "list";
+				case board_style::board: return "board";
 				case board_style::pipeline: return "pipeline";
+				case board_style::whiteboard: return "whiteboard";
 			}
 			return "";
 		}
 		// Reads a choice by its name; one that isn't, like a choice added since, leaves it.
 		inline bool from_string(const std::string& text, board_style& c) {
-			if (text == "kanban") return c = board_style::kanban, true;
-			if (text == "canvas") return c = board_style::canvas, true;
+			if (text == "list") return c = board_style::list, true;
+			if (text == "board") return c = board_style::board, true;
 			if (text == "pipeline") return c = board_style::pipeline, true;
+			if (text == "whiteboard") return c = board_style::whiteboard, true;
 			return false;
 		}
 
@@ -926,6 +928,7 @@ namespace neotrac {
 			::neotrac::projects::status status{};
 			std::vector<std::string> notify{};
 			std::vector<std::string> kinds{};
+			double width{};
 
 			static stage from(const ember::value& v) {
 				stage out;
@@ -943,6 +946,7 @@ namespace neotrac {
 				out.status = detail::choice<::neotrac::projects::status>(v["status"]);
 				out.notify = detail::texts(v["notify"]);
 				out.kinds = detail::texts(v["kinds"]);
+				out.width = detail::number(v["width"]);
 				return out;
 			}
 		};
@@ -2518,6 +2522,7 @@ namespace neotrac {
 			std::optional<::neotrac::projects::status> status{};
 			std::optional<std::vector<std::string>> notify{};
 			std::optional<std::vector<std::string>> kinds{};
+			std::optional<double> width{};
 
 			std::string json() const {
 				std::string out = "{";
@@ -2531,6 +2536,7 @@ namespace neotrac {
 				if (status) add("status", detail::json(std::string(to_string(*status))));
 				if (notify) add("notify", detail::json(*notify));
 				if (kinds) add("kinds", detail::json(*kinds));
+				if (width) add("width", detail::json(*width));
 				return out + "}";
 			}
 		};
@@ -2547,6 +2553,7 @@ namespace neotrac {
 			std::optional<::neotrac::projects::status> status{};
 			std::optional<std::vector<std::string>> notify{};
 			std::optional<std::vector<std::string>> kinds{};
+			std::optional<double> width{};
 
 			std::string json() const {
 				std::string out = "{";
@@ -2561,6 +2568,7 @@ namespace neotrac {
 				if (status) add("status", detail::json(std::string(to_string(*status))));
 				if (notify) add("notify", detail::json(*notify));
 				if (kinds) add("kinds", detail::json(*kinds));
+				if (width) add("width", detail::json(*width));
 				return out + "}";
 			}
 		};
@@ -2577,6 +2585,7 @@ namespace neotrac {
 			std::optional<::neotrac::projects::status> status{};
 			std::optional<std::vector<std::string>> notify{};
 			std::optional<std::vector<std::string>> kinds{};
+			std::optional<double> width{};
 			std::optional<std::string> into{};
 
 			std::string json() const {
@@ -2592,6 +2601,7 @@ namespace neotrac {
 				if (status) add("status", detail::json(std::string(to_string(*status))));
 				if (notify) add("notify", detail::json(*notify));
 				if (kinds) add("kinds", detail::json(*kinds));
+				if (width) add("width", detail::json(*width));
 				if (into) add("into", detail::json(*into));
 				return out + "}";
 			}
@@ -2812,6 +2822,7 @@ namespace neotrac {
 				::neotrac::projects::status status{};
 				std::vector<std::string> notify{};
 				std::vector<std::string> kinds{};
+				double width{};
 				static stages_row from(const ember::value& v) {
 					stages_row out;
 					out.id = detail::text(v["id"]);
@@ -2823,6 +2834,7 @@ namespace neotrac {
 					out.status = detail::choice<::neotrac::projects::status>(v["status"]);
 					out.notify = detail::texts(v["notify"]);
 					out.kinds = detail::texts(v["kinds"]);
+					out.width = detail::number(v["width"]);
 					return out;
 				}
 			};
