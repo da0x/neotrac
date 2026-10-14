@@ -640,7 +640,10 @@ namespace {
 		(void)!::write(input[1], given.data(), given.size());
 		::close(input[1]);
 		std::fprintf(stderr, "%s %s: working\n", number.c_str(), page.title.c_str());
-		report(s, id, {{"status", "working"}, {"since", now_said()}});
+		// A card already waiting is only looked at again, so it keeps saying it waits,
+		// and since when, rather than its timer starting over at each look.
+		bool waited = page.data["status"].as_string() == "waiting";
+		if (!waited) report(s, id, {{"status", "working"}, {"since", now_said()}});
 		// Kept while it runs: renewed every five minutes, well inside any lease.
 		auto renewed = std::chrono::steady_clock::now();
 		int status = 0;
@@ -668,7 +671,9 @@ namespace {
 				// Nothing to say or move: it isn't this worker's any more.
 			} else if (later) {
 				std::string said = tail_of(out_path, 1);
-				report(s, id, {{"status", "waiting"}, {"since", now_said()}, {"note", said.empty() ? ember::value() : ember::value(said)}});
+				ember::value note = said.empty() ? ember::value() : ember::value(said);
+				if (!waited) report(s, id, {{"status", "waiting"}, {"since", now_said()}, {"note", note}});
+				else if (page.data["note"].as_string() != said) report(s, id, {{"note", note}});
 				s.app->issue_release({.id = id});
 				std::fprintf(stderr, "%s: waiting%s\n", number.c_str(), said.empty() ? "" : (": " + said).c_str());
 			} else if (fine) {

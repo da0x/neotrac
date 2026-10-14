@@ -362,6 +362,15 @@ curl -s -H "Authorization: Bearer owner" "http://localhost:8080/v1/projects/demo
 check "its card waiting, on what the program said" python3 -c '
 import json,sys; d=json.load(open(sys.argv[1]))["fields"]["data"]["mapValue"]["fields"]
 assert d["status"]["stringValue"] == "waiting" and d["note"]["stringValue"] == "waiting on the compiler"' "$logs/waiting.data"
+# Looked at again, still not ready, it keeps waiting since it first did: its timer
+# doesn't start over at each look.
+sleep 1.5
+NEOTRAC_KEY=$ranger timeout 60 "$neotrac" work --run "$logs/later" --done verifying --failed closed --once >/dev/null 2>"$logs/work"
+curl -s -H "Authorization: Bearer owner" "http://localhost:8080/v1/projects/demo-uione/databases/(default)/documents/projects_issue/e2e-$waiting" >"$logs/waiting.again"
+check "looked at again, it's waiting since it first was" python3 -c '
+import json,sys; f=lambda p: json.load(open(p))["fields"]["data"]["mapValue"]["fields"]
+a, b = f(sys.argv[1]), f(sys.argv[2])
+assert b["status"]["stringValue"] == "waiting" and b["since"] == a["since"]' "$logs/waiting.data" "$logs/waiting.again"
 
 # An issue blocked by another waits on it: no one takes it, and it says on what, until
 # the other is at a stage whose status is success, Closed here; then it's taken.
