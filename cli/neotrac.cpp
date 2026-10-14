@@ -515,7 +515,7 @@ namespace {
 		}
 		out += "],\"comments\":[";
 		for (std::size_t i = 0; i < page.comments.size(); ++i) {
-			out += (i ? "," : "") + std::string("{\"by\":") + json(page.comments[i].author_name) + ",\"body\":" + json(page.comments[i].body) + "}";
+			out += (i ? "," : "") + std::string("{\"id\":") + json(page.comments[i].id) + ",\"by\":" + json(page.comments[i].author_name) + ",\"body\":" + json(page.comments[i].body) + "}";
 		}
 		out += "],\"moves\":[";
 		auto moves = moves_of(s, page);
@@ -556,6 +556,26 @@ namespace {
 
 	int code_of(int status);
 
+	// What's said on an issue doesn't show where things are on this machine: the home
+	// folder is said as ~.
+	std::string unhomed(std::string text) {
+		std::string home = env("HOME");
+		while (!home.empty() && home.back() == '/') home.pop_back();
+		if (home.empty()) return text;
+		for (std::size_t at = text.find(home); at != std::string::npos; at = text.find(home, at + 1)) {
+			std::size_t after = at + home.size();
+			if (after == text.size() || text[after] == '/' || text[after] == ' ' || text[after] == '\n') text.replace(at, home.size(), "~");
+		}
+		return text;
+	}
+
+	// A program as an issue says it: by its name, not where it is, with what it was given.
+	std::string named(const std::string& program) {
+		std::size_t end = program.find(' ');
+		std::string first = program.substr(0, end);
+		return std::filesystem::path(first).filename().string() + (end == std::string::npos ? "" : program.substr(end));
+	}
+
 	// The last lines of what a program wrote, for a comment.
 	std::string tail_of(const std::string& path, std::size_t lines) {
 		std::ifstream in(path);
@@ -567,7 +587,7 @@ namespace {
 		std::string out;
 		for (const auto& line : kept) out += line + "\n";
 		while (!out.empty() && (out.back() == '\n' || out.back() == ' ')) out.pop_back();
-		return out;
+		return unhomed(out);
 	}
 
 	// The stage of an issue's board by its name, title or id.
@@ -702,8 +722,8 @@ namespace {
 			} else {
 				std::string why = WIFEXITED(status) ? "exited " + std::to_string(WEXITSTATUS(status)) : "was stopped";
 				std::string said = tail_of(err_path, 40);
-				s.app->comment_create({.issue = id, .body = program + " " + why + (said.empty() ? "." : ":\n\n```\n" + said + "\n```")});
-				report(s, id, {{"status", "failed"}, {"since", now_said()}, {"note", program + " " + why}, {"at", page.stage_title}});
+				s.app->comment_create({.issue = id, .body = unhomed(named(program)) + " " + why + (said.empty() ? "." : ":\n\n```\n" + said + "\n```")});
+				report(s, id, {{"status", "failed"}, {"since", now_said()}, {"note", unhomed(named(program)) + " " + why}, {"at", page.stage_title}});
 				if (!failed_word.empty()) {
 					projects::issue_move sent{.id = id};
 					sent.stage = stage_named(s, page, failed_word);
@@ -1093,7 +1113,7 @@ namespace {
 		    {"project", "project"}, {"projects", "project"}, {"board", "board"}, {"boards", "board"}, {"issue", "issue"},
 		    {"issues", "issue"}, {"page", "page"}, {"pages", "page"}, {"wiki", "page"}, {"milestone", "milestone"},
 		    {"milestones", "milestone"}, {"stage", "stage"}, {"stages", "stage"}, {"step", "step"}, {"steps", "step"}, {"service", "service"}, {"services", "service"}, {"people", "person"}, {"person", "person"},
-		    {"members", "person"}};
+		    {"members", "person"}, {"comment", "comment"}, {"comments", "comment"}};
 		auto it = nouns.find(lower(word));
 		return it == nouns.end() ? "" : it->second;
 	}
@@ -2021,7 +2041,15 @@ namespace {
 			auto s = sign_in(a);
 			return delete_stage(a, s);
 		}
-		if (noun != "project") throw stop(usage, "a project, a board or a milestone is deleted; an issue goes with its board or project");
+		// A comment by its id, as show issue --json gives it; whoever may delete it.
+		if (noun == "comment") {
+			if (a.words.size() < 2) throw stop(usage, "say which comment, by its id from neotrac show 42 --json");
+			auto s = sign_in(a);
+			s.app->comment_delete({.id = a.words[1]});
+			if (!a.has("json")) std::printf("Deleted the comment.\n");
+			return 0;
+		}
+		if (noun != "project") throw stop(usage, "a project, a board, a milestone or a comment is deleted; an issue goes with its board or project");
 		auto s = sign_in(a, false);
 		if (s.who.service) throw stop(said_no, "a service doesn't delete projects");
 		return delete_project(a, s);
@@ -2127,6 +2155,7 @@ Writing, in your editor ($VISUAL, $EDITOR or vi)
   neotrac delete project [p]     asks you to type its address
   neotrac delete board|milestone b   asks you to type its title
   neotrac delete stage done --into published   its issues moved into another
+  neotrac delete comment c       by its id, from neotrac show 42 --json
 
 Working an issue
   neotrac claim 42, neotrac release 42

@@ -322,6 +322,7 @@ if [ "$title" = "Flaky test" ]; then
 	echo "Looked at $title: a race in setup."
 else
 	echo "can't reproduce $title" >&2
+	echo "its log is $HOME/.cache/runs/fix.log" >&2
 	exit 1
 fi
 FIX
@@ -345,6 +346,8 @@ NEOTRAC_KEY=$ranger timeout 60 "$neotrac" work --run "$logs/fix" --done verifyin
 "$neotrac" show issue "$failing" >"$logs/failed"
 check "a program that fails leaves the issue where it was" grep -q '"stage":"Investigate"' "$logs/failed.json"
 check "saying why" grep -q "can't reproduce Ghost bug" "$logs/failed"
+check "naming the program, not where it is on this machine" grep -q "^fix exited 1" "$logs/failed"
+check "nor the home folder, said as ~" sh -c '! grep -q "$1" "$2" && grep -q "its log is ~/.cache/runs/fix.log" "$2"' - "$HOME" "$logs/failed"
 check "and lets it go, for another to take" grep -q '"held_by":""' "$logs/failed.json"
 cat >"$logs/later" <<'LATER'
 #!/bin/sh
