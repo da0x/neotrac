@@ -286,7 +286,7 @@ namespace projects at / {
 		}
 		members = each member in project {
 			order by role
-			person  person.picture  person.name  role.title
+			person  person.picture  person.name  person.service  role.title
 		}
 		roles = each role in project {
 			order by name
