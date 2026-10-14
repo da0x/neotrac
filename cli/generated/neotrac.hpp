@@ -3683,6 +3683,14 @@ namespace neotrac {
 			if (!out) throw refused(0, local + " can't be written");
 		}
 
+		// A command by its name, like "projects::service::key", sent as JSON: its whole
+		// answer, for what it says besides the id, like a service's new key.
+		ember::value said(const std::string& command, const std::string& body) {
+			std::string route = "/api/" + command;
+			for (std::size_t at = route.find("::"); at != std::string::npos; at = route.find("::", at)) route.replace(at, 2, "/");
+			return ember::parse_json(post(route, body));
+		}
+
 		// board::update: the id of what it changed, or refused.
 		std::string board_update(const projects::board_update& sent) {
 			return detail::text(ember::parse_json(post("/api/projects/board/update", sent.json()))["id"]);

@@ -187,7 +187,7 @@ check "a board is selected too" grep -Eq "^\* main " "$logs/boards"
 check "a person makes a private board" grep -q "^Made Releases. neotrac select board releases works in it." "$logs/board"
 "$neotrac" list boards >"$logs/boards"
 check "listed among the project's boards for its people" grep -Eq "^  releases +Releases$" "$logs/boards"
-"$neotrac" new stage --board releases --title "Waiting on you" --status waiting --notify chime --position 2.5 >"$logs/stage" 2>&1
+"$neotrac" new stage --board releases --title "Waiting on you" --status waiting --notify chime --position 2.5 --worked-by agent >"$logs/stage" 2>&1
 check "a stage is added that chimes" grep -q "^Added Waiting on you to Releases." "$logs/stage"
 "$neotrac" edit stage in_progress --board releases --title "Working" --status working >"$logs/edited" 2>&1
 check "and a stage renamed, with its dot" grep -q "^Saved Working." "$logs/edited"
@@ -196,6 +196,12 @@ check "issues move into it" grep -q "^Issues move from Working to Waiting on you
 "$neotrac" list stages --board releases >"$logs/stages"
 check "the board's stages say themselves" grep -Eq "^  waiting_on_you +Waiting on you$" "$logs/stages"
 check "the new one between Working and Done, where it was put" test "$(awk '{print $1}' "$logs/stages" | tr '\n' ' ')" = "to_do working waiting_on_you done "
+"$neotrac" show board releases >"$logs/releases"
+check "worked by the role it names" grep -Eq "^  Waiting on you .*worked by Agent$" "$logs/releases"
+"$neotrac" new service --title Courier --role agent --json >"$logs/service" 2>&1
+courier=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["key"])' "$logs/service" 2>/dev/null)
+NEOTRAC_KEY=$courier "$neotrac" whoami >"$logs/courier" 2>&1
+check "a service made with its key, which signs it in" grep -q "Courier" "$logs/courier"
 "$neotrac" delete board releases --confirm Releases >/dev/null 2>&1
 check "and the private board is deleted, its title typed" test $? -eq 0
 "$neotrac" unselect board >/dev/null && "$neotrac" list boards >"$logs/boards"
@@ -338,5 +344,21 @@ NEOTRAC_KEY=$ranger timeout 60 "$neotrac" work --run "$logs/fix" --done verifyin
 check "a program that fails leaves the issue where it was" grep -q '"stage":"Investigate"' "$logs/failed.json"
 check "saying why" grep -q "can't reproduce Ghost bug" "$logs/failed"
 check "and lets it go, for another to take" grep -q '"held_by":""' "$logs/failed.json"
+cat >"$logs/later" <<'LATER'
+#!/bin/sh
+echo "waiting on the compiler"
+exit 75
+LATER
+chmod +x "$logs/later"
+NEOTRAC_KEY=$ranger "$neotrac" claim "$failing" >/dev/null && NEOTRAC_KEY=$ranger "$neotrac" move "$failing" verifying >/dev/null
+waiting=$(issue_in_investigate "Not yet")
+NEOTRAC_KEY=$ranger timeout 60 "$neotrac" work --run "$logs/later" --done verifying --failed closed --once >/dev/null 2>"$logs/work"
+"$neotrac" show issue "$waiting" --json >"$logs/waiting.json"
+check "a program that isn't ready leaves the issue where it was" grep -q '"stage":"Investigate"' "$logs/waiting.json"
+check "let go, for when it's ready" grep -q '"held_by":""' "$logs/waiting.json"
+curl -s -H "Authorization: Bearer owner" "http://localhost:8080/v1/projects/demo-uione/databases/(default)/documents/projects_issue/e2e-$waiting" >"$logs/waiting.data"
+check "its card waiting, on what the program said" python3 -c '
+import json,sys; d=json.load(open(sys.argv[1]))["fields"]["data"]["mapValue"]["fields"]
+assert d["status"]["stringValue"] == "waiting" and d["note"]["stringValue"] == "waiting on the compiler"' "$logs/waiting.data"
 
 if [ $failures -eq 0 ]; then echo "all passed"; else echo "$failures failed"; exit 1; fi

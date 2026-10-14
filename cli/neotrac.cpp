@@ -78,7 +78,7 @@ namespace {
 	// Flags that take a value, like --board main; any other is on or off.
 	const std::set<std::string> valued{"board", "project", "server", "message", "m", "note", "title", "body", "priority", "labels",
 	                                   "due", "name", "summary", "visibility", "workflow", "slug", "confirm", "run", "done", "failed",
-	                                   "milestone", "status", "notify", "from", "to", "position"};
+	                                   "milestone", "status", "notify", "from", "to", "position", "role", "worked-by"};
 
 	asked read_arguments(int count, char** given) {
 		asked out;
@@ -653,9 +653,18 @@ namespace {
 			}
 		}
 		bool fine = !lost && WIFEXITED(status) && WEXITSTATUS(status) == 0;
+		// 75, EX_TEMPFAIL: it can't be done yet, like a deploy waiting on its packages.
+		// It's let go where it is, saying what it waits on, and taken again once the
+		// queue changes.
+		bool later = !lost && WIFEXITED(status) && WEXITSTATUS(status) == 75;
 		try {
 			if (lost) {
 				// Nothing to say or move: it isn't this worker's any more.
+			} else if (later) {
+				std::string said = tail_of(out_path, 1);
+				report(s, id, {{"status", "waiting"}, {"since", now_said()}, {"note", said.empty() ? ember::value() : ember::value(said)}});
+				s.app->issue_release({.id = id});
+				std::fprintf(stderr, "%s: waiting%s\n", number.c_str(), said.empty() ? "" : (": " + said).c_str());
 			} else if (fine) {
 				// What it wrote in out/ is attached to the issue.
 				std::vector<std::string> made;
@@ -1000,7 +1009,7 @@ namespace {
 		static const std::map<std::string, std::string> nouns{
 		    {"project", "project"}, {"projects", "project"}, {"board", "board"}, {"boards", "board"}, {"issue", "issue"},
 		    {"issues", "issue"}, {"page", "page"}, {"pages", "page"}, {"wiki", "page"}, {"milestone", "milestone"},
-		    {"milestones", "milestone"}, {"stage", "stage"}, {"stages", "stage"}, {"step", "step"}, {"steps", "step"}, {"people", "person"}, {"person", "person"},
+		    {"milestones", "milestone"}, {"stage", "stage"}, {"stages", "stage"}, {"step", "step"}, {"steps", "step"}, {"service", "service"}, {"services", "service"}, {"people", "person"}, {"person", "person"},
 		    {"members", "person"}};
 		auto it = nouns.find(lower(word));
 		return it == nouns.end() ? "" : it->second;
@@ -1085,11 +1094,16 @@ namespace {
 	// A thing written: in the person's editor, from what it holds now, or from flags,
 	// each a field by its name in lower case, like --title, and --body for its text.
 	terminal::document written_by(const asked& a, const terminal::document& now, const std::string& help) {
-		bool flagged = a.has("body") || std::ranges::any_of(now.fields, [&](const auto& f) { return a.has(lower(f.first)); });
+		// A field's flag is its name in lower case, a space a dash: Worked by is --worked-by.
+		auto flag_of = [](std::string name) {
+			std::ranges::replace(name, ' ', '-');
+			return lower(name);
+		};
+		bool flagged = a.has("body") || std::ranges::any_of(now.fields, [&](const auto& f) { return a.has(flag_of(f.first)); });
 		if (flagged || !asking(a)) {
 			terminal::document out = now;
 			for (auto& [name, value] : out.fields) {
-				if (a.has(lower(name))) value = a.flag(lower(name));
+				if (a.has(flag_of(name))) value = a.flag(flag_of(name));
 			}
 			if (a.has("body")) out.text = text_flag(a, "body");
 			return out;
@@ -1704,10 +1718,13 @@ namespace {
 	}
 
 	const char* stage_help = "Status is its cards' dot: inactive, waiting, working, done or failed. Notify is chime, or nothing; email and text are "
-	                         "to come.";
+	                         "to come. Worked by names the roles whose services take its issues, like agent.";
 
 	// A stage's fields as written: its status, and how it tells the board's watchers.
-	void stage_fields(const terminal::document& d, std::optional<projects::status>& status, std::optional<std::vector<std::string>>& notify) {
+	void stage_fields(const session& s, const terminal::document& d, std::optional<projects::status>& status, std::optional<std::vector<std::string>>& notify,
+	                  std::optional<std::vector<std::string>>& worked_by) {
+		worked_by.emplace();
+		for (const auto& role : labels_from(lower(d.get("Worked by")))) worked_by->push_back(projects::role_id(s.project, role));
 		projects::status said{};
 		if (!projects::from_string(lower(d.get("Status")), said)) throw stop(usage, "status is inactive, waiting, working, done or failed");
 		status = said;
@@ -1720,13 +1737,13 @@ namespace {
 	int new_stage(const asked& a, session& s) {
 		std::string board;
 		auto page = board_page_of(a, s, board);
-		terminal::document now{{{"Title", ""}, {"Status", "inactive"}, {"Notify", ""}}, ""};
+		terminal::document now{{{"Title", ""}, {"Status", "inactive"}, {"Notify", ""}, {"Worked by", ""}}, ""};
 		auto d = written_by(a, now, stage_help);
 		if (d.get("Title").empty()) throw stop(usage, "a stage needs a title");
 		projects::stage_create sent;
 		sent.board = board;
 		sent.title = d.get("Title");
-		stage_fields(d, sent.status, sent.notify);
+		stage_fields(s, d, sent.status, sent.notify, sent.worked_by);
 		// Where it goes among the others, like 2.5 between the second and third; after them unless said.
 		if (a.has("position")) {
 			char* end = nullptr;
@@ -1749,14 +1766,32 @@ namespace {
 		std::string notify;
 		for (const auto& n : stage.notify) notify += (notify.empty() ? "" : ", ") + n;
 		std::string status = projects::to_string(stage.status);
-		terminal::document now{{{"Title", stage.title}, {"Status", status.empty() ? "inactive" : status}, {"Notify", notify}}, ""};
+		std::string workers;
+		for (const auto& r : stage.worked_by) workers += (workers.empty() ? "" : ", ") + r.substr(s.project.size() + 1);
+		terminal::document now{{{"Title", stage.title}, {"Status", status.empty() ? "inactive" : status}, {"Notify", notify}, {"Worked by", workers}}, ""};
 		auto d = written_by(a, now, stage_help);
 		projects::stage_update sent{.id = stage.id};
 		sent.title = d.get("Title");
-		stage_fields(d, sent.status, sent.notify);
+		stage_fields(s, d, sent.status, sent.notify, sent.worked_by);
 		s.app->stage_update(sent);
 		if (a.has("json")) std::printf("{\"stage\":%s}\n", json(stage.name).c_str());
 		else std::printf("Saved %s.\n", d.get("Title").c_str());
+		return done;
+	}
+
+	// A service in the project, with a role made for services, and its key, shown once.
+	int new_service(const asked& a, session& s) {
+		terminal::document now{{{"Title", ""}, {"Role", "agent"}}, ""};
+		auto d = written_by(a, now, "Role is a role made for services, like agent. Its key is shown once.");
+		if (d.get("Title").empty()) throw stop(usage, "a service needs a title");
+		projects::service_create sent;
+		sent.project = s.project;
+		sent.title = d.get("Title");
+		sent.role = projects::role_id(s.project, lower(d.get("Role")));
+		auto id = s.app->service_create(sent);
+		std::string key = text_of(s.app->said("projects::service::key", "{\"id\":" + json(id) + "}")["key"]);
+		if (a.has("json")) std::printf("{\"service\":%s,\"key\":%s}\n", json(id).c_str(), json(key).c_str());
+		else std::printf("Made %s. Its key, shown this once:\n%s\n", sent.title->c_str(), key.c_str());
 		return done;
 	}
 
@@ -1828,6 +1863,7 @@ namespace {
 		if (noun == "board") return new_board(a, s);
 		if (noun == "stage") return new_stage(a, s);
 		if (noun == "step") return new_step(a, s);
+		if (noun == "service") return new_service(a, s);
 		throw stop(usage, "say what to make: neotrac new project, board, stage, step, issue, page or milestone");
 	}
 
@@ -1940,6 +1976,7 @@ Writing, in your editor ($VISUAL, $EDITOR or vi)
   neotrac edit project|stage|issue|page|milestone [which]
   neotrac new step --from a --to b   lets issues move from one stage to another
   neotrac new stage --position 2.5   puts a stage between the second and third
+  neotrac new service --title Runner --role agent   and its key, shown once
   neotrac comment 42             or -m "..." or the comment on stdin
   neotrac attach 42 log.txt ...  uploads files and attaches them to the issue
   neotrac download 42 [folder]   saves what's attached to it
@@ -1953,7 +1990,8 @@ Working an issue
   neotrac work --run ./fix --done review [--failed backlog] [--once]
                                  takes each issue a role of yours works as it comes,
                                  runs the program on it, its attachments beside it,
-                                 attaches what it writes to out/, and moves it on
+                                 attaches what it writes to out/, and moves it on;
+                                 a program that exits 75 isn't ready, and lets it wait
   neotrac move 42 review         where the workflow lets your role
   neotrac close 42 done          or wont_do, or duplicate 9, from any stage
   neotrac reopen 42              back on its board, in the stage it was in
