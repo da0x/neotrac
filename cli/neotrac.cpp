@@ -337,9 +337,10 @@ namespace {
 
 	// The boards worked on, by id, with their titles: the one selected or named, or
 	// every one of the project's.
+	projects::project_page project_of(session& s);
+
 	std::map<std::string, std::string> boards_worked(session& s) {
-		auto project = s.app->project_page(s.project).get();
-		if (!project.exists) throw stop(not_found, "there's no project " + s.project + " you may read");
+		auto project = project_of(s);
 		std::map<std::string, std::string> titles;
 		for (const auto& board : project.boards) {
 			if (s.board.empty() || board.name == s.board || board.id == s.board) titles[board.id] = board.title;
@@ -593,7 +594,8 @@ namespace {
 	// Works one issue it holds: runs the program with the issue as JSON on its input,
 	// in a folder of its own, WORK_DIR, keeping its claim while it runs; then says
 	// what it wrote, and moves it on, or, when it fails, back or lets it go.
-	void work_on(session& s, const std::string& id, const std::string& program, const std::string& done_word, const std::string& failed_word) {
+	// Whether it waits: the program said it isn't ready yet.
+	bool work_on(session& s, const std::string& id, const std::string& program, const std::string& done_word, const std::string& failed_word) {
 		auto page = read_issue(s, id, id);
 		std::string number = "#" + std::to_string(static_cast<long long>(page.number));
 		std::string root = (env("TMPDIR").empty() ? std::string("/tmp") : env("TMPDIR")) + "/neotrac-work-XXXXXX";
@@ -712,6 +714,7 @@ namespace {
 		}
 		std::error_code ignored;
 		std::filesystem::remove_all(root, ignored);
+		return later;
 	}
 
 	// Works the issues in stages a role of yours works, one at a time, as they come:
@@ -737,6 +740,13 @@ namespace {
 		std::signal(SIGTERM, [](int) { stopping = 1; });
 		std::set<std::string> tried;  // taken by someone else as it was asked for; tried again once it changes
 		std::string seen;
+		// What waits, until an issue comes into the queue or leaves it, like the one it
+		// waits on moving on: its own let-go changes the queue, so that doesn't count.
+		std::set<std::string> parked;
+		std::string parked_with;
+		// What it's just worked, not worked again while the queue still shows it, as it
+		// does for a moment after it's moved on; dragged back later, it's worked again.
+		std::map<std::string, std::chrono::steady_clock::time_point> finished;
 		std::fprintf(stderr, "Working %s as %s; waiting for issues.\n", s.project.c_str(), s.who.name.c_str());
 		while (!stopping) {
 			s.here->run_one_for(std::chrono::milliseconds(250));
@@ -744,19 +754,34 @@ namespace {
 			auto q = queue_of(s, works, titles, false);
 			std::string now = queue_json(q);
 			if (now != seen) tried.clear(), seen = now;
-			auto next = std::ranges::find_if(q, [&](const waiting& w) { return !tried.contains(w.id); });
+			std::string ids;
+			for (const auto& w : q) ids += w.id + " ";
+			if (ids != parked_with) parked.clear();
+			std::erase_if(finished, [&](const auto& f) {
+				return std::ranges::none_of(q, [&](const waiting& w) { return w.id == f.first; }) || std::chrono::steady_clock::now() - f.second > std::chrono::seconds(30);
+			});
+			auto next = std::ranges::find_if(q, [&](const waiting& w) { return !tried.contains(w.id) && !parked.contains(w.id) && !finished.contains(w.id); });
 			if (next == q.end()) continue;
 			std::string id = next->id;
-			if (!next->yours) {
-				try {
-					s.app->issue_claim({.id = id});
-				} catch (const refused& r) {
-					if (code_of(r.status) != said_no) throw;
+			// Claimed even when the queue says it's held here already, since the queue
+			// can be a moment behind; refused, it's this worker's only if it really is,
+			// like one started again while it held it.
+			try {
+				s.app->issue_claim({.id = id});
+			} catch (const refused& r) {
+				if (code_of(r.status) != said_no) throw;
+				auto page = read_issue(s, id, id);
+				if (!(held(page) && page.held_by == s.who.id)) {
 					tried.insert(id);
 					continue;
 				}
 			}
-			work_on(s, id, program, done_word, failed_word);
+			if (work_on(s, id, program, done_word, failed_word)) {
+				parked.insert(id);
+				parked_with = ids;
+			} else {
+				finished[id] = std::chrono::steady_clock::now();
+			}
 			tried.insert(id);  // until the queue says it's gone, or changed
 			if (once) break;
 		}
