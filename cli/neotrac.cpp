@@ -282,6 +282,7 @@ namespace {
 		bool yours = false;
 		std::string stage = "";              // its stage's id
 		std::vector<std::string> labels = {};  // what it is, like package, which says which worker takes it
+		std::string milestone = "";            // its milestone's id, like the release it's a part of
 	};
 
 	// The order issues are worked in: most urgent first, then oldest.
@@ -304,7 +305,7 @@ namespace {
 				bool yours = held && issue.held_by == s.who.id;
 				if (!all && held && !yours) continue;
 				out.push_back({issue.id, issue.title, issue.stage_title, titles.at(issue.board), projects::to_string(issue.priority),
-				               held ? issue.held_by_name : "", issue.number, yours, issue.stage, issue.labels});
+				               held ? issue.held_by_name : "", issue.number, yours, issue.stage, issue.labels, issue.milestone});
 			}
 		}
 		std::ranges::sort(out, [](const waiting& a, const waiting& b) {
@@ -340,6 +341,7 @@ namespace {
 	// The boards worked on, by id, with their titles: the one selected or named, or
 	// every one of the project's.
 	projects::project_page project_of(session& s);
+	std::string milestone_named(const session& s, const projects::project_page& project, const std::string& word);
 
 	std::map<std::string, std::string> boards_worked(session& s) {
 		auto project = project_of(s);
@@ -727,6 +729,8 @@ namespace {
 		std::string only_stage = a.flag("stage"), only_label = lower(a.flag("label"));
 		if (program.empty() || done_word.empty()) throw stop(usage, "say what to run and where it goes when it's done, like neotrac work --run ./fix --done review");
 		auto titles = boards_worked(s);
+		// --milestone: only its issues, as two releases worked on one board each have their own workers.
+		std::string only_milestone = a.flag("milestone").empty() ? "" : milestone_named(s, project_of(s), a.flag("milestone"));
 		bool once = a.has("once");
 		std::map<std::string, projects::issue_work> works;
 		std::vector<ember::database::registration> listening;
@@ -764,6 +768,7 @@ namespace {
 			// Only what's in its stage and says it's its kind, when it's told: --stage
 			// to_do --label packages takes the packages just added, and no website.
 			std::erase_if(q, [&](const waiting& w) {
+				if (!only_milestone.empty() && w.milestone != only_milestone) return true;
 				if (!only_stage.empty() && !w.stage.ends_with("-" + only_stage) && lower(w.stage_title) != lower(only_stage)) return true;
 				return !only_label.empty() && !std::ranges::contains(w.labels, only_label);
 			});
@@ -2126,7 +2131,7 @@ Working an issue
                                  a program that exits 75 isn't ready, and lets it wait
   neotrac work ... --stage to_do --label package
                                  only what's in that stage and labelled so, as each kind of
-                                 issue has a worker of its own
+                                 issue has a worker of its own; --milestone 1.0, only its issues
   neotrac move 42 review         where the workflow lets your role
   neotrac transfer 42 main       to another of the project's boards, with its history
   neotrac close 42 done          or wont_do, or duplicate 9, from any stage
