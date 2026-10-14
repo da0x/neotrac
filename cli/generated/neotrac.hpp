@@ -539,6 +539,7 @@ namespace neotrac {
 			double position{};
 			::neotrac::projects::resolution closed{};
 			std::string duplicate_of{};
+			std::vector<std::string> waits_on{};
 			::neotrac::projects::issue_kind kind{};
 			double x{};
 			double y{};
@@ -570,6 +571,7 @@ namespace neotrac {
 				out.position = detail::number(v["position"]);
 				out.closed = detail::choice<::neotrac::projects::resolution>(v["closed"]);
 				out.duplicate_of = detail::text(v["duplicate_of"]);
+				out.waits_on = detail::texts(v["waits_on"]);
 				out.kind = detail::choice<::neotrac::projects::issue_kind>(v["kind"]);
 				out.x = detail::number(v["x"]);
 				out.y = detail::number(v["y"]);
@@ -1122,6 +1124,7 @@ namespace neotrac {
 			std::optional<double> position{};
 			std::optional<::neotrac::projects::resolution> closed{};
 			std::optional<std::string> duplicate_of{};
+			std::optional<std::vector<std::string>> waits_on{};
 			std::optional<::neotrac::projects::issue_kind> kind{};
 			std::optional<double> x{};
 			std::optional<double> y{};
@@ -1149,6 +1152,7 @@ namespace neotrac {
 				if (position) add("position", detail::json(*position));
 				if (closed) add("closed", detail::json(std::string(to_string(*closed))));
 				if (duplicate_of) add("duplicate_of", detail::json(*duplicate_of));
+				if (waits_on) add("waits_on", detail::json(*waits_on));
 				if (kind) add("kind", detail::json(std::string(to_string(*kind))));
 				if (x) add("x", detail::json(*x));
 				if (y) add("y", detail::json(*y));
@@ -1179,6 +1183,7 @@ namespace neotrac {
 			std::optional<double> position{};
 			std::optional<::neotrac::projects::resolution> closed{};
 			std::optional<std::string> duplicate_of{};
+			std::optional<std::vector<std::string>> waits_on{};
 			std::optional<::neotrac::projects::issue_kind> kind{};
 			std::optional<double> x{};
 			std::optional<double> y{};
@@ -1207,6 +1212,7 @@ namespace neotrac {
 				if (position) add("position", detail::json(*position));
 				if (closed) add("closed", detail::json(std::string(to_string(*closed))));
 				if (duplicate_of) add("duplicate_of", detail::json(*duplicate_of));
+				if (waits_on) add("waits_on", detail::json(*waits_on));
 				if (kind) add("kind", detail::json(std::string(to_string(*kind))));
 				if (x) add("x", detail::json(*x));
 				if (y) add("y", detail::json(*y));
@@ -1237,6 +1243,7 @@ namespace neotrac {
 			std::optional<double> position{};
 			std::optional<::neotrac::projects::resolution> closed{};
 			std::optional<std::string> duplicate_of{};
+			std::optional<std::vector<std::string>> waits_on{};
 			std::optional<::neotrac::projects::issue_kind> kind{};
 			std::optional<double> x{};
 			std::optional<double> y{};
@@ -1265,6 +1272,7 @@ namespace neotrac {
 				if (position) add("position", detail::json(*position));
 				if (closed) add("closed", detail::json(std::string(to_string(*closed))));
 				if (duplicate_of) add("duplicate_of", detail::json(*duplicate_of));
+				if (waits_on) add("waits_on", detail::json(*waits_on));
 				if (kind) add("kind", detail::json(std::string(to_string(*kind))));
 				if (x) add("x", detail::json(*x));
 				if (y) add("y", detail::json(*y));
@@ -1295,6 +1303,7 @@ namespace neotrac {
 			std::optional<double> position{};
 			std::optional<::neotrac::projects::resolution> closed{};
 			std::optional<std::string> duplicate_of{};
+			std::optional<std::vector<std::string>> waits_on{};
 			std::optional<::neotrac::projects::issue_kind> kind{};
 			std::optional<double> x{};
 			std::optional<double> y{};
@@ -1323,6 +1332,7 @@ namespace neotrac {
 				if (position) add("position", detail::json(*position));
 				if (closed) add("closed", detail::json(std::string(to_string(*closed))));
 				if (duplicate_of) add("duplicate_of", detail::json(*duplicate_of));
+				if (waits_on) add("waits_on", detail::json(*waits_on));
 				if (kind) add("kind", detail::json(std::string(to_string(*kind))));
 				if (x) add("x", detail::json(*x));
 				if (y) add("y", detail::json(*y));
@@ -1353,6 +1363,7 @@ namespace neotrac {
 			std::optional<double> position{};
 			std::optional<::neotrac::projects::resolution> closed{};
 			std::optional<std::string> duplicate_of{};
+			std::optional<std::vector<std::string>> waits_on{};
 			std::optional<::neotrac::projects::issue_kind> kind{};
 			std::optional<double> x{};
 			std::optional<double> y{};
@@ -1381,6 +1392,7 @@ namespace neotrac {
 				if (position) add("position", detail::json(*position));
 				if (closed) add("closed", detail::json(std::string(to_string(*closed))));
 				if (duplicate_of) add("duplicate_of", detail::json(*duplicate_of));
+				if (waits_on) add("waits_on", detail::json(*waits_on));
 				if (kind) add("kind", detail::json(std::string(to_string(*kind))));
 				if (x) add("x", detail::json(*x));
 				if (y) add("y", detail::json(*y));
@@ -1411,6 +1423,7 @@ namespace neotrac {
 			std::optional<double> position{};
 			std::optional<::neotrac::projects::resolution> closed{};
 			std::optional<std::string> duplicate_of{};
+			std::optional<std::vector<std::string>> waits_on{};
 			std::optional<::neotrac::projects::issue_kind> kind{};
 			std::optional<double> x{};
 			std::optional<double> y{};
@@ -1439,6 +1452,7 @@ namespace neotrac {
 				if (position) add("position", detail::json(*position));
 				if (closed) add("closed", detail::json(std::string(to_string(*closed))));
 				if (duplicate_of) add("duplicate_of", detail::json(*duplicate_of));
+				if (waits_on) add("waits_on", detail::json(*waits_on));
 				if (kind) add("kind", detail::json(std::string(to_string(*kind))));
 				if (x) add("x", detail::json(*x));
 				if (y) add("y", detail::json(*y));
@@ -1511,6 +1525,7 @@ namespace neotrac {
 			std::optional<double> position{};
 			std::optional<::neotrac::projects::resolution> closed{};
 			std::optional<std::string> duplicate_of{};
+			std::optional<std::vector<std::string>> waits_on{};
 			std::optional<::neotrac::projects::issue_kind> kind{};
 			std::optional<double> x{};
 			std::optional<double> y{};
@@ -1539,6 +1554,7 @@ namespace neotrac {
 				if (position) add("position", detail::json(*position));
 				if (closed) add("closed", detail::json(std::string(to_string(*closed))));
 				if (duplicate_of) add("duplicate_of", detail::json(*duplicate_of));
+				if (waits_on) add("waits_on", detail::json(*waits_on));
 				if (kind) add("kind", detail::json(std::string(to_string(*kind))));
 				if (x) add("x", detail::json(*x));
 				if (y) add("y", detail::json(*y));
@@ -1587,6 +1603,7 @@ namespace neotrac {
 			std::optional<double> position{};
 			std::optional<::neotrac::projects::resolution> closed{};
 			std::optional<std::string> duplicate_of{};
+			std::optional<std::vector<std::string>> waits_on{};
 			std::optional<::neotrac::projects::issue_kind> kind{};
 			std::optional<double> x{};
 			std::optional<double> y{};
@@ -1615,6 +1632,7 @@ namespace neotrac {
 				if (position) add("position", detail::json(*position));
 				if (closed) add("closed", detail::json(std::string(to_string(*closed))));
 				if (duplicate_of) add("duplicate_of", detail::json(*duplicate_of));
+				if (waits_on) add("waits_on", detail::json(*waits_on));
 				if (kind) add("kind", detail::json(std::string(to_string(*kind))));
 				if (x) add("x", detail::json(*x));
 				if (y) add("y", detail::json(*y));
@@ -1665,6 +1683,7 @@ namespace neotrac {
 			std::optional<double> position{};
 			std::optional<::neotrac::projects::resolution> closed{};
 			std::optional<std::string> duplicate_of{};
+			std::optional<std::vector<std::string>> waits_on{};
 			std::optional<::neotrac::projects::issue_kind> kind{};
 			std::optional<double> x{};
 			std::optional<double> y{};
@@ -1693,6 +1712,7 @@ namespace neotrac {
 				if (position) add("position", detail::json(*position));
 				if (closed) add("closed", detail::json(std::string(to_string(*closed))));
 				if (duplicate_of) add("duplicate_of", detail::json(*duplicate_of));
+				if (waits_on) add("waits_on", detail::json(*waits_on));
 				if (kind) add("kind", detail::json(std::string(to_string(*kind))));
 				if (x) add("x", detail::json(*x));
 				if (y) add("y", detail::json(*y));
@@ -1723,6 +1743,7 @@ namespace neotrac {
 			std::optional<double> position{};
 			std::optional<::neotrac::projects::resolution> closed{};
 			std::optional<std::string> duplicate_of{};
+			std::optional<std::vector<std::string>> waits_on{};
 			std::optional<::neotrac::projects::issue_kind> kind{};
 			std::optional<double> x{};
 			std::optional<double> y{};
@@ -1751,6 +1772,7 @@ namespace neotrac {
 				if (position) add("position", detail::json(*position));
 				if (closed) add("closed", detail::json(std::string(to_string(*closed))));
 				if (duplicate_of) add("duplicate_of", detail::json(*duplicate_of));
+				if (waits_on) add("waits_on", detail::json(*waits_on));
 				if (kind) add("kind", detail::json(std::string(to_string(*kind))));
 				if (x) add("x", detail::json(*x));
 				if (y) add("y", detail::json(*y));
@@ -1781,6 +1803,7 @@ namespace neotrac {
 			std::optional<double> position{};
 			std::optional<::neotrac::projects::resolution> closed{};
 			std::optional<std::string> duplicate_of{};
+			std::optional<std::vector<std::string>> waits_on{};
 			std::optional<::neotrac::projects::issue_kind> kind{};
 			std::optional<double> x{};
 			std::optional<double> y{};
@@ -1809,6 +1832,7 @@ namespace neotrac {
 				if (position) add("position", detail::json(*position));
 				if (closed) add("closed", detail::json(std::string(to_string(*closed))));
 				if (duplicate_of) add("duplicate_of", detail::json(*duplicate_of));
+				if (waits_on) add("waits_on", detail::json(*waits_on));
 				if (kind) add("kind", detail::json(std::string(to_string(*kind))));
 				if (x) add("x", detail::json(*x));
 				if (y) add("y", detail::json(*y));
@@ -1839,6 +1863,7 @@ namespace neotrac {
 			std::optional<double> position{};
 			std::optional<::neotrac::projects::resolution> closed{};
 			std::optional<std::string> duplicate_of{};
+			std::optional<std::vector<std::string>> waits_on{};
 			std::optional<::neotrac::projects::issue_kind> kind{};
 			std::optional<double> x{};
 			std::optional<double> y{};
@@ -1867,6 +1892,7 @@ namespace neotrac {
 				if (position) add("position", detail::json(*position));
 				if (closed) add("closed", detail::json(std::string(to_string(*closed))));
 				if (duplicate_of) add("duplicate_of", detail::json(*duplicate_of));
+				if (waits_on) add("waits_on", detail::json(*waits_on));
 				if (kind) add("kind", detail::json(std::string(to_string(*kind))));
 				if (x) add("x", detail::json(*x));
 				if (y) add("y", detail::json(*y));
@@ -1897,6 +1923,7 @@ namespace neotrac {
 			std::optional<double> position{};
 			std::optional<::neotrac::projects::resolution> closed{};
 			std::optional<std::string> duplicate_of{};
+			std::optional<std::vector<std::string>> waits_on{};
 			std::optional<::neotrac::projects::issue_kind> kind{};
 			std::optional<double> x{};
 			std::optional<double> y{};
@@ -1925,6 +1952,7 @@ namespace neotrac {
 				if (position) add("position", detail::json(*position));
 				if (closed) add("closed", detail::json(std::string(to_string(*closed))));
 				if (duplicate_of) add("duplicate_of", detail::json(*duplicate_of));
+				if (waits_on) add("waits_on", detail::json(*waits_on));
 				if (kind) add("kind", detail::json(std::string(to_string(*kind))));
 				if (x) add("x", detail::json(*x));
 				if (y) add("y", detail::json(*y));
@@ -2738,6 +2766,7 @@ namespace neotrac {
 				double y{};
 				double w{};
 				double h{};
+				std::vector<std::string> waits_on{};
 				static issues_row from(const ember::value& v) {
 					issues_row out;
 					out.id = detail::text(v["id"]);
@@ -2764,6 +2793,7 @@ namespace neotrac {
 					out.y = detail::number(v["y"]);
 					out.w = detail::number(v["w"]);
 					out.h = detail::number(v["h"]);
+					out.waits_on = detail::texts(v["waits_on"]);
 					return out;
 				}
 			};
@@ -3058,6 +3088,7 @@ namespace neotrac {
 				double position{};
 				::neotrac::projects::resolution closed{};
 				std::string duplicate_of{};
+				std::vector<std::string> waits_on{};
 				::neotrac::projects::issue_kind kind{};
 				double x{};
 				double y{};
@@ -3087,6 +3118,7 @@ namespace neotrac {
 					out.position = detail::number(v["position"]);
 					out.closed = detail::choice<::neotrac::projects::resolution>(v["closed"]);
 					out.duplicate_of = detail::text(v["duplicate_of"]);
+					out.waits_on = detail::texts(v["waits_on"]);
 					out.kind = detail::choice<::neotrac::projects::issue_kind>(v["kind"]);
 					out.x = detail::number(v["x"]);
 					out.y = detail::number(v["y"]);
