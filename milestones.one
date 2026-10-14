@@ -30,7 +30,7 @@ namespace projects {
 		title  due  description
 		issues = each issue in milestone where board.visibility == visibility::public {
 			order by number descending
-			number  title  stage.title  closed  priority  assignees.name  assignees.picture
+			number  title  board  board.title  stage.title  closed  priority  assignees.name  assignees.picture
 		}
 	}
 
@@ -60,10 +60,11 @@ namespace projects {
 		}
 		subtitle "{milestone_page.description}"
 		table milestone_page.issues link /:project/:issue {
-			search title
+			search title board.title
 			tint by priority
 			number
 			title
+			board.title "Board"
 			stage.title "Stage"
 			closed "Closed"
 			assignees
