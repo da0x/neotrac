@@ -787,6 +787,22 @@ namespace {
 					continue;
 				}
 			}
+			// Its queue can be a moment behind: claimed, it's read again, and one another
+			// worker has moved on since, out of the stage this one works, is let go untouched.
+			if (!only_stage.empty()) {
+				auto now_is = read_issue(s, id, id);
+				std::string at = lower(now_is.stage_title);
+				std::string named = only_stage;
+				std::ranges::replace(named, '_', ' ');
+				if (at != lower(named) && at != lower(only_stage)) {
+					try {
+						s.app->issue_release({.id = id});
+					} catch (const refused&) {
+					}
+					finished[id] = std::chrono::steady_clock::now();
+					continue;
+				}
+			}
 			if (work_on(s, id, program, done_word, failed_word)) {
 				parked.insert(id);
 				parked_with = ids;
