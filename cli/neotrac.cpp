@@ -78,7 +78,7 @@ namespace {
 	// Flags that take a value, like --board main; any other is on or off.
 	const std::set<std::string> valued{"board", "project", "server", "message", "m", "note", "title", "body", "priority", "labels",
 	                                   "due", "name", "summary", "visibility", "workflow", "slug", "confirm", "run", "done", "failed",
-	                                   "milestone", "status", "notify", "from", "to"};
+	                                   "milestone", "status", "notify", "from", "to", "position"};
 
 	asked read_arguments(int count, char** given) {
 		asked out;
@@ -1727,6 +1727,14 @@ namespace {
 		sent.board = board;
 		sent.title = d.get("Title");
 		stage_fields(d, sent.status, sent.notify);
+		// Where it goes among the others, like 2.5 between the second and third; after them unless said.
+		if (a.has("position")) {
+			char* end = nullptr;
+			std::string said = a.flag("position");
+			double position = std::strtod(said.c_str(), &end);
+			if (said.empty() || *end != '\0') throw stop(usage, said + " isn't a position, like 2.5");
+			sent.position = position;
+		}
 		s.app->stage_create(sent);
 		if (a.has("json")) std::printf("{\"board\":%s,\"title\":%s}\n", json(board).c_str(), json(*sent.title).c_str());
 		else std::printf("Added %s to %s.\n", sent.title->c_str(), page.title.c_str());
@@ -1931,6 +1939,7 @@ Writing, in your editor ($VISUAL, $EDITOR or vi)
   neotrac new project|board|stage|issue|page|milestone
   neotrac edit project|stage|issue|page|milestone [which]
   neotrac new step --from a --to b   lets issues move from one stage to another
+  neotrac new stage --position 2.5   puts a stage between the second and third
   neotrac comment 42             or -m "..." or the comment on stdin
   neotrac attach 42 log.txt ...  uploads files and attaches them to the issue
   neotrac download 42 [folder]   saves what's attached to it

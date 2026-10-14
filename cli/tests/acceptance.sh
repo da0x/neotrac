@@ -187,7 +187,7 @@ check "a board is selected too" grep -Eq "^\* main " "$logs/boards"
 check "a person makes a private board" grep -q "^Made Releases. neotrac select board releases works in it." "$logs/board"
 "$neotrac" list boards >"$logs/boards"
 check "listed among the project's boards for its people" grep -Eq "^  releases +Releases$" "$logs/boards"
-"$neotrac" new stage --board releases --title "Waiting on you" --status waiting --notify chime >"$logs/stage" 2>&1
+"$neotrac" new stage --board releases --title "Waiting on you" --status waiting --notify chime --position 2.5 >"$logs/stage" 2>&1
 check "a stage is added that chimes" grep -q "^Added Waiting on you to Releases." "$logs/stage"
 "$neotrac" edit stage in_progress --board releases --title "Working" --status working >"$logs/edited" 2>&1
 check "and a stage renamed, with its dot" grep -q "^Saved Working." "$logs/edited"
@@ -195,6 +195,7 @@ check "and a stage renamed, with its dot" grep -q "^Saved Working." "$logs/edite
 check "issues move into it" grep -q "^Issues move from Working to Waiting on you." "$logs/step"
 "$neotrac" list stages --board releases >"$logs/stages"
 check "the board's stages say themselves" grep -Eq "^  waiting_on_you +Waiting on you$" "$logs/stages"
+check "the new one between Working and Done, where it was put" test "$(awk '{print $1}' "$logs/stages" | tr '\n' ' ')" = "to_do working waiting_on_you done "
 "$neotrac" delete board releases --confirm Releases >/dev/null 2>&1
 check "and the private board is deleted, its title typed" test $? -eq 0
 "$neotrac" unselect board >/dev/null && "$neotrac" list boards >"$logs/boards"
