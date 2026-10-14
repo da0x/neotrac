@@ -3490,6 +3490,7 @@ namespace neotrac {
 				std::string person{};
 				std::string person_picture{};
 				std::string person_name{};
+				bool person_service{};
 				std::string role_title{};
 				static members_row from(const ember::value& v) {
 					members_row out;
@@ -3497,6 +3498,7 @@ namespace neotrac {
 					out.person = detail::text(v["person"]);
 					out.person_picture = detail::text(v["person.picture"]);
 					out.person_name = detail::text(v["person.name"]);
+					out.person_service = detail::flag(v["person.service"]);
 					out.role_title = detail::text(v["role.title"]);
 					return out;
 				}
