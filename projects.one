@@ -51,6 +51,8 @@ namespace projects at / {
 		milestone::create
 		milestone::update
 		milestone::delete
+		milestone::archive
+		milestone::restore
 		page::create
 		page::update
 		issue::create
@@ -67,6 +69,8 @@ namespace projects at / {
 		link::create
 		link::delete
 		comment::create
+		// Takes down a comment that shouldn't be there, like one saying what's private.
+		comment::delete
 		report::resolve
 		reply::create
 		service::create
@@ -276,8 +280,13 @@ namespace projects at / {
 		issues = each issue in project where closed == none && board.visibility == visibility::public {
 			number  title  labels  board  milestone  stage  stage.title  stage.position
 		}
-		milestones = each milestone in project {
-			order by due
+		// Its milestones at work, and those archived once they're finished.
+		milestones = each milestone in project where archived != true {
+			order by due  created_at
+			name  title  due
+		}
+		archived_milestones = each milestone in project where archived == true {
+			order by due  created_at
 			name  title  due
 		}
 		pages = each page in project {

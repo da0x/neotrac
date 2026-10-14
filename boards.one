@@ -74,10 +74,10 @@ namespace projects {
 			order by updated_at descending
 			number  title  labels  closed  stage.title  priority  updated_at
 		}
-		// The project's milestones, soonest first, as a track above its issues.
-		milestones = each milestone where project == board.project {
-			order by due
-			name  title  due
+		// The project's milestones, soonest first, then oldest first, as a track above its issues.
+		milestones = each milestone where project == board.project && archived != true {
+			order by due  created_at
+			name  title  due  created_at
 		}
 		stages = each stage in board {
 			order by position
@@ -110,9 +110,11 @@ namespace projects {
 		}
 		table board_page.issues by stage over board_page.stages link /:project/:issue when board_page.style == style::list {
 			// The milestones as a timeline above the issues, however they're shown:
-			// picking one shows only its issues.
+			// picking one shows only its issues. The last, where the work is, is
+			// picked until another is.
 			track milestone over board_page.milestones {
 				hide when empty
+				picked last
 				due "Due"
 			}
 			search title labels stage.title priority

@@ -12,10 +12,19 @@ namespace projects {
 		title        text      required
 		due          date
 		description  markdown
+		// A finished milestone is archived: it leaves the boards' tracks and the
+		// roadmap's cards, so they show today's work, and stays readable under Archived.
+		archived     boolean
 	}
 
 	command milestone::create
 	command milestone::update
+	command milestone::archive {
+		archived = true
+	}
+	command milestone::restore {
+		archived = false
+	}
 	// A milestone goes, once its title is typed to say so, and its issues stay, part
 	// of none.
 	command milestone::delete {
@@ -27,7 +36,10 @@ namespace projects {
 	}
 
 	view milestone_page per milestone {
-		title  due  description
+		title  due  description  archived
+		// How far along it is: its issues at a stage that's a success, of them all.
+		total = count(issues)
+		done = count(issue where milestone == milestone.id && stage.status == status::success && board.visibility == visibility::public)
 		issues = each issue in milestone where board.visibility == visibility::public {
 			order by number descending
 			number  title  board  board.title  stage.title  closed  priority  assignees.name  assignees.picture
@@ -46,6 +58,13 @@ namespace projects {
 			due "Due"
 			tally project_page.issues by milestone and stage
 		}
+		section "Archived" {
+			table project_page.archived_milestones link /:project/milestones/:milestone {
+				hide when empty
+				title
+				due "Due"
+			}
+		}
 	}
 
 	screen "{milestone_page.title}" /:project/milestones/:milestone {
@@ -54,11 +73,14 @@ namespace projects {
 			milestone::update "Edit milestone" icon edit form "Save" {
 				title  due "Due"  description
 			}
+			milestone::archive "Archive" icon archive when milestone_page.archived != true
+			milestone::restore "Bring back" when milestone_page.archived == true
 			milestone::delete "Delete milestone" icon delete form "Delete it" {
 				typed "Its issues stay, in no milestone. Type its title to confirm"
 			}
 		}
 		subtitle "{milestone_page.description}"
+		text "{milestone_page.done} of {milestone_page.total} done"
 		table milestone_page.issues link /:project/:issue {
 			search title board.title
 			tint by priority

@@ -191,6 +191,8 @@ namespace projects {
 		// It waits on what it depends on, until each is at a stage that's a success.
 		depends on waits_on
 		done when stage.status == status::success
+		// A closed issue keeps its stage, to reopen where it was, but no one works it.
+		while closed == none
 		lease 30 minutes
 	}
 
