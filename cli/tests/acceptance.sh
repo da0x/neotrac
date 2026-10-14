@@ -183,6 +183,20 @@ check "signed in, the person reads the issue" grep -q "Crash on save" "$logs/per
 check "whoami marks the project selected" grep -Eq "^  \* e2e, Maintainer$" "$logs/whoami"
 "$neotrac" select board main >/dev/null && "$neotrac" list boards >"$logs/boards"
 check "a board is selected too" grep -Eq "^\* main " "$logs/boards"
+"$neotrac" new board --title "Releases" --visibility private --workflow basic >"$logs/board" 2>&1
+check "a person makes a private board" grep -q "^Made Releases. neotrac select board releases works in it." "$logs/board"
+"$neotrac" list boards >"$logs/boards"
+check "listed among the project's boards for its people" grep -Eq "^  releases +Releases$" "$logs/boards"
+"$neotrac" new stage --board releases --title "Waiting on you" --status waiting --notify chime >"$logs/stage" 2>&1
+check "a stage is added that chimes" grep -q "^Added Waiting on you to Releases." "$logs/stage"
+"$neotrac" edit stage in_progress --board releases --title "Working" --status working >"$logs/edited" 2>&1
+check "and a stage renamed, with its dot" grep -q "^Saved Working." "$logs/edited"
+"$neotrac" new step --board releases --from working --to waiting_on_you >"$logs/step" 2>&1
+check "issues move into it" grep -q "^Issues move from Working to Waiting on you." "$logs/step"
+"$neotrac" list stages --board releases >"$logs/stages"
+check "the board's stages say themselves" grep -Eq "^  waiting_on_you +Waiting on you$" "$logs/stages"
+"$neotrac" delete board releases --confirm Releases >/dev/null 2>&1
+check "and the private board is deleted, its title typed" test $? -eq 0
 "$neotrac" unselect board >/dev/null && "$neotrac" list boards >"$logs/boards"
 check "and unselected" grep -Eq "^  main " "$logs/boards"
 

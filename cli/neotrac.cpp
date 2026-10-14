@@ -78,7 +78,7 @@ namespace {
 	// Flags that take a value, like --board main; any other is on or off.
 	const std::set<std::string> valued{"board", "project", "server", "message", "m", "note", "title", "body", "priority", "labels",
 	                                   "due", "name", "summary", "visibility", "workflow", "slug", "confirm", "run", "done", "failed",
-	                                   "milestone"};
+	                                   "milestone", "status", "notify", "from", "to"};
 
 	asked read_arguments(int count, char** given) {
 		asked out;
@@ -1000,7 +1000,7 @@ namespace {
 		static const std::map<std::string, std::string> nouns{
 		    {"project", "project"}, {"projects", "project"}, {"board", "board"}, {"boards", "board"}, {"issue", "issue"},
 		    {"issues", "issue"}, {"page", "page"}, {"pages", "page"}, {"wiki", "page"}, {"milestone", "milestone"},
-		    {"milestones", "milestone"}, {"stage", "stage"}, {"stages", "stage"}, {"people", "person"}, {"person", "person"},
+		    {"milestones", "milestone"}, {"stage", "stage"}, {"stages", "stage"}, {"step", "step"}, {"steps", "step"}, {"people", "person"}, {"person", "person"},
 		    {"members", "person"}};
 		auto it = nouns.find(lower(word));
 		return it == nouns.end() ? "" : it->second;
@@ -1038,6 +1038,9 @@ namespace {
 	projects::project_page project_of(session& s) {
 		auto page = s.app->project_page(s.project).get();
 		if (!page.exists) throw stop(not_found, "there's no project " + s.project + " you may read");
+		// Its private boards, which its public page leaves out, for its people.
+		auto hidden = s.app->private_boards(s.project).get();
+		for (const auto& b : hidden.boards) page.boards.push_back({.id = b.id, .name = b.name, .title = b.title});
 		return page;
 	}
 
@@ -1656,6 +1659,116 @@ namespace {
 		return done;
 	}
 
+	// ---- Boards and their stages ----------------------------------------------------------
+
+	int new_board(const asked& a, session& s) {
+		terminal::document now{{{"Title", ""}, {"Visibility", "public"}, {"Workflow", "basic"}}, ""};
+		auto d = written_by(a, now,
+		                    "Visibility is public, or private for the project's people alone. Workflow is basic, software, editorial, bugs, "
+		                    "adr or custom.");
+		if (d.get("Title").empty()) throw stop(usage, "a board needs a title");
+		projects::board_create sent;
+		sent.project = s.project;
+		sent.title = d.get("Title");
+		projects::board_visibility visibility{};
+		if (!projects::from_string(lower(d.get("Visibility")), visibility)) throw stop(usage, "visibility is public or private");
+		sent.visibility = visibility;
+		std::string preset = lower(d.get("Workflow"));
+		if (preset.starts_with("software")) preset = "agile";
+		projects::workflow workflow{};
+		if (!projects::from_string(preset, workflow)) throw stop(usage, "the workflow is basic, software, editorial, bugs, adr or custom");
+		sent.workflow = workflow;
+		auto made = s.app->board_create(sent);
+		auto page = s.app->board_page(made).get();
+		std::string name = page.exists ? made.substr(s.project.size() + 1) : made;
+		if (a.has("json")) std::printf("{\"board\":%s}\n", json(name).c_str());
+		else std::printf("Made %s. neotrac select board %s works in it.\n", sent.title->c_str(), name.c_str());
+		return done;
+	}
+
+	// The selected board's page, and a stage of it by its name, title or id.
+	projects::board_page board_page_of(const asked& a, session& s, std::string& id) {
+		id = board_of(a, s, project_of(s));
+		auto page = s.app->board_page(id).get();
+		if (!page.exists) throw stop(not_found, "there's no board " + id + " you may read");
+		return page;
+	}
+
+	const projects::board_page::stages_row& stage_on(const projects::board_page& page, const std::string& word) {
+		for (const auto& p : page.stages) {
+			if (p.name == word || lower(p.title) == lower(word) || p.id == word) return p;
+		}
+		std::string names;
+		for (const auto& p : page.stages) names += (names.empty() ? "" : ", ") + p.name;
+		throw stop(not_found, "there's no stage " + word + " on " + page.title + "; its stages are " + names);
+	}
+
+	const char* stage_help = "Status is its cards' dot: inactive, waiting, working, done or failed. Notify is chime, or nothing; email and text are "
+	                         "to come.";
+
+	// A stage's fields as written: its status, and how it tells the board's watchers.
+	void stage_fields(const terminal::document& d, std::optional<projects::status>& status, std::optional<std::vector<std::string>>& notify) {
+		projects::status said{};
+		if (!projects::from_string(lower(d.get("Status")), said)) throw stop(usage, "status is inactive, waiting, working, done or failed");
+		status = said;
+		notify = labels_from(lower(d.get("Notify")));
+		for (const auto& n : *notify) {
+			if (n != "chime" && n != "email" && n != "text") throw stop(usage, n + " isn't how a stage tells: chime, email or text");
+		}
+	}
+
+	int new_stage(const asked& a, session& s) {
+		std::string board;
+		auto page = board_page_of(a, s, board);
+		terminal::document now{{{"Title", ""}, {"Status", "inactive"}, {"Notify", ""}}, ""};
+		auto d = written_by(a, now, stage_help);
+		if (d.get("Title").empty()) throw stop(usage, "a stage needs a title");
+		projects::stage_create sent;
+		sent.board = board;
+		sent.title = d.get("Title");
+		stage_fields(d, sent.status, sent.notify);
+		s.app->stage_create(sent);
+		if (a.has("json")) std::printf("{\"board\":%s,\"title\":%s}\n", json(board).c_str(), json(*sent.title).c_str());
+		else std::printf("Added %s to %s.\n", sent.title->c_str(), page.title.c_str());
+		return done;
+	}
+
+	int edit_stage(const asked& a, session& s) {
+		if (a.words.size() < 2) throw stop(usage, "say which stage, like neotrac edit stage review --status waiting --notify chime");
+		std::string board;
+		auto page = board_page_of(a, s, board);
+		const auto& stage = stage_on(page, a.words[1]);
+		std::string notify;
+		for (const auto& n : stage.notify) notify += (notify.empty() ? "" : ", ") + n;
+		std::string status = projects::to_string(stage.status);
+		terminal::document now{{{"Title", stage.title}, {"Status", status.empty() ? "inactive" : status}, {"Notify", notify}}, ""};
+		auto d = written_by(a, now, stage_help);
+		projects::stage_update sent{.id = stage.id};
+		sent.title = d.get("Title");
+		stage_fields(d, sent.status, sent.notify);
+		s.app->stage_update(sent);
+		if (a.has("json")) std::printf("{\"stage\":%s}\n", json(stage.name).c_str());
+		else std::printf("Saved %s.\n", d.get("Title").c_str());
+		return done;
+	}
+
+	// A move between two stages, for whoever moves issues on the board.
+	int new_step(const asked& a, session& s) {
+		std::string board;
+		auto page = board_page_of(a, s, board);
+		std::string from = a.flag("from"), to = a.flag("to");
+		if (from.empty() || to.empty()) throw stop(usage, "say between which stages, like neotrac new step --from review --to done");
+		projects::step_create sent;
+		sent.board = board;
+		sent.from_ = stage_on(page, from).id;
+		sent.to = stage_on(page, to).id;
+		if (a.has("title")) sent.title = a.flag("title");
+		s.app->step_create(sent);
+		if (a.has("json")) std::printf("{\"from\":%s,\"to\":%s}\n", json(from).c_str(), json(to).c_str());
+		else std::printf("Issues move from %s to %s.\n", stage_on(page, from).title.c_str(), stage_on(page, to).title.c_str());
+		return done;
+	}
+
 	// ---- The verbs ---------------------------------------------------------------------
 
 	int list(const asked& a) {
@@ -1704,7 +1817,10 @@ namespace {
 		if (noun == "issue") return new_issue(a, s);
 		if (noun == "page") return new_page(a, s);
 		if (noun == "milestone") return write_milestone(a, s, true);
-		throw stop(usage, "say what to make: neotrac new project, issue, page or milestone");
+		if (noun == "board") return new_board(a, s);
+		if (noun == "stage") return new_stage(a, s);
+		if (noun == "step") return new_step(a, s);
+		throw stop(usage, "say what to make: neotrac new project, board, stage, step, issue, page or milestone");
 	}
 
 	int edit(const asked& a) {
@@ -1714,7 +1830,8 @@ namespace {
 		if (noun == "issue") return edit_issue(a, s);
 		if (noun == "page") return edit_page(a, s);
 		if (noun == "milestone") return write_milestone(a, s, false);
-		throw stop(usage, "say what to edit: neotrac edit project, issue, page or milestone");
+		if (noun == "stage") return edit_stage(a, s);
+		throw stop(usage, "say what to edit: neotrac edit project, stage, issue, page or milestone");
 	}
 
 	int remove(const asked& a) {
@@ -1811,8 +1928,9 @@ Reading
   neotrac queue [--all] [--watch]  the issues in stages your roles work
 
 Writing, in your editor ($VISUAL, $EDITOR or vi)
-  neotrac new project|issue|page|milestone
-  neotrac edit project|issue|page|milestone [which]
+  neotrac new project|board|stage|issue|page|milestone
+  neotrac edit project|stage|issue|page|milestone [which]
+  neotrac new step --from a --to b   lets issues move from one stage to another
   neotrac comment 42             or -m "..." or the comment on stdin
   neotrac attach 42 log.txt ...  uploads files and attaches them to the issue
   neotrac download 42 [folder]   saves what's attached to it
@@ -1836,8 +1954,8 @@ Working an issue
 At a terminal, leaving out which one picks it from a list (arrows or j/k, Enter).
 A program names it instead, and gives what it writes as flags: --title, --body
 (- for stdin), --priority, --labels, --milestone, --due, --name, --visibility, --slug,
---workflow, and --confirm <address> to delete a project. --project and --board work
-in another than the selected one, for one command.
+--workflow, --status, --notify, and --confirm <address> to delete a project. --project
+and --board work in another than the selected one, for one command.
 
 Every command takes --json, and --server to use another neotrac. A service's key may
 also come from NEOTRAC_KEY. Exit codes: 0 done, 1 left or nothing changed, 2 wrong
