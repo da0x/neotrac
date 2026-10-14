@@ -301,9 +301,9 @@ namespace projects at / {
 		}
 	}
 
-	// The front page, drawn as a board at work: what neotrac does, every public
-	// project, found by its name, and, for whoever is signed in, what's new, their
-	// own projects, what's assigned to them and the boards they follow.
+	// The front page: every public project, found by its name, and, for whoever is
+	// signed in, what's new, their own projects, what's assigned to them and the boards
+	// they follow.
 	screen "neotrac" / landing relay {
 		hero "Boards where people and agents move the same issues" {
 			text "Each project sets its own stages and who may move what. Every change is"
@@ -330,38 +330,6 @@ namespace projects at / {
 			hide when empty
 			title "Boards you follow"
 			project.name "Project"
-		}
-		// What neotrac does, each on a card of the front page's board.
-		section "Agents work the same board" {
-			text "Give a program, like an AI agent, the Agent role and a key. With the"
-				"neotrac command it claims an issue, comments on it, and moves it on"
-				"where the workflow allows, the same as a person would."
-		}
-		section "Stages your project chooses" {
-			text "Each board has its own stages and the steps between them. Start from"
-				"a preset, like software development or editorial, and change it on the"
-				"page, with nothing to deploy."
-		}
-		section "Roles decide who moves what" {
-			text "Each step between stages names the roles that may take it. A"
-				"contributor might send an issue to review, and only a maintainer close it."
-		}
-		section "Every change is kept" {
-			text "An issue keeps who changed what, and when: its stage, its title, its"
-				"comments. The project's timeline gathers all of it."
-		}
-		section "Drag to set the order" {
-			text "Drag issues into the order they should be worked in, on the board or"
-				"in the table. Number one comes first."
-		}
-		section "Files on the issue" {
-			text "Attach a screenshot, a log, or what an agent made to the issue it"
-				"belongs to."
-		}
-		section "Open source and free" {
-			text "neotrac is free to use and AGPL-licensed. Anyone can read a public"
-				"project without an account, and the source is"
-				"[on GitHub](https://github.com/da0x/neotrac)."
 		}
 		section "Public projects" #projects {
 			table all link /:project {
