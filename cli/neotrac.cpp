@@ -1894,6 +1894,26 @@ namespace {
 		return done;
 	}
 
+	// A service called something else: neotrac edit service sites --title deployer. Its
+	// key, role and id stay as they were.
+	int edit_service(const asked& a, session& s) {
+		if (a.words.size() < 2) throw stop(usage, "say which service, like neotrac edit service sites --title deployer");
+		auto listed = s.app->services(s.project).get();
+		std::string wanted = lower(a.words[1]), id, title;
+		for (const auto& r : listed.services) {
+			if (lower(r.title) == wanted || r.id == a.words[1] || r.id == s.project + "-" + wanted) id = r.id, title = r.title;
+		}
+		if (id.empty()) throw stop(not_found, "there's no service " + a.words[1] + " in " + s.project);
+		terminal::document now{{{"Title", title}}, ""};
+		auto d = written_by(a, now, "The title it's shown by.");
+		projects::service_update sent{.id = id};
+		sent.title = d.get("Title");
+		s.app->service_update(sent);
+		if (a.has("json")) std::printf("{\"service\":%s}\n", json(id).c_str());
+		else std::printf("Saved %s.\n", d.get("Title").c_str());
+		return done;
+	}
+
 	// A move between two stages, for whoever moves issues on the board.
 	int new_step(const asked& a, session& s) {
 		std::string board;
@@ -1979,6 +1999,7 @@ namespace {
 		if (noun == "page") return edit_page(a, s);
 		if (noun == "milestone") return write_milestone(a, s, false);
 		if (noun == "stage") return edit_stage(a, s);
+		if (noun == "service") return edit_service(a, s);
 		throw stop(usage, "say what to edit: neotrac edit project, stage, issue, page or milestone");
 	}
 
