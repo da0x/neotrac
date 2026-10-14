@@ -896,6 +896,26 @@ namespace {
 		return done;
 	}
 
+	// Moves an issue to another of the project's boards, starting where that board's
+	// issues start; its history and comments go with it.
+	int transfer(const asked& a) {
+		auto s = sign_in(a);
+		std::string id = issue_of(s, a);
+		if (a.words.size() < 2) throw stop(usage, "say which board, like neotrac transfer 42 main");
+		auto project = project_of(s);
+		std::string board;
+		for (const auto& b : project.boards) {
+			if (b.name == a.words[1] || lower(b.title) == lower(a.words[1]) || b.id == a.words[1]) board = b.id;
+		}
+		if (board.empty()) throw stop(not_found, "there's no board " + a.words[1] + " in " + s.project);
+		projects::issue_transfer sent{.id = id};
+		sent.board = board;
+		s.app->issue_transfer(sent);
+		if (a.has("json")) std::printf("{\"id\":%s,\"board\":%s}\n", json(id).c_str(), json(board).c_str());
+		else std::printf("Moved %s to %s.\n", a.words[0].c_str(), a.words[1].c_str());
+		return done;
+	}
+
 	int move(const asked& a) {
 		auto s = sign_in(a);
 		std::string id = issue_of(s, a);
@@ -2024,6 +2044,7 @@ Working an issue
                                  attaches what it writes to out/, and moves it on;
                                  a program that exits 75 isn't ready, and lets it wait
   neotrac move 42 review         where the workflow lets your role
+  neotrac transfer 42 main       to another of the project's boards, with its history
   neotrac close 42 done          or wont_do, or duplicate 9, from any stage
   neotrac reopen 42              back on its board, in the stage it was in
   neotrac link 42 blocked_by 9   or blocks, relates, duplicates, replaces
@@ -2064,6 +2085,7 @@ connection, 7 too many requests.
 		if (a.command == "claim") return claim(on_issue(a), true);
 		if (a.command == "release") return claim(on_issue(a), false);
 		if (a.command == "move") return move(on_issue(a));
+		if (a.command == "transfer") return transfer(on_issue(a));
 		if (a.command == "status") return status(on_issue(a));
 		if (a.command == "close") return close(on_issue(a));
 		if (a.command == "reopen") return reopen(on_issue(a));
