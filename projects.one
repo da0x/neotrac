@@ -143,10 +143,10 @@ namespace projects at / {
 			dispatch stage::delete
 		}
 		each board where project == id {
-			dispatch board::delete
+			dispatch board::delete { typed = board.title }
 		}
 		each milestone where project == id {
-			dispatch milestone::delete
+			dispatch milestone::delete { typed = milestone.title }
 		}
 		each page where project == id {
 			dispatch page::delete
