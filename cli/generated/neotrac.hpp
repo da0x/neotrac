@@ -381,13 +381,13 @@ namespace neotrac {
 			return false;
 		}
 
-		enum class status { inactive, waiting, working, done, failed };
+		enum class status { inactive, waiting, working, success, failed };
 		inline const char* to_string(status c) {
 			switch (c) {
 				case status::inactive: return "inactive";
 				case status::waiting: return "waiting";
 				case status::working: return "working";
-				case status::done: return "done";
+				case status::success: return "success";
 				case status::failed: return "failed";
 			}
 			return "";
@@ -397,7 +397,7 @@ namespace neotrac {
 			if (text == "inactive") return c = status::inactive, true;
 			if (text == "waiting") return c = status::waiting, true;
 			if (text == "working") return c = status::working, true;
-			if (text == "done") return c = status::done, true;
+			if (text == "success") return c = status::success, true;
 			if (text == "failed") return c = status::failed, true;
 			return false;
 		}
@@ -3124,6 +3124,8 @@ namespace neotrac {
 				std::string id{};
 				double number{};
 				std::string title{};
+				std::string board{};
+				std::string board_title{};
 				std::string stage_title{};
 				::neotrac::projects::resolution closed{};
 				::neotrac::projects::priority priority{};
@@ -3137,6 +3139,8 @@ namespace neotrac {
 					out.id = detail::text(v["id"]);
 					out.number = detail::number(v["number"]);
 					out.title = detail::text(v["title"]);
+					out.board = detail::text(v["board"]);
+					out.board_title = detail::text(v["board.title"]);
 					out.stage_title = detail::text(v["stage.title"]);
 					out.closed = detail::choice<::neotrac::projects::resolution>(v["closed"]);
 					out.priority = detail::choice<::neotrac::projects::priority>(v["priority"]);

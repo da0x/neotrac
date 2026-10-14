@@ -6,6 +6,15 @@
 
 namespace projects {
 
+	// A stage's end status is success, where it was done.
+	once "2026-10-14 stage success" {
+		each stage {
+			if status != status::inactive && status != status::waiting && status != status::working && status != status::success && status != status::failed {
+				dispatch stage::update { status = status::success }
+			}
+		}
+	}
+
 	// A board's styles are list, board, pipeline and whiteboard now: one shown as kanban,
 	// or as a canvas before canvases had columns, is a board.
 	once "2026-10-14 board styles" {
@@ -28,7 +37,7 @@ namespace projects {
 		each stage {
 			if status == none {
 				if name == "done" || name == "completed" || name == "published" || name == "closed" || name == "accepted" {
-					dispatch stage::update { status = status::done }
+					dispatch stage::update { status = status::success }
 				} else {
 					dispatch stage::update { status = status::inactive }
 				}

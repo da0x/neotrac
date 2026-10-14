@@ -875,14 +875,15 @@ namespace {
 	int status(const asked& a) {
 		auto s = sign_in(a);
 		std::string id = issue_of(s, a);
-		if (a.words.size() < 2) throw stop(usage, "say how it's going, like neotrac status 42 working, or waiting, done, failed, inactive or clear");
+		if (a.words.size() < 2) throw stop(usage, "say how it's going, like neotrac status 42 working, or waiting, success, failed, inactive or clear");
 		std::string word = lower(a.words[1]);
+		if (word == "done") word = "success";  // as it was said before
 		std::map<std::string, ember::value> data;
 		if (word == "clear") {
 			data = {{"status", ember::value()}, {"since", ember::value()}, {"note", ember::value()}};
 		} else {
 			projects::status known;
-			if (!projects::from_string(word, known)) throw stop(usage, a.words[1] + " isn't how an issue goes: working, waiting, done, failed, inactive or clear");
+			if (!projects::from_string(word, known)) throw stop(usage, a.words[1] + " isn't how an issue goes: working, waiting, success, failed, inactive or clear");
 			data = {{"status", word}, {"since", now_said()}, {"note", a.has("note") ? ember::value(a.flag("note")) : ember::value()}};
 		}
 		projects::issue_report sent{.id = id};
@@ -1789,7 +1790,7 @@ namespace {
 		throw stop(not_found, "there's no stage " + word + " on " + page.title + "; its stages are " + names);
 	}
 
-	const char* stage_help = "Status is its cards' dot: inactive, waiting, working, done or failed. Notify is chime, or nothing; email and text are "
+	const char* stage_help = "Status is its cards' dot: inactive, waiting, working, success, an end, or failed. Notify is chime, or nothing; email and text are "
 	                         "to come. Worked by names the roles whose services take its issues, like agent. Kinds names the labels of the issues that go "
 	                         "through it, on a board shown as a pipeline; none, every kind.";
 
@@ -1800,7 +1801,7 @@ namespace {
 		worked_by.emplace();
 		for (const auto& role : labels_from(lower(d.get("Worked by")))) worked_by->push_back(projects::role_id(s.project, role));
 		projects::status said{};
-		if (!projects::from_string(lower(d.get("Status")), said)) throw stop(usage, "status is inactive, waiting, working, done or failed");
+		if (!projects::from_string(lower(d.get("Status")), said)) throw stop(usage, "status is inactive, waiting, working, success or failed");
 		status = said;
 		notify = labels_from(lower(d.get("Notify")));
 		for (const auto& n : *notify) {
@@ -2116,7 +2117,7 @@ Writing, in your editor ($VISUAL, $EDITOR or vi)
 
 Working an issue
   neotrac claim 42, neotrac release 42
-  neotrac status 42 working      or waiting, done, failed, inactive; clear takes it
+  neotrac status 42 working      or waiting, success, failed, inactive; clear takes it
                                  out. [--note "..."] Its card shows it, and the time since
   neotrac work --run ./fix --done review [--failed backlog] [--once]
                                  takes each issue a role of yours works as it comes,
