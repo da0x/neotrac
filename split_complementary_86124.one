@@ -1,0 +1,16 @@
+// Split complementary 86124: a theme made from a palette in uione.io's theme generator.
+
+import one
+
+define theme split_complementary_86124 "Split complementary 86124" {
+	page     #f4fcff  dark #001017
+	surface  #fdfeff  dark #021a23
+	sunken   #dcf3fd  dark #00090e
+	ink      #051e27  dark #e3f1f7
+	muted    #616177  dark #a8a9bc
+	line     #c4e0ec  dark #1b3742
+	accent   #8b5f13  dark #e5a239
+	danger   #bc3e16  dark #fa7955
+	success  #418509  dark #87c568
+	warning  #9d6d00  dark #fbb62b
+}
