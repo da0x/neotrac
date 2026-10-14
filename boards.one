@@ -25,6 +25,9 @@ namespace projects {
 		position  number
 		// A private board is read by the project's people alone, even in a public project.
 		visibility  enum  public | private = visibility::public
+		// How its issues are shown: in columns by stage, or placed anywhere on a canvas,
+		// as ideas are. Switching keeps both, each where it was.
+		style  enum  kanban | canvas = style::kanban
 		// Who follows it, to find it on their front page.
 		followers  list of user
 	}
@@ -58,12 +61,12 @@ namespace projects {
 	}
 
 	view board_page per board {
-		title  start  visibility  followers  project.name
+		title  start  visibility  style  followers  project.name
 		issues = each issue in board where closed == none {
 			order by position
 			number  title  labels  stage  stage.title  priority  updated_at  position
 			author  author.picture  author.name  assignees  assignees.name  assignees.picture
-			milestone  data  held_by  held_until
+			milestone  data  held_by  held_until  kind  x  y  w  h
 		}
 		// What was closed, the last closed first, and why.
 		closed = each issue in board where closed != none {
@@ -99,12 +102,15 @@ namespace projects {
 				visibility "Who sees it" {
 					hint "A private board, its issues and their history are seen by the project's people alone."
 				}
+				style "Show issues as" {
+					hint "Kanban: in columns by stage. Canvas: placed anywhere, like ideas on a wall. Switching keeps both."
+				}
 			}
 			board::delete "Delete board" icon delete form "Delete it for good" {
 				typed "Its issues are deleted with it. Type its title to confirm"
 			}
 		}
-		table board_page.issues by stage over board_page.stages link /:project/:issue {
+		table board_page.issues by stage over board_page.stages link /:project/:issue when board_page.style == style::kanban {
 			// The milestones as a timeline: picking one shows only its issues.
 			track milestone over board_page.milestones {
 				due "Due"
@@ -119,7 +125,7 @@ namespace projects {
 			assignees
 			author "Opened by"
 		}
-		board board_page.issues by stage over board_page.stages link /:project/:issue {
+		board board_page.issues by stage over board_page.stages link /:project/:issue when board_page.style == style::kanban {
 			move issue::move along board_page.steps
 			chime when notify has chime
 			status by status
@@ -127,6 +133,15 @@ namespace projects {
 			tint by priority
 			title
 			number  labels  assignees
+		}
+		// The same issues placed anywhere, like ideas on a wall; those not placed yet
+		// start in their stage's column.
+		canvas board_page.issues by stage over board_page.stages link /:project/:issue when board_page.style == style::canvas {
+			place issue::place
+			kind kind
+			grid 160 from 40 40
+			title
+			number  labels
 		}
 		link /:project "All boards"
 	}

@@ -43,6 +43,13 @@ namespace projects {
 		// Why it's closed, from whatever stage it was in; none while it's open.
 		closed  resolution  "Closed"
 		duplicate_of  issue  "Duplicate of"
+		// On a board shown as a canvas: how it's drawn, a note or large text, and where
+		// it's placed and how big.
+		kind  enum  note | text = kind::note
+		x  number
+		y  number
+		w  number
+		h  number
 	}
 
 	// Why an issue was closed: finished, not to be done, or already asked for.
@@ -166,6 +173,11 @@ namespace projects {
 		worked by worked_by
 		steps step
 		lease 30 minutes
+	}
+
+	// An issue placed somewhere else on its board's canvas, or made bigger.
+	command issue::place {
+		changes x  y  w  h
 	}
 
 	command comment::create
