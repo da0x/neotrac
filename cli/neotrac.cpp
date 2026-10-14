@@ -78,7 +78,7 @@ namespace {
 	// Flags that take a value, like --board main; any other is on or off.
 	const std::set<std::string> valued{"board", "project", "server", "message", "m", "note", "title", "body", "priority", "labels",
 	                                   "due", "name", "summary", "visibility", "workflow", "slug", "confirm", "run", "done", "failed",
-	                                   "milestone", "status", "notify", "from", "to", "position", "role", "worked-by", "roles", "stage", "label", "kinds"};
+	                                   "milestone", "status", "notify", "from", "to", "position", "role", "worked-by", "roles", "stage", "label", "kinds", "into"};
 
 	asked read_arguments(int count, char** given) {
 		asked out;
@@ -1860,6 +1860,22 @@ namespace {
 		return done;
 	}
 
+	// A stage taken away, its issues moved into another: neotrac delete stage done --into published.
+	int delete_stage(const asked& a, session& s) {
+		if (a.words.size() < 2 || a.flag("into").empty()) throw stop(usage, "say which stage, and where its issues go, like neotrac delete stage done --into published");
+		std::string board;
+		auto page = board_page_of(a, s, board);
+		const auto& stage = stage_on(page, a.words[1]);
+		std::string into_word = a.flag("into");
+		const auto& into = stage_on(page, into_word);
+		projects::stage_delete sent{.id = stage.id};
+		sent.into = into.id;
+		s.app->stage_delete(sent);
+		if (a.has("json")) std::printf("{\"stage\":%s}\n", json(stage.name).c_str());
+		else std::printf("Removed %s; its issues are in %s.\n", stage.title.c_str(), into.title.c_str());
+		return done;
+	}
+
 	// A move between two stages, for whoever moves issues on the board.
 	int new_step(const asked& a, session& s) {
 		std::string board;
@@ -1951,6 +1967,10 @@ namespace {
 	int remove(const asked& a) {
 		std::string noun = a.words.empty() ? "" : noun_of(a.words[0]);
 		if (noun == "milestone" || noun == "board") return delete_part(a, noun);
+		if (noun == "stage") {
+			auto s = sign_in(a);
+			return delete_stage(a, s);
+		}
 		if (noun != "project") throw stop(usage, "a project, a board or a milestone is deleted; an issue goes with its board or project");
 		auto s = sign_in(a, false);
 		if (s.who.service) throw stop(said_no, "a service doesn't delete projects");
@@ -2053,6 +2073,7 @@ Writing, in your editor ($VISUAL, $EDITOR or vi)
   neotrac download 42 [folder]   saves what's attached to it
   neotrac delete project [p]     asks you to type its address
   neotrac delete board|milestone b   asks you to type its title
+  neotrac delete stage done --into published   its issues moved into another
 
 Working an issue
   neotrac claim 42, neotrac release 42
