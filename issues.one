@@ -43,6 +43,10 @@ namespace projects {
 		// Why it's closed, from whatever stage it was in; none while it's open.
 		closed  resolution  "Closed"
 		duplicate_of  issue  "Duplicate of"
+		// What it depends on: it isn't taken or moved until each has reached a stage
+		// whose status is success, and shows as waiting till then. Its blocked by links
+		// keep it.
+		waits_on  list of issue  "Waits on"
 		// On a board shown as a canvas: how it's drawn, a note or large text, and where
 		// it's placed and how big.
 		kind  enum  note | text = kind::note
@@ -142,6 +146,12 @@ namespace projects {
 		require from.board.visibility == to.board.visibility  "link it to an issue on a board that's private or public as its own is"
 		// The other side, said from there. The link made for it has a pair, so it
 		// makes no other.
+		// Blocked by another, it waits on it.
+		if relation == relation::blocked_by {
+			each issue where id == from {
+				dispatch issue::update { add link.to to waits_on }
+			}
+		}
 		if pair == none {
 			dispatch link::create {
 				pair = id  from = to  to = from
@@ -160,6 +170,11 @@ namespace projects {
 
 	// Both sides go together.
 	command link::delete {
+		if relation == relation::blocked_by {
+			each issue where id == from {
+				dispatch issue::update { remove link.to from waits_on }
+			}
+		}
 		each other link where other.pair == id || other.id == pair {
 			dispatch link::delete
 		}
@@ -172,6 +187,9 @@ namespace projects {
 	define workflow issue by stage {
 		worked by worked_by
 		steps step
+		// It waits on what it depends on, until each is at a stage that's a success.
+		depends on waits_on
+		done when stage.status == status::success
 		lease 30 minutes
 	}
 

@@ -363,4 +363,17 @@ check "its card waiting, on what the program said" python3 -c '
 import json,sys; d=json.load(open(sys.argv[1]))["fields"]["data"]["mapValue"]["fields"]
 assert d["status"]["stringValue"] == "waiting" and d["note"]["stringValue"] == "waiting on the compiler"' "$logs/waiting.data"
 
+# An issue blocked by another waits on it: no one takes it, and it says on what, until
+# the other is at a stage whose status is success, Closed here; then it's taken.
+NEOTRAC_KEY=$ranger "$neotrac" claim "$waiting" >/dev/null 2>&1 && NEOTRAC_KEY=$ranger "$neotrac" move "$waiting" verifying >/dev/null 2>&1
+needed=$(as "$person" projects/issue/create '{"project":"e2e","board":"e2e-main","title":"The fix it needs"}' | python3 -c 'import json,sys; print(json.load(sys.stdin)["id"])')
+dependent=$(issue_in_investigate "After the fix")
+as "$person" projects/link/create "{\"project\":\"e2e\",\"from\":\"e2e-$dependent\",\"to\":\"$needed\",\"relation\":\"blocked_by\"}" >/dev/null
+NEOTRAC_KEY=$ranger "$neotrac" claim "$dependent" >"$logs/depends" 2>&1
+check "an issue blocked by another isn't taken" test $? -eq 5
+check "and says what it waits on" grep -q "waiting on The fix it needs" "$logs/depends"
+as "$person" projects/issue/move "{\"id\":\"$needed\",\"stage\":\"e2e-main-closed\"}" >/dev/null
+NEOTRAC_KEY=$ranger "$neotrac" claim "$dependent" >"$logs/depends" 2>&1
+check "once what it waits on has succeeded, it's taken" test $? -eq 0
+
 if [ $failures -eq 0 ]; then echo "all passed"; else echo "$failures failed"; exit 1; fi
