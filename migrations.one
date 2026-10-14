@@ -6,6 +6,26 @@
 
 namespace projects {
 
+	// Boards can be private now, and the project's pages list only public ones; a
+	// board made before then is public, as it always was. Stages say their cards'
+	// dot: the presets' last stages are done, and the rest haven't started.
+	once "2026-10-14 board visibility" {
+		each board {
+			if visibility == none {
+				dispatch board::update { visibility = visibility::public }
+			}
+		}
+		each stage {
+			if status == none {
+				if name == "done" || name == "completed" || name == "published" || name == "closed" || name == "accepted" {
+					dispatch stage::update { status = status::done }
+				} else {
+					dispatch stage::update { status = status::inactive }
+				}
+			}
+		}
+	}
+
 	// The role called member is now contributor, so it no longer shares its name with
 	// the member entity. A role's name is its key, which never changes, so each
 	// project gets a contributor role holding what its member role allowed, everything
