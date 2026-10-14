@@ -63,7 +63,7 @@ namespace projects {
 			order by position
 			number  title  labels  stage  stage.title  priority  updated_at  position
 			author  author.picture  author.name  assignees  assignees.name  assignees.picture
-			milestone
+			milestone  data  held_by  held_until
 		}
 		// What was closed, the last closed first, and why.
 		closed = each issue in board where closed != none {
@@ -77,7 +77,7 @@ namespace projects {
 		}
 		stages = each stage in board {
 			order by position
-			name  title  position  worked_by  worked_by.title
+			name  title  position  worked_by  worked_by.title  status  notify
 		}
 		steps = each step in board {
 			order by from.position  to.position
@@ -121,6 +121,8 @@ namespace projects {
 		}
 		board board_page.issues by stage over board_page.stages link /:project/:issue {
 			move issue::move along board_page.steps
+			chime when notify has chime
+			status by status
 			reorder position
 			tint by priority
 			title

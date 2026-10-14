@@ -16,6 +16,16 @@ namespace projects {
 		custom     "Custom: Open and Done, to make your own"
 	}
 
+	// What a stage's issues are doing, as the dot on their cards says unless whoever
+	// holds one says otherwise.
+	enum status {
+		inactive  "Not started"
+		waiting   "Waiting"
+		working   "Working"
+		done      "Done"
+		failed    "Failed"
+	}
+
 	// A stage of a board's issues, in its place among the others. Its name is made
 	// from its title when it's added, and stays when it's renamed.
 	entity stage {
@@ -27,6 +37,10 @@ namespace projects {
 		// The roles whose people and services work its issues: a service holding
 		// one sees them in its queue and takes them, one at a time.
 		worked_by  list of role
+		status     status  = status::inactive
+		// How it tells the people watching its board that an issue arrived: chime is
+		// heard so far, and email and text are to come.
+		notify     list of text
 	}
 
 	// From one stage to another, for the roles it names. A step back is a step of
@@ -86,7 +100,7 @@ namespace projects {
 				board = id  name = "in_progress"  title = "In progress"  position = 2
 			}
 			dispatch stage::create {
-				board = id  name = "done"  title = "Done"  position = 3
+				board = id  name = "done"  title = "Done"  position = 3  status = status::done
 			}
 			dispatch step::create { board = id  from = stage::to_do  to = stage::in_progress }
 			dispatch step::create { board = id  from = stage::to_do  to = stage::done }
@@ -111,7 +125,7 @@ namespace projects {
 				board = id  name = "review"  title = "In review"  position = 4
 			}
 			dispatch stage::create {
-				board = id  name = "completed"  title = "Completed"  position = 5
+				board = id  name = "completed"  title = "Completed"  position = 5  status = status::done
 			}
 			dispatch step::create { board = id  from = stage::backlog  to = stage::to_do }
 			dispatch step::create { board = id  from = stage::to_do  to = stage::backlog }
@@ -138,7 +152,7 @@ namespace projects {
 				board = id  name = "scheduled"  title = "Scheduled"  position = 4
 			}
 			dispatch stage::create {
-				board = id  name = "published"  title = "Published"  position = 5
+				board = id  name = "published"  title = "Published"  position = 5  status = status::done
 			}
 			dispatch step::create { board = id  from = stage::idea  to = stage::writing }
 			dispatch step::create { board = id  from = stage::writing  to = stage::idea }
@@ -166,7 +180,7 @@ namespace projects {
 				board = id  name = "verifying"  title = "Verifying"  position = 4
 			}
 			dispatch stage::create {
-				board = id  name = "closed"  title = "Closed"  position = 5
+				board = id  name = "closed"  title = "Closed"  position = 5  status = status::done
 			}
 			dispatch step::create { board = id  from = stage::reported  to = stage::triaged }
 			dispatch step::create { board = id  from = stage::triaged  to = stage::in_fixing }
@@ -186,7 +200,7 @@ namespace projects {
 				board = id  name = "proposed"  title = "Proposed"  position = 1
 			}
 			dispatch stage::create {
-				board = id  name = "accepted"  title = "Accepted"  position = 2
+				board = id  name = "accepted"  title = "Accepted"  position = 2  status = status::done
 			}
 			dispatch stage::create {
 				board = id  name = "rejected"  title = "Rejected"  position = 3
@@ -222,7 +236,7 @@ namespace projects {
 				board = id  name = "open"  title = "Open"  position = 1
 			}
 			dispatch stage::create {
-				board = id  name = "done"  title = "Done"  position = 2
+				board = id  name = "done"  title = "Done"  position = 2  status = status::done
 			}
 			dispatch step::create { board = id  from = stage::open  to = stage::done }
 			dispatch step::create { board = id  from = stage::done  to = stage::open }
@@ -239,18 +253,26 @@ namespace projects {
 			reorder position
 			title "Stage"
 			worked_by.title "Worked by"
+			status "Dot"
+			notify "Tells"
 			update "Change"
 			delete "Remove"
 			stage::create "New stage"
 		}
 		form stage::update "Save" {
-			title "Called"  worked_by "Worked by"
+			title "Called"  worked_by "Worked by"  status "Its cards' dot"
+			notify "When an issue arrives" {
+				hint "chime rings for everyone watching the board; email and text are to come."
+			}
 		}
 		form stage::delete "Remove" {
 			into "Move its issues to"
 		}
 		form stage::create "Add" {
-			title "Called"  worked_by "Worked by"
+			title "Called"  worked_by "Worked by"  status "Its cards' dot"
+			notify "When an issue arrives" {
+				hint "chime rings for everyone watching the board; email and text are to come."
+			}
 		}
 		form board::update "Save" {
 			start "New issues start in"

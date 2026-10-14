@@ -184,7 +184,7 @@ namespace projects {
 
 	view issue_page per issue {
 		number  title  body  labels  stage  stage.title  priority  assignees
-		assignees.name  held_by  held_by.name  held_until  milestone
+		assignees.name  held_by  held_by.name  held_until  data  milestone
 		milestone.title  attachments  board  board.title  closed  duplicate_of  duplicate_of.number
 		// How it bears on others, and they on it, each said from this side.
 		links = each link where from == issue.id {
@@ -237,6 +237,7 @@ namespace projects {
 				assignees.name
 				held_by.name "Held by"
 				held_until "Until"
+				data "Status"
 				milestone.title "Milestone"
 				priority "Priority"
 				labels "Labels"
