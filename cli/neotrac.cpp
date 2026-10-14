@@ -76,7 +76,7 @@ namespace {
 	};
 
 	// Flags that take a value, like --board main; any other is on or off.
-	const std::set<std::string> valued{"board", "project", "server", "message", "m", "title", "body", "priority", "labels",
+	const std::set<std::string> valued{"board", "project", "server", "message", "m", "note", "title", "body", "priority", "labels",
 	                                   "due", "name", "summary", "visibility", "workflow", "slug", "confirm", "run", "done", "failed",
 	                                   "milestone"};
 
@@ -574,6 +574,22 @@ namespace {
 		throw stop(usage, "there's no stage " + word + " on " + page.board_title);
 	}
 
+	// What's said of an issue for its card: its status, since when, a note; a null
+	// takes one out. Saying it is a courtesy, so a refusal is only told.
+	void report(session& s, const std::string& id, std::map<std::string, ember::value> data) {
+		try {
+			projects::issue_report sent{.id = id};
+			sent.data = ember::value(std::move(data));
+			s.app->issue_report(sent);
+		} catch (const refused& r) {
+			std::fprintf(stderr, "neotrac: couldn't say how it's going: %s\n", r.what());
+		}
+	}
+
+	std::string now_said() {
+		return std::format("{:%FT%TZ}", std::chrono::floor<std::chrono::seconds>(std::chrono::system_clock::now()));
+	}
+
 	// Works one issue it holds: runs the program with the issue as JSON on its input,
 	// in a folder of its own, WORK_DIR, keeping its claim while it runs; then says
 	// what it wrote, and moves it on, or, when it fails, back or lets it go.
@@ -618,6 +634,7 @@ namespace {
 		(void)!::write(input[1], given.data(), given.size());
 		::close(input[1]);
 		std::fprintf(stderr, "%s %s: working\n", number.c_str(), page.title.c_str());
+		report(s, id, {{"status", "working"}, {"since", now_said()}});
 		// Kept while it runs: renewed every five minutes, well inside any lease.
 		auto renewed = std::chrono::steady_clock::now();
 		int status = 0;
@@ -657,6 +674,7 @@ namespace {
 				}
 				std::string said = tail_of(out_path, 40);
 				if (!said.empty()) s.app->comment_create({.issue = id, .body = said});
+				report(s, id, {{"status", ember::value()}, {"since", ember::value()}});
 				projects::issue_move sent{.id = id};
 				sent.stage = stage_named(s, page, done_word);
 				s.app->issue_move(sent);
@@ -665,6 +683,7 @@ namespace {
 				std::string why = WIFEXITED(status) ? "exited " + std::to_string(WEXITSTATUS(status)) : "was stopped";
 				std::string said = tail_of(err_path, 40);
 				s.app->comment_create({.issue = id, .body = program + " " + why + (said.empty() ? "." : ":\n\n```\n" + said + "\n```")});
+				report(s, id, {{"status", "failed"}, {"since", now_said()}, {"note", program + " " + why}});
 				if (!failed_word.empty()) {
 					projects::issue_move sent{.id = id};
 					sent.stage = stage_named(s, page, failed_word);
@@ -787,6 +806,29 @@ namespace {
 		else s.app->issue_release({.id = id});
 		if (a.has("json")) std::printf("{\"id\":%s,\"%s\":true}\n", json(id).c_str(), taking ? "taken" : "let_go");
 		else std::printf(taking ? "Took %s.\n" : "Let go of %s.\n", a.words[0].c_str());
+		return done;
+	}
+
+	// Says how an issue you hold is going, for its card's dot and timer: working,
+	// waiting, done, failed or inactive, since now, with --note; clear takes it out.
+	int status(const asked& a) {
+		auto s = sign_in(a);
+		std::string id = issue_of(s, a);
+		if (a.words.size() < 2) throw stop(usage, "say how it's going, like neotrac status 42 working, or waiting, done, failed, inactive or clear");
+		std::string word = lower(a.words[1]);
+		std::map<std::string, ember::value> data;
+		if (word == "clear") {
+			data = {{"status", ember::value()}, {"since", ember::value()}, {"note", ember::value()}};
+		} else {
+			projects::status known;
+			if (!projects::from_string(word, known)) throw stop(usage, a.words[1] + " isn't how an issue goes: working, waiting, done, failed, inactive or clear");
+			data = {{"status", word}, {"since", now_said()}, {"note", a.has("note") ? ember::value(a.flag("note")) : ember::value()}};
+		}
+		projects::issue_report sent{.id = id};
+		sent.data = ember::value(std::move(data));
+		s.app->issue_report(sent);
+		if (a.has("json")) std::printf("{\"id\":%s,\"status\":%s}\n", json(id).c_str(), json(word).c_str());
+		else std::printf("%s is %s.\n", a.words[0].c_str(), word == "clear" ? "said nothing of" : word.c_str());
 		return done;
 	}
 
@@ -1779,6 +1821,8 @@ Writing, in your editor ($VISUAL, $EDITOR or vi)
 
 Working an issue
   neotrac claim 42, neotrac release 42
+  neotrac status 42 working      or waiting, done, failed, inactive; clear takes it
+                                 out. [--note "..."] Its card shows it, and the time since
   neotrac work --run ./fix --done review [--failed backlog] [--once]
                                  takes each issue a role of yours works as it comes,
                                  runs the program on it, its attachments beside it,
@@ -1824,6 +1868,7 @@ connection, 7 too many requests.
 		if (a.command == "claim") return claim(on_issue(a), true);
 		if (a.command == "release") return claim(on_issue(a), false);
 		if (a.command == "move") return move(on_issue(a));
+		if (a.command == "status") return status(on_issue(a));
 		if (a.command == "close") return close(on_issue(a));
 		if (a.command == "reopen") return reopen(on_issue(a));
 		if (a.command == "comment") return comment(on_issue(a));

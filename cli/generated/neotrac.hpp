@@ -47,6 +47,7 @@ namespace neotrac {
 		inline double number(const ember::value& v) { return v.is_integer() ? double(v.as_integer()) : v.is_double() ? v.as_double() : 0; }
 		inline bool flag(const ember::value& v) { return v.is_bool() && v.as_bool(); }
 		inline time when(const ember::value& v) { return v.is_time() ? v.as_time() : time{}; }
+		inline ember::value named(const ember::value& v) { return v; }
 		inline std::vector<std::string> texts(const ember::value& v) {
 			std::vector<std::string> out;
 			if (v.is_array()) {
@@ -71,6 +72,18 @@ namespace neotrac {
 		}
 		inline std::string json(double n) { char s[32]; std::snprintf(s, sizeof s, "%.17g", n); return s; }
 		inline std::string json(bool b) { return b ? "true" : "false"; }
+		inline std::string json(const ember::value& v) {
+			if (v.is_string()) return json(v.as_string());
+			if (v.is_bool()) return json(v.as_bool());
+			if (v.is_integer()) return json(double(v.as_integer()));
+			if (v.is_double()) return json(v.as_double());
+			if (v.is_map()) {
+				std::string out;
+				for (const auto& [name, item] : v.as_map()) out += (out.empty() ? "" : ",") + json(name) + ":" + json(item);
+				return "{" + out + "}";
+			}
+			return "null";
+		}
 		inline std::string json(const std::vector<std::string>& list) {
 			std::string out = "[";
 			for (std::size_t i = 0; i < list.size(); ++i) out += (i ? "," : "") + json(list[i]);
@@ -368,6 +381,42 @@ namespace neotrac {
 			return false;
 		}
 
+		enum class status { inactive, waiting, working, done, failed };
+		inline const char* to_string(status c) {
+			switch (c) {
+				case status::inactive: return "inactive";
+				case status::waiting: return "waiting";
+				case status::working: return "working";
+				case status::done: return "done";
+				case status::failed: return "failed";
+			}
+			return "";
+		}
+		// Reads a choice by its name; one that isn't, like a choice added since, leaves it.
+		inline bool from_string(const std::string& text, status& c) {
+			if (text == "inactive") return c = status::inactive, true;
+			if (text == "waiting") return c = status::waiting, true;
+			if (text == "working") return c = status::working, true;
+			if (text == "done") return c = status::done, true;
+			if (text == "failed") return c = status::failed, true;
+			return false;
+		}
+
+		enum class board_visibility { public_, private_ };
+		inline const char* to_string(board_visibility c) {
+			switch (c) {
+				case board_visibility::public_: return "public";
+				case board_visibility::private_: return "private";
+			}
+			return "";
+		}
+		// Reads a choice by its name; one that isn't, like a choice added since, leaves it.
+		inline bool from_string(const std::string& text, board_visibility& c) {
+			if (text == "public") return c = board_visibility::public_, true;
+			if (text == "private") return c = board_visibility::private_, true;
+			return false;
+		}
+
 		enum class project_visibility { public_, private_ };
 		inline const char* to_string(project_visibility c) {
 			switch (c) {
@@ -410,6 +459,7 @@ namespace neotrac {
 			::neotrac::projects::workflow workflow{};
 			std::string start{};
 			double position{};
+			::neotrac::projects::board_visibility visibility{};
 			std::vector<std::string> followers{};
 
 			static board from(const ember::value& v) {
@@ -425,6 +475,7 @@ namespace neotrac {
 				out.workflow = detail::choice<::neotrac::projects::workflow>(v["workflow"]);
 				out.start = detail::text(v["start"]);
 				out.position = detail::number(v["position"]);
+				out.visibility = detail::choice<::neotrac::projects::board_visibility>(v["visibility"]);
 				out.followers = detail::texts(v["followers"]);
 				return out;
 			}
@@ -454,6 +505,7 @@ namespace neotrac {
 			std::string duplicate_of{};
 			std::string held_by{};
 			time held_until{};
+			ember::value data{};
 
 			static issue from(const ember::value& v) {
 				issue out;
@@ -479,6 +531,7 @@ namespace neotrac {
 				out.duplicate_of = detail::text(v["duplicate_of"]);
 				out.held_by = detail::text(v["held_by"]);
 				out.held_until = detail::when(v["held_until"]);
+				out.data = detail::named(v["data"]);
 				return out;
 			}
 		};
@@ -826,6 +879,8 @@ namespace neotrac {
 			std::string title{};
 			double position{};
 			std::vector<std::string> worked_by{};
+			::neotrac::projects::status status{};
+			std::vector<std::string> notify{};
 
 			static stage from(const ember::value& v) {
 				stage out;
@@ -840,6 +895,8 @@ namespace neotrac {
 				out.title = detail::text(v["title"]);
 				out.position = detail::number(v["position"]);
 				out.worked_by = detail::texts(v["worked_by"]);
+				out.status = detail::choice<::neotrac::projects::status>(v["status"]);
+				out.notify = detail::texts(v["notify"]);
 				return out;
 			}
 		};
@@ -885,6 +942,7 @@ namespace neotrac {
 			std::optional<::neotrac::projects::workflow> workflow{};
 			std::optional<std::string> start{};
 			std::optional<double> position{};
+			std::optional<::neotrac::projects::board_visibility> visibility{};
 			std::optional<std::vector<std::string>> followers{};
 
 			std::string json() const {
@@ -897,6 +955,7 @@ namespace neotrac {
 				if (workflow) add("workflow", detail::json(std::string(to_string(*workflow))));
 				if (start) add("start", detail::json(*start));
 				if (position) add("position", detail::json(*position));
+				if (visibility) add("visibility", detail::json(std::string(to_string(*visibility))));
 				if (followers) add("followers", detail::json(*followers));
 				return out + "}";
 			}
@@ -911,6 +970,7 @@ namespace neotrac {
 			std::optional<::neotrac::projects::workflow> workflow{};
 			std::optional<std::string> start{};
 			std::optional<double> position{};
+			std::optional<::neotrac::projects::board_visibility> visibility{};
 			std::optional<std::vector<std::string>> followers{};
 			std::optional<std::string> typed{};
 
@@ -924,6 +984,7 @@ namespace neotrac {
 				if (workflow) add("workflow", detail::json(std::string(to_string(*workflow))));
 				if (start) add("start", detail::json(*start));
 				if (position) add("position", detail::json(*position));
+				if (visibility) add("visibility", detail::json(std::string(to_string(*visibility))));
 				if (followers) add("followers", detail::json(*followers));
 				if (typed) add("typed", detail::json(*typed));
 				return out + "}";
@@ -939,6 +1000,7 @@ namespace neotrac {
 			std::optional<::neotrac::projects::workflow> workflow{};
 			std::optional<std::string> start{};
 			std::optional<double> position{};
+			std::optional<::neotrac::projects::board_visibility> visibility{};
 			std::optional<std::vector<std::string>> followers{};
 
 			std::string json() const {
@@ -951,6 +1013,7 @@ namespace neotrac {
 				if (workflow) add("workflow", detail::json(std::string(to_string(*workflow))));
 				if (start) add("start", detail::json(*start));
 				if (position) add("position", detail::json(*position));
+				if (visibility) add("visibility", detail::json(std::string(to_string(*visibility))));
 				if (followers) add("followers", detail::json(*followers));
 				return out + "}";
 			}
@@ -965,6 +1028,7 @@ namespace neotrac {
 			std::optional<::neotrac::projects::workflow> workflow{};
 			std::optional<std::string> start{};
 			std::optional<double> position{};
+			std::optional<::neotrac::projects::board_visibility> visibility{};
 			std::optional<std::vector<std::string>> followers{};
 
 			std::string json() const {
@@ -977,6 +1041,7 @@ namespace neotrac {
 				if (workflow) add("workflow", detail::json(std::string(to_string(*workflow))));
 				if (start) add("start", detail::json(*start));
 				if (position) add("position", detail::json(*position));
+				if (visibility) add("visibility", detail::json(std::string(to_string(*visibility))));
 				if (followers) add("followers", detail::json(*followers));
 				return out + "}";
 			}
@@ -1001,6 +1066,7 @@ namespace neotrac {
 			std::optional<std::string> duplicate_of{};
 			std::optional<std::string> held_by{};
 			std::optional<time> held_until{};
+			std::optional<ember::value> data{};
 
 			std::string json() const {
 				std::string out = "{";
@@ -1022,6 +1088,7 @@ namespace neotrac {
 				if (duplicate_of) add("duplicate_of", detail::json(*duplicate_of));
 				if (held_by) add("held_by", detail::json(*held_by));
 				if (held_until) add("held_until", detail::json(*held_until));
+				if (data) add("data", detail::json(*data));
 				return out + "}";
 			}
 		};
@@ -1046,6 +1113,7 @@ namespace neotrac {
 			std::optional<std::string> duplicate_of{};
 			std::optional<std::string> held_by{};
 			std::optional<time> held_until{};
+			std::optional<ember::value> data{};
 
 			std::string json() const {
 				std::string out = "{";
@@ -1068,6 +1136,7 @@ namespace neotrac {
 				if (duplicate_of) add("duplicate_of", detail::json(*duplicate_of));
 				if (held_by) add("held_by", detail::json(*held_by));
 				if (held_until) add("held_until", detail::json(*held_until));
+				if (data) add("data", detail::json(*data));
 				return out + "}";
 			}
 		};
@@ -1092,6 +1161,7 @@ namespace neotrac {
 			std::optional<std::string> duplicate_of{};
 			std::optional<std::string> held_by{};
 			std::optional<time> held_until{};
+			std::optional<ember::value> data{};
 
 			std::string json() const {
 				std::string out = "{";
@@ -1114,6 +1184,7 @@ namespace neotrac {
 				if (duplicate_of) add("duplicate_of", detail::json(*duplicate_of));
 				if (held_by) add("held_by", detail::json(*held_by));
 				if (held_until) add("held_until", detail::json(*held_until));
+				if (data) add("data", detail::json(*data));
 				return out + "}";
 			}
 		};
@@ -1138,6 +1209,7 @@ namespace neotrac {
 			std::optional<std::string> duplicate_of{};
 			std::optional<std::string> held_by{};
 			std::optional<time> held_until{};
+			std::optional<ember::value> data{};
 
 			std::string json() const {
 				std::string out = "{";
@@ -1160,6 +1232,7 @@ namespace neotrac {
 				if (duplicate_of) add("duplicate_of", detail::json(*duplicate_of));
 				if (held_by) add("held_by", detail::json(*held_by));
 				if (held_until) add("held_until", detail::json(*held_until));
+				if (data) add("data", detail::json(*data));
 				return out + "}";
 			}
 		};
@@ -1184,6 +1257,7 @@ namespace neotrac {
 			std::optional<std::string> duplicate_of{};
 			std::optional<std::string> held_by{};
 			std::optional<time> held_until{};
+			std::optional<ember::value> data{};
 
 			std::string json() const {
 				std::string out = "{";
@@ -1206,6 +1280,7 @@ namespace neotrac {
 				if (duplicate_of) add("duplicate_of", detail::json(*duplicate_of));
 				if (held_by) add("held_by", detail::json(*held_by));
 				if (held_until) add("held_until", detail::json(*held_until));
+				if (data) add("data", detail::json(*data));
 				return out + "}";
 			}
 		};
@@ -1230,6 +1305,7 @@ namespace neotrac {
 			std::optional<std::string> duplicate_of{};
 			std::optional<std::string> held_by{};
 			std::optional<time> held_until{};
+			std::optional<ember::value> data{};
 
 			std::string json() const {
 				std::string out = "{";
@@ -1252,6 +1328,7 @@ namespace neotrac {
 				if (duplicate_of) add("duplicate_of", detail::json(*duplicate_of));
 				if (held_by) add("held_by", detail::json(*held_by));
 				if (held_until) add("held_until", detail::json(*held_until));
+				if (data) add("data", detail::json(*data));
 				return out + "}";
 			}
 		};
@@ -1336,6 +1413,7 @@ namespace neotrac {
 			std::optional<std::string> duplicate_of{};
 			std::optional<std::string> held_by{};
 			std::optional<time> held_until{};
+			std::optional<ember::value> data{};
 
 			std::string json() const {
 				std::string out = "{";
@@ -1358,6 +1436,7 @@ namespace neotrac {
 				if (duplicate_of) add("duplicate_of", detail::json(*duplicate_of));
 				if (held_by) add("held_by", detail::json(*held_by));
 				if (held_until) add("held_until", detail::json(*held_until));
+				if (data) add("data", detail::json(*data));
 				return out + "}";
 			}
 		};
@@ -1402,6 +1481,7 @@ namespace neotrac {
 			std::optional<std::string> duplicate_of{};
 			std::optional<std::string> held_by{};
 			std::optional<time> held_until{};
+			std::optional<ember::value> data{};
 
 			std::string json() const {
 				std::string out = "{";
@@ -1424,6 +1504,7 @@ namespace neotrac {
 				if (duplicate_of) add("duplicate_of", detail::json(*duplicate_of));
 				if (held_by) add("held_by", detail::json(*held_by));
 				if (held_until) add("held_until", detail::json(*held_until));
+				if (data) add("data", detail::json(*data));
 				return out + "}";
 			}
 		};
@@ -1448,6 +1529,7 @@ namespace neotrac {
 			std::optional<std::string> duplicate_of{};
 			std::optional<std::string> held_by{};
 			std::optional<time> held_until{};
+			std::optional<ember::value> data{};
 
 			std::string json() const {
 				std::string out = "{";
@@ -1470,6 +1552,7 @@ namespace neotrac {
 				if (duplicate_of) add("duplicate_of", detail::json(*duplicate_of));
 				if (held_by) add("held_by", detail::json(*held_by));
 				if (held_until) add("held_until", detail::json(*held_until));
+				if (data) add("data", detail::json(*data));
 				return out + "}";
 			}
 		};
@@ -1494,6 +1577,7 @@ namespace neotrac {
 			std::optional<std::string> duplicate_of{};
 			std::optional<std::string> held_by{};
 			std::optional<time> held_until{};
+			std::optional<ember::value> data{};
 
 			std::string json() const {
 				std::string out = "{";
@@ -1516,6 +1600,55 @@ namespace neotrac {
 				if (duplicate_of) add("duplicate_of", detail::json(*duplicate_of));
 				if (held_by) add("held_by", detail::json(*held_by));
 				if (held_until) add("held_until", detail::json(*held_until));
+				if (data) add("data", detail::json(*data));
+				return out + "}";
+			}
+		};
+
+		// What issue::report is sent.
+		struct issue_report {
+			std::string id{};
+			std::optional<std::string> project{};
+			std::optional<double> number{};
+			std::optional<std::string> board{};
+			std::optional<std::string> title{};
+			std::optional<std::string> body{};
+			std::optional<std::vector<std::string>> labels{};
+			std::optional<std::string> author{};
+			std::optional<std::string> stage{};
+			std::optional<::neotrac::projects::priority> priority{};
+			std::optional<std::vector<std::string>> assignees{};
+			std::optional<std::string> milestone{};
+			std::optional<std::vector<std::string>> attachments{};
+			std::optional<double> position{};
+			std::optional<::neotrac::projects::resolution> closed{};
+			std::optional<std::string> duplicate_of{};
+			std::optional<std::string> held_by{};
+			std::optional<time> held_until{};
+			std::optional<ember::value> data{};
+
+			std::string json() const {
+				std::string out = "{";
+				auto add = [&](const char* name, const std::string& value) { out += (out.size() > 1 ? "," : "") + detail::json(std::string(name)) + ":" + value; };
+				add("id", detail::json(id));
+				if (project) add("project", detail::json(*project));
+				if (number) add("number", detail::json(*number));
+				if (board) add("board", detail::json(*board));
+				if (title) add("title", detail::json(*title));
+				if (body) add("body", detail::json(*body));
+				if (labels) add("labels", detail::json(*labels));
+				if (author) add("author", detail::json(*author));
+				if (stage) add("stage", detail::json(*stage));
+				if (priority) add("priority", detail::json(std::string(to_string(*priority))));
+				if (assignees) add("assignees", detail::json(*assignees));
+				if (milestone) add("milestone", detail::json(*milestone));
+				if (attachments) add("attachments", detail::json(*attachments));
+				if (position) add("position", detail::json(*position));
+				if (closed) add("closed", detail::json(std::string(to_string(*closed))));
+				if (duplicate_of) add("duplicate_of", detail::json(*duplicate_of));
+				if (held_by) add("held_by", detail::json(*held_by));
+				if (held_until) add("held_until", detail::json(*held_until));
+				if (data) add("data", detail::json(*data));
 				return out + "}";
 			}
 		};
@@ -1540,6 +1673,7 @@ namespace neotrac {
 			std::optional<std::string> duplicate_of{};
 			std::optional<std::string> held_by{};
 			std::optional<time> held_until{};
+			std::optional<ember::value> data{};
 
 			std::string json() const {
 				std::string out = "{";
@@ -1562,6 +1696,7 @@ namespace neotrac {
 				if (duplicate_of) add("duplicate_of", detail::json(*duplicate_of));
 				if (held_by) add("held_by", detail::json(*held_by));
 				if (held_until) add("held_until", detail::json(*held_until));
+				if (data) add("data", detail::json(*data));
 				return out + "}";
 			}
 		};
@@ -2148,6 +2283,8 @@ namespace neotrac {
 			std::optional<std::string> title{};
 			std::optional<double> position{};
 			std::optional<std::vector<std::string>> worked_by{};
+			std::optional<::neotrac::projects::status> status{};
+			std::optional<std::vector<std::string>> notify{};
 
 			std::string json() const {
 				std::string out = "{";
@@ -2158,6 +2295,8 @@ namespace neotrac {
 				if (title) add("title", detail::json(*title));
 				if (position) add("position", detail::json(*position));
 				if (worked_by) add("worked_by", detail::json(*worked_by));
+				if (status) add("status", detail::json(std::string(to_string(*status))));
+				if (notify) add("notify", detail::json(*notify));
 				return out + "}";
 			}
 		};
@@ -2171,6 +2310,8 @@ namespace neotrac {
 			std::optional<std::string> title{};
 			std::optional<double> position{};
 			std::optional<std::vector<std::string>> worked_by{};
+			std::optional<::neotrac::projects::status> status{};
+			std::optional<std::vector<std::string>> notify{};
 
 			std::string json() const {
 				std::string out = "{";
@@ -2182,6 +2323,8 @@ namespace neotrac {
 				if (title) add("title", detail::json(*title));
 				if (position) add("position", detail::json(*position));
 				if (worked_by) add("worked_by", detail::json(*worked_by));
+				if (status) add("status", detail::json(std::string(to_string(*status))));
+				if (notify) add("notify", detail::json(*notify));
 				return out + "}";
 			}
 		};
@@ -2195,6 +2338,8 @@ namespace neotrac {
 			std::optional<std::string> title{};
 			std::optional<double> position{};
 			std::optional<std::vector<std::string>> worked_by{};
+			std::optional<::neotrac::projects::status> status{};
+			std::optional<std::vector<std::string>> notify{};
 			std::optional<std::string> into{};
 
 			std::string json() const {
@@ -2207,6 +2352,8 @@ namespace neotrac {
 				if (title) add("title", detail::json(*title));
 				if (position) add("position", detail::json(*position));
 				if (worked_by) add("worked_by", detail::json(*worked_by));
+				if (status) add("status", detail::json(std::string(to_string(*status))));
+				if (notify) add("notify", detail::json(*notify));
 				if (into) add("into", detail::json(*into));
 				return out + "}";
 			}
@@ -2290,6 +2437,7 @@ namespace neotrac {
 			std::optional<::neotrac::projects::workflow> workflow{};
 			std::optional<std::string> start{};
 			std::optional<double> position{};
+			std::optional<::neotrac::projects::board_visibility> visibility{};
 			std::optional<std::vector<std::string>> followers{};
 
 			std::string json() const {
@@ -2301,6 +2449,7 @@ namespace neotrac {
 				if (workflow) add("workflow", detail::json(std::string(to_string(*workflow))));
 				if (start) add("start", detail::json(*start));
 				if (position) add("position", detail::json(*position));
+				if (visibility) add("visibility", detail::json(std::string(to_string(*visibility))));
 				if (followers) add("followers", detail::json(*followers));
 				return out + "}";
 			}
@@ -2310,6 +2459,7 @@ namespace neotrac {
 			bool exists = false;  // whether it's been made, and may be read
 			std::string title{};
 			std::string start{};
+			::neotrac::projects::board_visibility visibility{};
 			std::vector<std::string> followers{};
 			std::string project_name{};
 			struct issues_row {
@@ -2329,6 +2479,9 @@ namespace neotrac {
 				std::vector<std::string> assignees_name{};
 				std::vector<std::string> assignees_picture{};
 				std::string milestone{};
+				ember::value data{};
+				std::string held_by{};
+				time held_until{};
 				static issues_row from(const ember::value& v) {
 					issues_row out;
 					out.id = detail::text(v["id"]);
@@ -2347,6 +2500,9 @@ namespace neotrac {
 					out.assignees_name = detail::texts(v["assignees.name"]);
 					out.assignees_picture = detail::texts(v["assignees.picture"]);
 					out.milestone = detail::text(v["milestone"]);
+					out.data = detail::named(v["data"]);
+					out.held_by = detail::text(v["held_by"]);
+					out.held_until = detail::when(v["held_until"]);
 					return out;
 				}
 			};
@@ -2360,6 +2516,9 @@ namespace neotrac {
 				std::string stage_title{};
 				::neotrac::projects::priority priority{};
 				time updated_at{};
+				std::string held_by{};
+				time held_until{};
+				ember::value data{};
 				static closed_row from(const ember::value& v) {
 					closed_row out;
 					out.id = detail::text(v["id"]);
@@ -2370,6 +2529,9 @@ namespace neotrac {
 					out.stage_title = detail::text(v["stage.title"]);
 					out.priority = detail::choice<::neotrac::projects::priority>(v["priority"]);
 					out.updated_at = detail::when(v["updated_at"]);
+					out.held_by = detail::text(v["held_by"]);
+					out.held_until = detail::when(v["held_until"]);
+					out.data = detail::named(v["data"]);
 					return out;
 				}
 			};
@@ -2396,6 +2558,8 @@ namespace neotrac {
 				double position{};
 				std::vector<std::string> worked_by{};
 				std::vector<std::string> worked_by_title{};
+				::neotrac::projects::status status{};
+				std::vector<std::string> notify{};
 				static stages_row from(const ember::value& v) {
 					stages_row out;
 					out.id = detail::text(v["id"]);
@@ -2404,6 +2568,8 @@ namespace neotrac {
 					out.position = detail::number(v["position"]);
 					out.worked_by = detail::texts(v["worked_by"]);
 					out.worked_by_title = detail::texts(v["worked_by.title"]);
+					out.status = detail::choice<::neotrac::projects::status>(v["status"]);
+					out.notify = detail::texts(v["notify"]);
 					return out;
 				}
 			};
@@ -2442,6 +2608,7 @@ namespace neotrac {
 				const ember::value& v = s.data;
 				out.title = detail::text(v["title"]);
 				out.start = detail::text(v["start"]);
+				out.visibility = detail::choice<::neotrac::projects::board_visibility>(v["visibility"]);
 				out.followers = detail::texts(v["followers"]);
 				out.project_name = detail::text(v["project.name"]);
 				if (v["issues"].is_array()) {
@@ -2478,6 +2645,7 @@ namespace neotrac {
 			std::string held_by{};
 			std::string held_by_name{};
 			time held_until{};
+			ember::value data{};
 			std::string milestone{};
 			std::string milestone_title{};
 			std::vector<std::string> attachments{};
@@ -2579,6 +2747,7 @@ namespace neotrac {
 				out.held_by = detail::text(v["held_by"]);
 				out.held_by_name = detail::text(v["held_by.name"]);
 				out.held_until = detail::when(v["held_until"]);
+				out.data = detail::named(v["data"]);
 				out.milestone = detail::text(v["milestone"]);
 				out.milestone_title = detail::text(v["milestone.title"]);
 				out.attachments = detail::texts(v["attachments"]);
@@ -2628,6 +2797,7 @@ namespace neotrac {
 				std::string held_by{};
 				std::string held_by_name{};
 				time held_until{};
+				ember::value data{};
 				static items_row from(const ember::value& v) {
 					items_row out;
 					out.id = detail::text(v["id"]);
@@ -2651,6 +2821,7 @@ namespace neotrac {
 					out.held_by = detail::text(v["held_by"]);
 					out.held_by_name = detail::text(v["held_by.name"]);
 					out.held_until = detail::when(v["held_until"]);
+					out.data = detail::named(v["data"]);
 					return out;
 				}
 			};
@@ -2682,6 +2853,9 @@ namespace neotrac {
 				::neotrac::projects::priority priority{};
 				std::vector<std::string> assignees_name{};
 				std::vector<std::string> assignees_picture{};
+				std::string held_by{};
+				time held_until{};
+				ember::value data{};
 				static issues_row from(const ember::value& v) {
 					issues_row out;
 					out.id = detail::text(v["id"]);
@@ -2692,6 +2866,9 @@ namespace neotrac {
 					out.priority = detail::choice<::neotrac::projects::priority>(v["priority"]);
 					out.assignees_name = detail::texts(v["assignees.name"]);
 					out.assignees_picture = detail::texts(v["assignees.picture"]);
+					out.held_by = detail::text(v["held_by"]);
+					out.held_until = detail::when(v["held_until"]);
+					out.data = detail::named(v["data"]);
 					return out;
 				}
 			};
@@ -2749,6 +2926,9 @@ namespace neotrac {
 				std::string title{};
 				std::string project_name{};
 				std::string stage_title{};
+				std::string held_by{};
+				time held_until{};
+				ember::value data{};
 				static rows_row from(const ember::value& v) {
 					rows_row out;
 					out.id = detail::text(v["id"]);
@@ -2757,6 +2937,9 @@ namespace neotrac {
 					out.title = detail::text(v["title"]);
 					out.project_name = detail::text(v["project.name"]);
 					out.stage_title = detail::text(v["stage.title"]);
+					out.held_by = detail::text(v["held_by"]);
+					out.held_until = detail::when(v["held_until"]);
+					out.data = detail::named(v["data"]);
 					return out;
 				}
 			};
@@ -2886,6 +3069,34 @@ namespace neotrac {
 			static std::string path(const std::string& of) { return "views/projects::mine:" + of; }
 		};
 
+		struct private_boards {
+			bool exists = false;  // whether it's been made, and may be read
+			struct boards_row {
+				std::string id{};
+				std::string name{};
+				std::string title{};
+				static boards_row from(const ember::value& v) {
+					boards_row out;
+					out.id = detail::text(v["id"]);
+					out.name = detail::text(v["name"]);
+					out.title = detail::text(v["title"]);
+					return out;
+				}
+			};
+			std::vector<boards_row> boards{};
+
+			static struct private_boards from(const ember::snapshot& s) {
+				struct private_boards out;
+				out.exists = s.exists;
+				const ember::value& v = s.data;
+				if (v["boards"].is_array()) {
+					for (const auto& row : v["boards"].as_array()) out.boards.push_back(boards_row::from(row));
+				}
+				return out;
+			}
+			static std::string path(const std::string& of) { return "views/projects::private_boards:" + of; }
+		};
+
 		struct project_page {
 			bool exists = false;  // whether it's been made, and may be read
 			std::string name{};
@@ -2915,6 +3126,9 @@ namespace neotrac {
 				std::string stage{};
 				std::string stage_title{};
 				double stage_position{};
+				std::string held_by{};
+				time held_until{};
+				ember::value data{};
 				static issues_row from(const ember::value& v) {
 					issues_row out;
 					out.id = detail::text(v["id"]);
@@ -2926,6 +3140,9 @@ namespace neotrac {
 					out.stage = detail::text(v["stage"]);
 					out.stage_title = detail::text(v["stage.title"]);
 					out.stage_position = detail::number(v["stage.position"]);
+					out.held_by = detail::text(v["held_by"]);
+					out.held_until = detail::when(v["held_until"]);
+					out.data = detail::named(v["data"]);
 					return out;
 				}
 			};
@@ -3538,6 +3755,10 @@ namespace neotrac {
 		std::string issue_release(const projects::issue_release& sent) {
 			return detail::text(ember::parse_json(post("/api/projects/issue/release", sent.json()))["id"]);
 		}
+		// issue::report: the id of what it changed, or refused.
+		std::string issue_report(const projects::issue_report& sent) {
+			return detail::text(ember::parse_json(post("/api/projects/issue/report", sent.json()))["id"]);
+		}
 		// issue::move: the id of what it changed, or refused.
 		std::string issue_move(const projects::issue_move& sent) {
 			return detail::text(ember::parse_json(post("/api/projects/issue/move", sent.json()))["id"]);
@@ -3691,6 +3912,7 @@ namespace neotrac {
 		live<projects::followed> followed() { connect(); return {*store_, projects::followed::path(auth_->current_user().value().uid)}; }
 		// What it shows the one signed in.
 		live<projects::mine> mine() { connect(); return {*store_, projects::mine::path(auth_->current_user().value().uid)}; }
+		live<projects::private_boards> private_boards(const std::string& project) { connect(); return {*store_, projects::private_boards::path(project)}; }
 		live<projects::project_page> project_page(const std::string& project) { connect(); return {*store_, projects::project_page::path(project)}; }
 		live<projects::invitations> invitations(const std::string& project) { connect(); return {*store_, projects::invitations::path(project)}; }
 		live<projects::role_page> role_page(const std::string& role) { connect(); return {*store_, projects::role_page::path(role)}; }

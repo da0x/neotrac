@@ -119,7 +119,15 @@ curl -s -X PATCH -H "Authorization: Bearer owner" -H "Content-Type: application/
 NEOTRAC_KEY=$loser "$neotrac" claim 1 >"$logs/retaken" 2>&1
 check "once a lease runs out, another takes the issue" test $? -eq 0
 winner=$loser
-"$neotrac" comment 1 -m "Found it: a nil map on save." >/dev/null 2>&1 || true
+NEOTRAC_KEY=$winner "$neotrac" status 1 working --note "reading the save path" >"$logs/status" 2>&1
+check "whoever holds an issue says how it's going" grep -q "1 is working." "$logs/status"
+curl -s -H "Authorization: Bearer owner" "http://localhost:8080/v1/projects/demo-uione/databases/(default)/documents/projects_issue/e2e-1" >"$logs/data"
+check "for its card: its status, since when, and a note" python3 -c '
+import json,sys; d=json.load(open(sys.argv[1]))["fields"]["data"]["mapValue"]["fields"]
+assert d["status"]["stringValue"] == "working" and "since" in d and d["note"]["stringValue"] == "reading the save path"' "$logs/data"
+other=$scout; [ "$winner" = "$scout" ] && other=$ranger
+NEOTRAC_KEY=$other "$neotrac" status 1 waiting >"$logs/not-held" 2>&1
+check "someone who doesn't hold it says nothing of it" test $? -eq 5
 NEOTRAC_KEY=$winner "$neotrac" move 1 closed >"$logs/refused" 2>&1
 refused=$?
 check "a move its role can't make exits 5" test $refused -eq 5
@@ -188,7 +196,7 @@ check "an issue is edited, its text from stdin, its fields kept" grep -q '"body"
 check "list issues shows them newest first" test "$(head -1 "$logs/issues" | cut -c1-6)" = "#2    "
 "$neotrac" new page --title "How to build" --body "Run make." >/dev/null
 "$neotrac" edit page how_to_build --title "Building" >/dev/null
-"$neotrac" show page how_to_build >"$logs/page"
+"$neotrac" show page building >"$logs/page"
 check "a wiki page is written and edited" grep -qx "Building" "$logs/page"
 check "keeping its text" grep -qx "Run make." "$logs/page"
 "$neotrac" new milestone --title "Beta" --due 2026-12-01 >/dev/null
