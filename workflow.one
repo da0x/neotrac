@@ -41,6 +41,11 @@ namespace projects {
 		// How it tells the people watching its board that an issue arrived: chime is
 		// heard so far, and email and text are to come.
 		notify     list of text
+		// The kinds of issue that go through it, by their labels, as a pipeline lays out
+		// each kind's own path; none, every kind.
+		kinds      list of text
+		// How wide its column is on a board shown as a whiteboard.
+		width      number
 	}
 
 	// From one stage to another, for the roles it names. A step back is a step of
@@ -255,6 +260,7 @@ namespace projects {
 			worked_by.title "Worked by"
 			status "Dot"
 			notify "Tells"
+			kinds "For"
 			update "Change"
 			delete "Remove"
 			stage::create "New stage"
@@ -264,6 +270,9 @@ namespace projects {
 			notify "When an issue arrives" {
 				hint "chime rings for everyone watching the board; email and text are to come."
 			}
+			kinds "For issues labelled" {
+				hint "On a board shown as a pipeline, the kinds of issue that go through this stage, by their labels; none, every kind."
+			}
 		}
 		form stage::delete "Remove" {
 			into "Move its issues to"
@@ -272,6 +281,9 @@ namespace projects {
 			title "Called"  worked_by "Worked by"  status "Its cards' dot"
 			notify "When an issue arrives" {
 				hint "chime rings for everyone watching the board; email and text are to come."
+			}
+			kinds "For issues labelled" {
+				hint "On a board shown as a pipeline, the kinds of issue that go through this stage, by their labels; none, every kind."
 			}
 		}
 		form board::update "Save" {

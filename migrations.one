@@ -6,6 +6,16 @@
 
 namespace projects {
 
+	// A board's styles are list, board, pipeline and whiteboard now: one shown as kanban,
+	// or as a canvas before canvases had columns, is a board.
+	once "2026-10-14 board styles" {
+		each board {
+			if style != style::list && style != style::board && style != style::pipeline && style != style::whiteboard {
+				dispatch board::update { style = style::board }
+			}
+		}
+	}
+
 	// Boards can be private now, and the project's pages list only public ones; a
 	// board made before then is public, as it always was. Stages say their cards'
 	// dot: the presets' last stages are done, and the rest haven't started.

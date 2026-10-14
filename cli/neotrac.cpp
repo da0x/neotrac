@@ -78,7 +78,7 @@ namespace {
 	// Flags that take a value, like --board main; any other is on or off.
 	const std::set<std::string> valued{"board", "project", "server", "message", "m", "note", "title", "body", "priority", "labels",
 	                                   "due", "name", "summary", "visibility", "workflow", "slug", "confirm", "run", "done", "failed",
-	                                   "milestone", "status", "notify", "from", "to", "position", "role", "worked-by", "roles"};
+	                                   "milestone", "status", "notify", "from", "to", "position", "role", "worked-by", "roles", "stage", "label", "kinds"};
 
 	asked read_arguments(int count, char** given) {
 		asked out;
@@ -280,6 +280,8 @@ namespace {
 		std::string id, title, stage_title, board_title, priority, holder;
 		double number = 0;
 		bool yours = false;
+		std::string stage = "";              // its stage's id
+		std::vector<std::string> labels = {};  // what it is, like package, which says which worker takes it
 	};
 
 	// The order issues are worked in: most urgent first, then oldest.
@@ -302,7 +304,7 @@ namespace {
 				bool yours = held && issue.held_by == s.who.id;
 				if (!all && held && !yours) continue;
 				out.push_back({issue.id, issue.title, issue.stage_title, titles.at(issue.board), projects::to_string(issue.priority),
-				               held ? issue.held_by_name : "", issue.number, yours});
+				               held ? issue.held_by_name : "", issue.number, yours, issue.stage, issue.labels});
 			}
 		}
 		std::ranges::sort(out, [](const waiting& a, const waiting& b) {
@@ -694,7 +696,7 @@ namespace {
 				std::string why = WIFEXITED(status) ? "exited " + std::to_string(WEXITSTATUS(status)) : "was stopped";
 				std::string said = tail_of(err_path, 40);
 				s.app->comment_create({.issue = id, .body = program + " " + why + (said.empty() ? "." : ":\n\n```\n" + said + "\n```")});
-				report(s, id, {{"status", "failed"}, {"since", now_said()}, {"note", program + " " + why}});
+				report(s, id, {{"status", "failed"}, {"since", now_said()}, {"note", program + " " + why}, {"at", page.stage_title}});
 				if (!failed_word.empty()) {
 					projects::issue_move sent{.id = id};
 					sent.stage = stage_named(s, page, failed_word);
@@ -722,6 +724,7 @@ namespace {
 	int work(const asked& a) {
 		auto s = sign_in(a);
 		std::string program = a.flag("run"), done_word = a.flag("done"), failed_word = a.flag("failed");
+		std::string only_stage = a.flag("stage"), only_label = lower(a.flag("label"));
 		if (program.empty() || done_word.empty()) throw stop(usage, "say what to run and where it goes when it's done, like neotrac work --run ./fix --done review");
 		auto titles = boards_worked(s);
 		bool once = a.has("once");
@@ -754,6 +757,12 @@ namespace {
 			auto q = queue_of(s, works, titles, false);
 			std::string now = queue_json(q);
 			if (now != seen) tried.clear(), seen = now;
+			// Only what's in its stage and says it's its kind, when it's told: --stage
+			// to_do --label package takes the packages just added, and no site.
+			std::erase_if(q, [&](const waiting& w) {
+				if (!only_stage.empty() && !w.stage.ends_with("-" + only_stage) && lower(w.stage_title) != lower(only_stage)) return true;
+				return !only_label.empty() && !std::ranges::contains(w.labels, only_label);
+			});
 			std::string ids;
 			for (const auto& w : q) ids += w.id + " ";
 			if (ids != parked_with) parked.clear();
@@ -1763,11 +1772,13 @@ namespace {
 	}
 
 	const char* stage_help = "Status is its cards' dot: inactive, waiting, working, done or failed. Notify is chime, or nothing; email and text are "
-	                         "to come. Worked by names the roles whose services take its issues, like agent.";
+	                         "to come. Worked by names the roles whose services take its issues, like agent. Kinds names the labels of the issues that go "
+	                         "through it, on a board shown as a pipeline; none, every kind.";
 
 	// A stage's fields as written: its status, and how it tells the board's watchers.
 	void stage_fields(const session& s, const terminal::document& d, std::optional<projects::status>& status, std::optional<std::vector<std::string>>& notify,
-	                  std::optional<std::vector<std::string>>& worked_by) {
+	                  std::optional<std::vector<std::string>>& worked_by, std::optional<std::vector<std::string>>& kinds) {
+		kinds = labels_from(d.get("Kinds"));
 		worked_by.emplace();
 		for (const auto& role : labels_from(lower(d.get("Worked by")))) worked_by->push_back(projects::role_id(s.project, role));
 		projects::status said{};
@@ -1782,13 +1793,13 @@ namespace {
 	int new_stage(const asked& a, session& s) {
 		std::string board;
 		auto page = board_page_of(a, s, board);
-		terminal::document now{{{"Title", ""}, {"Status", "inactive"}, {"Notify", ""}, {"Worked by", ""}}, ""};
+		terminal::document now{{{"Title", ""}, {"Status", "inactive"}, {"Notify", ""}, {"Worked by", ""}, {"Kinds", ""}}, ""};
 		auto d = written_by(a, now, stage_help);
 		if (d.get("Title").empty()) throw stop(usage, "a stage needs a title");
 		projects::stage_create sent;
 		sent.board = board;
 		sent.title = d.get("Title");
-		stage_fields(s, d, sent.status, sent.notify, sent.worked_by);
+		stage_fields(s, d, sent.status, sent.notify, sent.worked_by, sent.kinds);
 		// Where it goes among the others, like 2.5 between the second and third; after them unless said.
 		if (a.has("position")) {
 			char* end = nullptr;
@@ -1813,11 +1824,20 @@ namespace {
 		std::string status = projects::to_string(stage.status);
 		std::string workers;
 		for (const auto& r : stage.worked_by) workers += (workers.empty() ? "" : ", ") + r.substr(s.project.size() + 1);
-		terminal::document now{{{"Title", stage.title}, {"Status", status.empty() ? "inactive" : status}, {"Notify", notify}, {"Worked by", workers}}, ""};
+		std::string kinds;
+		for (const auto& k : stage.kinds) kinds += (kinds.empty() ? "" : ", ") + k;
+		terminal::document now{{{"Title", stage.title}, {"Status", status.empty() ? "inactive" : status}, {"Notify", notify}, {"Worked by", workers}, {"Kinds", kinds}}, ""};
 		auto d = written_by(a, now, stage_help);
 		projects::stage_update sent{.id = stage.id};
 		sent.title = d.get("Title");
-		stage_fields(s, d, sent.status, sent.notify, sent.worked_by);
+		stage_fields(s, d, sent.status, sent.notify, sent.worked_by, sent.kinds);
+		if (a.has("position")) {
+			char* end = nullptr;
+			std::string said = a.flag("position");
+			double position = std::strtod(said.c_str(), &end);
+			if (said.empty() || *end != '\0') throw stop(usage, said + " isn't a position, like 2.5");
+			sent.position = position;
+		}
 		s.app->stage_update(sent);
 		if (a.has("json")) std::printf("{\"stage\":%s}\n", json(stage.name).c_str());
 		else std::printf("Saved %s.\n", d.get("Title").c_str());
@@ -2043,6 +2063,9 @@ Working an issue
                                  runs the program on it, its attachments beside it,
                                  attaches what it writes to out/, and moves it on;
                                  a program that exits 75 isn't ready, and lets it wait
+  neotrac work ... --stage to_do --label package
+                                 only what's in that stage and labelled so, as each kind of
+                                 issue has a worker of its own
   neotrac move 42 review         where the workflow lets your role
   neotrac transfer 42 main       to another of the project's boards, with its history
   neotrac close 42 done          or wont_do, or duplicate 9, from any stage

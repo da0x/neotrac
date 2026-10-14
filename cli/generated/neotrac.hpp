@@ -417,11 +417,12 @@ namespace neotrac {
 			return false;
 		}
 
-		enum class board_style { kanban, canvas };
+		enum class board_style { kanban, canvas, pipeline };
 		inline const char* to_string(board_style c) {
 			switch (c) {
 				case board_style::kanban: return "kanban";
 				case board_style::canvas: return "canvas";
+				case board_style::pipeline: return "pipeline";
 			}
 			return "";
 		}
@@ -429,6 +430,7 @@ namespace neotrac {
 		inline bool from_string(const std::string& text, board_style& c) {
 			if (text == "kanban") return c = board_style::kanban, true;
 			if (text == "canvas") return c = board_style::canvas, true;
+			if (text == "pipeline") return c = board_style::pipeline, true;
 			return false;
 		}
 
@@ -923,6 +925,7 @@ namespace neotrac {
 			std::vector<std::string> worked_by{};
 			::neotrac::projects::status status{};
 			std::vector<std::string> notify{};
+			std::vector<std::string> kinds{};
 
 			static stage from(const ember::value& v) {
 				stage out;
@@ -939,6 +942,7 @@ namespace neotrac {
 				out.worked_by = detail::texts(v["worked_by"]);
 				out.status = detail::choice<::neotrac::projects::status>(v["status"]);
 				out.notify = detail::texts(v["notify"]);
+				out.kinds = detail::texts(v["kinds"]);
 				return out;
 			}
 		};
@@ -2513,6 +2517,7 @@ namespace neotrac {
 			std::optional<std::vector<std::string>> worked_by{};
 			std::optional<::neotrac::projects::status> status{};
 			std::optional<std::vector<std::string>> notify{};
+			std::optional<std::vector<std::string>> kinds{};
 
 			std::string json() const {
 				std::string out = "{";
@@ -2525,6 +2530,7 @@ namespace neotrac {
 				if (worked_by) add("worked_by", detail::json(*worked_by));
 				if (status) add("status", detail::json(std::string(to_string(*status))));
 				if (notify) add("notify", detail::json(*notify));
+				if (kinds) add("kinds", detail::json(*kinds));
 				return out + "}";
 			}
 		};
@@ -2540,6 +2546,7 @@ namespace neotrac {
 			std::optional<std::vector<std::string>> worked_by{};
 			std::optional<::neotrac::projects::status> status{};
 			std::optional<std::vector<std::string>> notify{};
+			std::optional<std::vector<std::string>> kinds{};
 
 			std::string json() const {
 				std::string out = "{";
@@ -2553,6 +2560,7 @@ namespace neotrac {
 				if (worked_by) add("worked_by", detail::json(*worked_by));
 				if (status) add("status", detail::json(std::string(to_string(*status))));
 				if (notify) add("notify", detail::json(*notify));
+				if (kinds) add("kinds", detail::json(*kinds));
 				return out + "}";
 			}
 		};
@@ -2568,6 +2576,7 @@ namespace neotrac {
 			std::optional<std::vector<std::string>> worked_by{};
 			std::optional<::neotrac::projects::status> status{};
 			std::optional<std::vector<std::string>> notify{};
+			std::optional<std::vector<std::string>> kinds{};
 			std::optional<std::string> into{};
 
 			std::string json() const {
@@ -2582,6 +2591,7 @@ namespace neotrac {
 				if (worked_by) add("worked_by", detail::json(*worked_by));
 				if (status) add("status", detail::json(std::string(to_string(*status))));
 				if (notify) add("notify", detail::json(*notify));
+				if (kinds) add("kinds", detail::json(*kinds));
 				if (into) add("into", detail::json(*into));
 				return out + "}";
 			}
@@ -2801,6 +2811,7 @@ namespace neotrac {
 				std::vector<std::string> worked_by_title{};
 				::neotrac::projects::status status{};
 				std::vector<std::string> notify{};
+				std::vector<std::string> kinds{};
 				static stages_row from(const ember::value& v) {
 					stages_row out;
 					out.id = detail::text(v["id"]);
@@ -2811,6 +2822,7 @@ namespace neotrac {
 					out.worked_by_title = detail::texts(v["worked_by.title"]);
 					out.status = detail::choice<::neotrac::projects::status>(v["status"]);
 					out.notify = detail::texts(v["notify"]);
+					out.kinds = detail::texts(v["kinds"]);
 					return out;
 				}
 			};
