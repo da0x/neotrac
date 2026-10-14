@@ -127,6 +127,11 @@ namespace projects {
 			author "Opened by"
 		}
 		board board_page.issues by stage over board_page.stages link /:project/:issue when board_page.style == style::board {
+			// The milestones as a timeline above it, as over the list.
+			track milestone over board_page.milestones {
+				due "Due"
+			}
+			search title labels stage.title priority
 			move issue::move along board_page.steps
 			chime when notify has chime
 			status by status
