@@ -337,6 +337,10 @@ check "a worker takes an issue, runs its program, and finishes" test $? -eq 0
 check "moving it where it goes when done" grep -q '"stage":"Verifying"' "$logs/worked.json"
 check "saying what the program wrote" grep -q "Looked at Flaky test: a race in setup." "$logs/worked"
 check "and holding it no longer" grep -q '"held_by":""' "$logs/worked.json"
+check "logging what it wrote, as it ran" grep -q '"log":\[{"by":"[^"]*","text":"Looked at Flaky test: a race in setup."' "$logs/worked.json"
+NEOTRAC_KEY=$ranger "$neotrac" log "$worked" -m "checked again: $HOME/runs is clean" >/dev/null
+"$neotrac" show issue "$worked" --json >"$logs/logged.json"
+check "neotrac log adds to it, newest first, the home folder said as ~" grep -q '"log":\[{"by":"[^"]*","text":"checked again: ~/runs is clean"' "$logs/logged.json"
 check "attaching what it made beside what it was given" grep -q '"attachments":\[{"name":"notes.txt",[^]]*{"name":"report.txt"' "$logs/worked.json"
 "$neotrac" download "$worked" "$logs/made" >/dev/null
 check "made from the attachment it was given" grep -qx "seen: fails one run in ten" "$logs/made/report.txt"

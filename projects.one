@@ -69,6 +69,7 @@ namespace projects at / {
 		link::create
 		link::delete
 		comment::create
+		entry::create
 		// Takes down a comment that shouldn't be there, like one saying what's private.
 		comment::delete
 		report::resolve
@@ -96,6 +97,7 @@ namespace projects at / {
 		link::create
 		link::delete
 		comment::create
+		entry::create
 		milestone::create
 		milestone::update
 		page::create
@@ -112,6 +114,7 @@ namespace projects at / {
 		issue::move
 		issue::attach
 		comment::create
+		entry::create
 	}
 
 	// Whoever makes a project maintains it, and it starts with a board called what the
@@ -170,6 +173,7 @@ namespace projects at / {
 	define service neotrac "neotrac" {
 		issue::delete
 		comment::delete
+		entry::delete
 		page::delete
 		report::delete
 		reply::delete

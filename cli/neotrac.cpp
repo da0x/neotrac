@@ -513,6 +513,10 @@ namespace {
 			out += (i ? "," : "") + std::string("{\"relation\":") + json(std::string(projects::to_string(page.links[i].relation))) +
 			       ",\"to\":" + json(page.links[i].to_number) + "}";
 		}
+		out += "],\"log\":[";
+		for (std::size_t i = 0; i < page.log.size(); ++i) {
+			out += (i ? "," : "") + std::string("{\"by\":") + json(page.log[i].author_name) + ",\"text\":" + json(page.log[i].text) + "}";
+		}
 		out += "],\"comments\":[";
 		for (std::size_t i = 0; i < page.comments.size(); ++i) {
 			out += (i ? "," : "") + std::string("{\"id\":") + json(page.comments[i].id) + ",\"by\":" + json(page.comments[i].author_name) + ",\"body\":" + json(page.comments[i].body) + "}";
@@ -615,6 +619,38 @@ namespace {
 		return std::format("{:%FT%TZ}", std::chrono::floor<std::chrono::seconds>(std::chrono::system_clock::now()));
 	}
 
+	// What a program has written since it was last looked at, whole lines only, from
+	// each of its outputs: kept as it runs, a few lines at a time, in its issue's log.
+	struct log_follower {
+		std::vector<std::pair<std::string, std::uintmax_t>> outputs;  // each file, and how far it's been read
+		std::string pending;
+		std::string read_more(bool all) {
+			std::string out;
+			for (auto& [path, at] : outputs) {
+				std::ifstream in(path, std::ios::binary);
+				in.seekg(static_cast<std::streamoff>(at));
+				std::string more((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+				std::size_t whole = all ? more.size() : (more.rfind('\n') == std::string::npos ? 0 : more.rfind('\n') + 1);
+				out += more.substr(0, whole);
+				at += whole;
+			}
+			return out;
+		}
+		// Sends what's new as one entry; a refusal is only told, since the log is a courtesy.
+		void send(session& s, const std::string& id, bool all) {
+			std::string text = read_more(all);
+			while (!text.empty() && (text.back() == '\n' || text.back() == ' ')) text.pop_back();
+			if (text.empty()) return;
+			// Kept short: the end of what it said, which is what's read.
+			if (text.size() > 4000) text = "…" + text.substr(text.size() - 4000);
+			try {
+				s.app->entry_create({.issue = id, .text = unhomed(text)});
+			} catch (const refused& r) {
+				std::fprintf(stderr, "neotrac: couldn't log: %s\n", r.what());
+			}
+		}
+	};
+
 	// Works one issue it holds: runs the program with the issue as JSON on its input,
 	// in a folder of its own, WORK_DIR, keeping its claim while it runs; then says
 	// what it wrote, and moves it on, or, when it fails, back or lets it go.
@@ -664,12 +700,19 @@ namespace {
 		// and since when, rather than its timer starting over at each look.
 		bool waited = page.data["status"].as_string() == "waiting";
 		if (!waited) report(s, id, {{"status", "working"}, {"since", now_said()}});
-		// Kept while it runs: renewed every five minutes, well inside any lease.
+		// Kept while it runs: renewed every five minutes, well inside any lease. What it
+		// writes goes in the issue's log every few seconds, so it's read as it grows.
 		auto renewed = std::chrono::steady_clock::now();
+		auto logged = renewed;
+		log_follower follower{{{out_path, 0}, {err_path, 0}}, ""};
 		int status = 0;
 		bool lost = false;
 		while (::waitpid(child, &status, WNOHANG) == 0) {
 			std::this_thread::sleep_for(std::chrono::milliseconds(200));
+			if (std::chrono::steady_clock::now() - logged >= std::chrono::seconds(3)) {
+				follower.send(s, id, false);
+				logged = std::chrono::steady_clock::now();
+			}
 			if (std::chrono::steady_clock::now() - renewed < std::chrono::minutes(5)) continue;
 			try {
 				s.app->issue_renew({.id = id});
@@ -681,6 +724,7 @@ namespace {
 				lost = true;
 			}
 		}
+		if (!lost) follower.send(s, id, true);
 		bool fine = !lost && WIFEXITED(status) && WEXITSTATUS(status) == 0;
 		// 75, EX_TEMPFAIL: it can't be done yet, like a deploy waiting on its packages.
 		// It's let go where it is, saying what it waits on, and taken again once the
@@ -1022,6 +1066,24 @@ namespace {
 		auto made = s.app->comment_create(sent);
 		if (a.has("json")) std::printf("{\"id\":%s}\n", json(made).c_str());
 		else std::printf("Commented on %s.\n", a.words[0].c_str());
+		return done;
+	}
+
+	// Adds to an issue's log: what's given with -m, or what comes on stdin, a line or
+	// many, said as it is, the home folder as ~.
+	int log(const asked& a) {
+		auto s = sign_in(a);
+		std::string id = issue_of(s, a);
+		std::string text = a.flag("message");
+		if (!a.has("message")) {
+			std::stringstream in;
+			in << std::cin.rdbuf();
+			text = in.str();
+		}
+		while (!text.empty() && (text.back() == '\n' || text.back() == ' ')) text.pop_back();
+		if (text.empty()) throw stop(usage, "say what to log, with -m \"...\" or on stdin");
+		s.app->entry_create({.issue = id, .text = unhomed(text)});
+		if (!a.has("json")) std::printf("Logged on %s.\n", a.words[0].c_str());
 		return done;
 	}
 
@@ -2150,6 +2212,8 @@ Writing, in your editor ($VISUAL, $EDITOR or vi)
   neotrac new stage --position 2.5   puts a stage between the second and third
   neotrac new service --title Runner --role agent   and its key, shown once
   neotrac comment 42             or -m "..." or the comment on stdin
+  neotrac log 42 -m "..."        adds to its log, or what comes on stdin; neotrac work
+                                 logs what its program writes as it runs
   neotrac attach 42 log.txt ...  uploads files and attaches them to the issue
   neotrac download 42 [folder]   saves what's attached to it
   neotrac delete project [p]     asks you to type its address
@@ -2216,6 +2280,7 @@ connection, 7 too many requests.
 		if (a.command == "close") return close(on_issue(a));
 		if (a.command == "reopen") return reopen(on_issue(a));
 		if (a.command == "comment") return comment(on_issue(a));
+		if (a.command == "log") return log(on_issue(a));
 		if (a.command == "work") return work(a);
 		if (a.command == "attach") return attach(on_issue(a));
 		if (a.command == "download") return download(on_issue(a));

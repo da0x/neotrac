@@ -639,6 +639,30 @@ namespace neotrac {
 			}
 		};
 
+		struct entry {
+			std::string id{};
+			time created_at{};
+			std::string created_by{};
+			time updated_at{};
+			std::string updated_by{};
+			std::string issue{};
+			std::string text{};
+			std::string author{};
+
+			static entry from(const ember::value& v) {
+				entry out;
+				out.id = detail::text(v["id"]);
+				out.created_at = detail::when(v["created_at"]);
+				out.created_by = detail::text(v["created_by"]);
+				out.updated_at = detail::when(v["updated_at"]);
+				out.updated_by = detail::text(v["updated_by"]);
+				out.issue = detail::text(v["issue"]);
+				out.text = detail::text(v["text"]);
+				out.author = detail::text(v["author"]);
+				return out;
+			}
+		};
+
 		struct milestone {
 			std::string id{};
 			time created_at{};
@@ -650,6 +674,7 @@ namespace neotrac {
 			std::string title{};
 			time due{};
 			std::string description{};
+			bool archived{};
 
 			static milestone from(const ember::value& v) {
 				milestone out;
@@ -663,6 +688,7 @@ namespace neotrac {
 				out.title = detail::text(v["title"]);
 				out.due = detail::when(v["due"]);
 				out.description = detail::text(v["description"]);
+				out.archived = detail::flag(v["archived"]);
 				return out;
 			}
 		};
@@ -1585,6 +1611,40 @@ namespace neotrac {
 			}
 		};
 
+		// What entry::create is sent.
+		struct entry_create {
+			std::optional<std::string> issue{};
+			std::optional<std::string> text{};
+			std::optional<std::string> author{};
+
+			std::string json() const {
+				std::string out = "{";
+				auto add = [&](const char* name, const std::string& value) { out += (out.size() > 1 ? "," : "") + detail::json(std::string(name)) + ":" + value; };
+				if (issue) add("issue", detail::json(*issue));
+				if (text) add("text", detail::json(*text));
+				if (author) add("author", detail::json(*author));
+				return out + "}";
+			}
+		};
+
+		// What entry::delete is sent.
+		struct entry_delete {
+			std::string id{};
+			std::optional<std::string> issue{};
+			std::optional<std::string> text{};
+			std::optional<std::string> author{};
+
+			std::string json() const {
+				std::string out = "{";
+				auto add = [&](const char* name, const std::string& value) { out += (out.size() > 1 ? "," : "") + detail::json(std::string(name)) + ":" + value; };
+				add("id", detail::json(id));
+				if (issue) add("issue", detail::json(*issue));
+				if (text) add("text", detail::json(*text));
+				if (author) add("author", detail::json(*author));
+				return out + "}";
+			}
+		};
+
 		// What issue::delete is sent.
 		struct issue_delete {
 			std::string id{};
@@ -1972,6 +2032,7 @@ namespace neotrac {
 			std::optional<std::string> title{};
 			std::optional<time> due{};
 			std::optional<std::string> description{};
+			std::optional<bool> archived{};
 
 			std::string json() const {
 				std::string out = "{";
@@ -1981,6 +2042,7 @@ namespace neotrac {
 				if (title) add("title", detail::json(*title));
 				if (due) add("due", detail::json(*due));
 				if (description) add("description", detail::json(*description));
+				if (archived) add("archived", detail::json(*archived));
 				return out + "}";
 			}
 		};
@@ -1993,6 +2055,7 @@ namespace neotrac {
 			std::optional<std::string> title{};
 			std::optional<time> due{};
 			std::optional<std::string> description{};
+			std::optional<bool> archived{};
 
 			std::string json() const {
 				std::string out = "{";
@@ -2003,6 +2066,55 @@ namespace neotrac {
 				if (title) add("title", detail::json(*title));
 				if (due) add("due", detail::json(*due));
 				if (description) add("description", detail::json(*description));
+				if (archived) add("archived", detail::json(*archived));
+				return out + "}";
+			}
+		};
+
+		// What milestone::archive is sent.
+		struct milestone_archive {
+			std::string id{};
+			std::optional<std::string> project{};
+			std::optional<std::string> name{};
+			std::optional<std::string> title{};
+			std::optional<time> due{};
+			std::optional<std::string> description{};
+			std::optional<bool> archived{};
+
+			std::string json() const {
+				std::string out = "{";
+				auto add = [&](const char* name, const std::string& value) { out += (out.size() > 1 ? "," : "") + detail::json(std::string(name)) + ":" + value; };
+				add("id", detail::json(id));
+				if (project) add("project", detail::json(*project));
+				if (name) add("name", detail::json(*name));
+				if (title) add("title", detail::json(*title));
+				if (due) add("due", detail::json(*due));
+				if (description) add("description", detail::json(*description));
+				if (archived) add("archived", detail::json(*archived));
+				return out + "}";
+			}
+		};
+
+		// What milestone::restore is sent.
+		struct milestone_restore {
+			std::string id{};
+			std::optional<std::string> project{};
+			std::optional<std::string> name{};
+			std::optional<std::string> title{};
+			std::optional<time> due{};
+			std::optional<std::string> description{};
+			std::optional<bool> archived{};
+
+			std::string json() const {
+				std::string out = "{";
+				auto add = [&](const char* name, const std::string& value) { out += (out.size() > 1 ? "," : "") + detail::json(std::string(name)) + ":" + value; };
+				add("id", detail::json(id));
+				if (project) add("project", detail::json(*project));
+				if (name) add("name", detail::json(*name));
+				if (title) add("title", detail::json(*title));
+				if (due) add("due", detail::json(*due));
+				if (description) add("description", detail::json(*description));
+				if (archived) add("archived", detail::json(*archived));
 				return out + "}";
 			}
 		};
@@ -2015,6 +2127,7 @@ namespace neotrac {
 			std::optional<std::string> title{};
 			std::optional<time> due{};
 			std::optional<std::string> description{};
+			std::optional<bool> archived{};
 			std::optional<std::string> typed{};
 
 			std::string json() const {
@@ -2026,6 +2139,7 @@ namespace neotrac {
 				if (title) add("title", detail::json(*title));
 				if (due) add("due", detail::json(*due));
 				if (description) add("description", detail::json(*description));
+				if (archived) add("archived", detail::json(*archived));
 				if (typed) add("typed", detail::json(*typed));
 				return out + "}";
 			}
@@ -2832,12 +2946,14 @@ namespace neotrac {
 				std::string name{};
 				std::string title{};
 				time due{};
+				time created_at{};
 				static milestones_row from(const ember::value& v) {
 					milestones_row out;
 					out.id = detail::text(v["id"]);
 					out.name = detail::text(v["name"]);
 					out.title = detail::text(v["title"]);
 					out.due = detail::when(v["due"]);
+					out.created_at = detail::when(v["created_at"]);
 					return out;
 				}
 			};
@@ -3005,6 +3121,21 @@ namespace neotrac {
 				}
 			};
 			std::vector<comments_row> comments{};
+			struct log_row {
+				std::string id{};
+				std::string text{};
+				std::string author_name{};
+				time created_at{};
+				static log_row from(const ember::value& v) {
+					log_row out;
+					out.id = detail::text(v["id"]);
+					out.text = detail::text(v["text"]);
+					out.author_name = detail::text(v["author.name"]);
+					out.created_at = detail::when(v["created_at"]);
+					return out;
+				}
+			};
+			std::vector<log_row> log{};
 			struct history_row {
 				std::string id{};
 				ember::value field{};
@@ -3060,6 +3191,9 @@ namespace neotrac {
 				}
 				if (v["comments"].is_array()) {
 					for (const auto& row : v["comments"].as_array()) out.comments.push_back(comments_row::from(row));
+				}
+				if (v["log"].is_array()) {
+					for (const auto& row : v["log"].as_array()) out.log.push_back(log_row::from(row));
 				}
 				if (v["history"].is_array()) {
 					for (const auto& row : v["history"].as_array()) out.history.push_back(history_row::from(row));
@@ -3152,6 +3286,9 @@ namespace neotrac {
 			std::string title{};
 			time due{};
 			std::string description{};
+			bool archived{};
+			ember::value total{};
+			ember::value done{};
 			struct issues_row {
 				std::string id{};
 				double number{};
@@ -3193,6 +3330,9 @@ namespace neotrac {
 				out.title = detail::text(v["title"]);
 				out.due = detail::when(v["due"]);
 				out.description = detail::text(v["description"]);
+				out.archived = detail::flag(v["archived"]);
+				out.total = v["total"];
+				out.done = v["done"];
 				if (v["issues"].is_array()) {
 					for (const auto& row : v["issues"].as_array()) out.issues.push_back(issues_row::from(row));
 				}
@@ -3504,6 +3644,21 @@ namespace neotrac {
 				}
 			};
 			std::vector<milestones_row> milestones{};
+			struct archived_milestones_row {
+				std::string id{};
+				std::string name{};
+				std::string title{};
+				time due{};
+				static archived_milestones_row from(const ember::value& v) {
+					archived_milestones_row out;
+					out.id = detail::text(v["id"]);
+					out.name = detail::text(v["name"]);
+					out.title = detail::text(v["title"]);
+					out.due = detail::when(v["due"]);
+					return out;
+				}
+			};
+			std::vector<archived_milestones_row> archived_milestones{};
 			struct pages_row {
 				std::string id{};
 				std::string name{};
@@ -3626,6 +3781,9 @@ namespace neotrac {
 				}
 				if (v["milestones"].is_array()) {
 					for (const auto& row : v["milestones"].as_array()) out.milestones.push_back(milestones_row::from(row));
+				}
+				if (v["archived_milestones"].is_array()) {
+					for (const auto& row : v["archived_milestones"].as_array()) out.archived_milestones.push_back(archived_milestones_row::from(row));
 				}
 				if (v["pages"].is_array()) {
 					for (const auto& row : v["pages"].as_array()) out.pages.push_back(pages_row::from(row));
@@ -4091,6 +4249,14 @@ namespace neotrac {
 		std::string comment_create(const projects::comment_create& sent) {
 			return detail::text(ember::parse_json(post("/api/projects/comment/create", sent.json()))["id"]);
 		}
+		// entry::create: the id of what it changed, or refused.
+		std::string entry_create(const projects::entry_create& sent) {
+			return detail::text(ember::parse_json(post("/api/projects/entry/create", sent.json()))["id"]);
+		}
+		// entry::delete: the id of what it changed, or refused.
+		std::string entry_delete(const projects::entry_delete& sent) {
+			return detail::text(ember::parse_json(post("/api/projects/entry/delete", sent.json()))["id"]);
+		}
 		// issue::delete: the id of what it changed, or refused.
 		std::string issue_delete(const projects::issue_delete& sent) {
 			return detail::text(ember::parse_json(post("/api/projects/issue/delete", sent.json()))["id"]);
@@ -4126,6 +4292,14 @@ namespace neotrac {
 		// milestone::update: the id of what it changed, or refused.
 		std::string milestone_update(const projects::milestone_update& sent) {
 			return detail::text(ember::parse_json(post("/api/projects/milestone/update", sent.json()))["id"]);
+		}
+		// milestone::archive: the id of what it changed, or refused.
+		std::string milestone_archive(const projects::milestone_archive& sent) {
+			return detail::text(ember::parse_json(post("/api/projects/milestone/archive", sent.json()))["id"]);
+		}
+		// milestone::restore: the id of what it changed, or refused.
+		std::string milestone_restore(const projects::milestone_restore& sent) {
+			return detail::text(ember::parse_json(post("/api/projects/milestone/restore", sent.json()))["id"]);
 		}
 		// milestone::delete: the id of what it changed, or refused.
 		std::string milestone_delete(const projects::milestone_delete& sent) {

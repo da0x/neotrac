@@ -203,10 +203,23 @@ namespace projects {
 
 	command comment::create
 
+	// An issue's log: what whoever works it writes as they go, a few lines at a time,
+	// read as it grows, like a program's output while an agent runs it.
+	entity entry {
+		issue   issue  required
+		text    text   required
+		author  user   = me
+	}
+	command entry::create
+	command entry::delete
+
 	// An issue goes with its comments and links, when its board or project does.
 	command issue::delete {
 		each comment where issue == id {
 			dispatch comment::delete
+		}
+		each entry where issue == id {
+			dispatch entry::delete
 		}
 		each link where from == id || to == id {
 			dispatch link::delete
@@ -230,6 +243,13 @@ namespace projects {
 			order by created_at
 			author.picture  author.name  body  created_at
 		}
+		logged = count(log)
+		// The newest of its log, newest first.
+		log = each entry in issue {
+			order by created_at descending
+			limit 200
+			text  author.name  created_at
+		}
 		history = each change in issue {
 			order by created_at
 			field  before  after  action  created_by.name  created_at
@@ -247,6 +267,15 @@ namespace projects {
 				to.number "#"
 				to.title "Issue"
 				delete "Remove"
+			}
+			section "Log" when issue_page.logged > 0 {
+				table issue_page.log {
+					hide when empty
+					page 20
+					created_at "When"
+					author.name "By"
+					text "Said"
+				}
 			}
 			timeline issue_page.history
 			thread issue_page.comments
