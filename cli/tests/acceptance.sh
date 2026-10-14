@@ -193,6 +193,8 @@ check "a stage is added that chimes" grep -q "^Added Waiting on you to Releases.
 check "and a stage renamed, with its dot" grep -q "^Saved Working." "$logs/edited"
 "$neotrac" new step --board releases --from working --to waiting_on_you >"$logs/step" 2>&1
 check "issues move into it" grep -q "^Issues move from Working to Waiting on you." "$logs/step"
+"$neotrac" new step --board releases --from waiting_on_you --to done --roles agent >/dev/null 2>&1
+check "a step for a role named" test $? -eq 0
 "$neotrac" list stages --board releases >"$logs/stages"
 check "the board's stages say themselves" grep -Eq "^  waiting_on_you +Waiting on you$" "$logs/stages"
 check "the new one between Working and Done, where it was put" test "$(awk '{print $1}' "$logs/stages" | tr '\n' ' ')" = "to_do working waiting_on_you done "

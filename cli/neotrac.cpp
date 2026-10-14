@@ -78,7 +78,7 @@ namespace {
 	// Flags that take a value, like --board main; any other is on or off.
 	const std::set<std::string> valued{"board", "project", "server", "message", "m", "note", "title", "body", "priority", "labels",
 	                                   "due", "name", "summary", "visibility", "workflow", "slug", "confirm", "run", "done", "failed",
-	                                   "milestone", "status", "notify", "from", "to", "position", "role", "worked-by"};
+	                                   "milestone", "status", "notify", "from", "to", "position", "role", "worked-by", "roles"};
 
 	asked read_arguments(int count, char** given) {
 		asked out;
@@ -1806,6 +1806,11 @@ namespace {
 		sent.from_ = stage_on(page, from).id;
 		sent.to = stage_on(page, to).id;
 		if (a.has("title")) sent.title = a.flag("title");
+		// Whose move it is: roles by name, like agent; the project's people unless said.
+		if (a.has("roles")) {
+			sent.roles.emplace();
+			for (const auto& role : labels_from(lower(a.flag("roles")))) sent.roles->push_back(projects::role_id(s.project, role));
+		}
 		s.app->step_create(sent);
 		if (a.has("json")) std::printf("{\"from\":%s,\"to\":%s}\n", json(from).c_str(), json(to).c_str());
 		else std::printf("Issues move from %s to %s.\n", stage_on(page, from).title.c_str(), stage_on(page, to).title.c_str());
@@ -1974,7 +1979,8 @@ Reading
 Writing, in your editor ($VISUAL, $EDITOR or vi)
   neotrac new project|board|stage|issue|page|milestone
   neotrac edit project|stage|issue|page|milestone [which]
-  neotrac new step --from a --to b   lets issues move from one stage to another
+  neotrac new step --from a --to b   lets issues move from one stage to another,
+                                 for --roles agent, or the project's people
   neotrac new stage --position 2.5   puts a stage between the second and third
   neotrac new service --title Runner --role agent   and its key, shown once
   neotrac comment 42             or -m "..." or the comment on stdin
