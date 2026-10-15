@@ -1,10 +1,3 @@
-neotrac is free software, licensed under the GNU Affero General Public License,
-version 3 only (AGPL-3.0-only). You may use it, study it, change it and share it.
-Whoever you share it with gets the same freedoms, and so does anyone who uses a changed
-version of neotrac over a network: they can get its source.
-
----
-
 # GNU Affero General Public License
 
 Version 3, 19 November 2007
