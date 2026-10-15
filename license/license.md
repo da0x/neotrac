@@ -7,13 +7,16 @@ Every page's footer links to the exact source this site runs, and all of it is o
 [GitHub](https://github.com/da0x/neotrac). The license is also at
 [gnu.org](https://www.gnu.org/licenses/agpl-3.0.html).
 
-## GNU Affero General Public License
+---
+
+# GNU Affero General Public License
 
 Version 3, 19 November 2007
 
-Copyright (C) 2007 Free Software Foundation, Inc. <https://fsf.org/> Everyone is permitted to copy and distribute verbatim copies of this license document, but changing it is not allowed.
+Copyright (C) 2007 Free Software Foundation, Inc. <https://fsf.org/>\
+Everyone is permitted to copy and distribute verbatim copies of this license document, but changing it is not allowed.
 
-### Preamble
+## Preamble
 
 The GNU Affero General Public License is a free, copyleft license for software and other kinds of works, specifically designed to ensure cooperation with the community in the case of network server software.
 
@@ -31,7 +34,7 @@ An older license, called the Affero General Public License and published by Affe
 
 The precise terms and conditions for copying, distribution and modification follow.
 
-### TERMS AND CONDITIONS
+## Terms and Conditions
 
 ### 0. Definitions
 
@@ -225,7 +228,7 @@ If the disclaimer of warranty and limitation of liability provided above cannot 
 
 End of terms and conditions.
 
-### How to Apply These Terms to Your New Programs
+## How to Apply These Terms to Your New Programs
 
 If you develop a new program, and you want it to be of the greatest possible use to the public, the best way to achieve this is to make it free software which everyone can redistribute and change under these terms.
 

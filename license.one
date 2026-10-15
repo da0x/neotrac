@@ -7,7 +7,7 @@
 namespace license {
 
 	screen "License" / {
-		markdown "license/*.md"
+		markdown "license/*.md" as document
 	}
 
 } // namespace license
