@@ -36,6 +36,7 @@ header {
 
 footer {
 	text "© {year} [Daher Alfawares](https://www.linkedin.com/in/daheralfawares)"
+	link /about/license "AGPL-3.0-only"
 	link build.release "uione {build.version}"
 	link build.source "{build.commit}"
 }
