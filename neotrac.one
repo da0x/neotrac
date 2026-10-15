@@ -32,6 +32,7 @@ define theme neotrac "neotrac" from harbor {
 
 header {
 	badge news.unread
+	navigation projects docs download about license
 }
 
 footer {

@@ -387,6 +387,20 @@ namespace projects at / {
 	// Every public project, and, for whoever is signed in, their own first, private
 	// ones too. It's in the top bar, beside About.
 	screen "Projects" /projects {
+		heading {
+			project::create "New project" form "Create project" {
+				slug "Address"  name  summary  visibility
+				takes_reports {
+					hint "Anyone signed in can send this project a private report, like a security"
+						"problem. Only the project's people and whoever sent it can read it."
+				}
+				workflow "Start from"
+			}
+		}
+		find "Search projects" {
+			mine "Your projects" link /:project by project
+			all "Public projects" link /:project by name slug summary
+		}
 		section "Your projects" when me != none {
 			cards mine link /:project {
 				hide when empty
