@@ -72,7 +72,7 @@ namespace projects {
 			order by position
 			number  title  labels  stage  stage.title  priority  updated_at  position
 			author  author.picture  author.name  assignees  assignees.name  assignees.picture
-			milestone  data  held_by  held_until  kind  x  y  w  h  waits_on
+			milestone  data  held_by  held_until  kind  x  y  w  h  waits_on  attachments
 		}
 		// What was closed, the last closed first, and why.
 		closed = each issue in board where closed != none {
@@ -153,6 +153,10 @@ namespace projects {
 			move issue::move along board_page.steps
 			regions by width
 			resize stage::update
+			// An image pasted or dropped on it is an issue holding it, in the board's
+			// first stage, where it landed.
+			paste issue::create into attachments
+			picture attachments
 			kind kind
 			grid 160 from 40 40
 			title
