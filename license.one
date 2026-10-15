@@ -1,0 +1,13 @@
+// Copyright 2026 Daher Alfawares
+// SPDX-License-Identifier: AGPL-3.0-only
+
+// neotrac's license, in the top bar and linked from every page's footer: what it lets
+// people do, and the GNU AGPL's full text, from license/license.md.
+
+namespace license {
+
+	screen "License" / {
+		markdown "license/*.md"
+	}
+
+} // namespace license
