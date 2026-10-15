@@ -6,6 +6,16 @@
 
 namespace projects {
 
+	// A private project's boards are private now, as they always were to read: a board
+	// said to be public in a private project was seen by its people alone anyway.
+	once "2026-10-15 private projects' boards" {
+		each board {
+			if project.visibility == visibility::private && visibility != visibility::private {
+				dispatch board::update { visibility = visibility::private }
+			}
+		}
+	}
+
 	// A stage's end status is success, where it was done.
 	once "2026-10-14 stage success" {
 		each stage {

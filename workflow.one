@@ -93,6 +93,10 @@ namespace projects {
 	// A board starts from the preset it's made with: its stages, the steps between
 	// them, and the stage its issues start in.
 	command board::create {
+		// A private project's boards are private, whatever the form said.
+		if project.visibility == visibility::private {
+			visibility = visibility::private
+		}
 		// One made on the project's page goes after the others.
 		if position == none {
 			position = 1000

@@ -33,7 +33,12 @@ namespace projects {
 		followers  list of user
 	}
 
-	command board::update
+	// A private project's boards are private: only a public project has public boards,
+	// beside private ones its people keep to themselves.
+	command board::update {
+		require visibility == visibility::private || project.visibility == visibility::public  "a private project's boards are private; make the project public first"
+	}
+
 	// A board goes with its issues, and its stages and steps, once its title is typed
 	// to say so.
 	command board::delete {
@@ -99,6 +104,7 @@ namespace projects {
 				title
 				visibility "Who sees it" {
 					hint "A private board, its issues and their history are seen by the project's people alone."
+						"In a private project, every board is private."
 				}
 				style "Show issues as" {
 					hint "List: tickets one under another. Board: in columns by stage. Pipeline: a lane for each kind of issue, by its labels, along the stages it goes through. Whiteboard: placed anywhere, in a column for each stage. Switching keeps each where it was."

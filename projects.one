@@ -131,7 +131,15 @@ namespace projects at / {
 		}
 	}
 
-	command project::update
+	// A project made private takes its boards with it. Made public again, its boards
+	// stay private until its people open each, so nothing is shown by surprise.
+	command project::update {
+		if visibility == visibility::private {
+			each board where project == id {
+				dispatch board::update { visibility = visibility::private }
+			}
+		}
+	}
 
 	// Deleting a project and everything in it: its issues, with their comments and
 	// links, its boards and their workflows, its milestones, its wiki, its reports,
@@ -487,7 +495,11 @@ namespace projects at / {
 	screen "Settings" /:project/settings {
 		section "General" {
 			form project::update "Save" {
-				name  summary  visibility
+				name  summary
+				visibility {
+					hint "Made private, its boards are private too. Made public again, they stay private until"
+						"you open each, so nothing is shown by surprise."
+				}
 				takes_reports {
 					hint "Anyone signed in can send this project a private report, like a security"
 						"problem. Only the project's people and whoever sent it can read it."
