@@ -1,0 +1,15 @@
+// Copyright 2026 Daher Alfawares
+// SPDX-License-Identifier: AGPL-3.0-only
+
+// Getting neotrac beyond the browser: the neotrac command, and the desktop and terminal
+// apps, from download/download.md. Until there are packages, each is built from its
+// source.
+
+namespace download {
+
+	screen "Download" / {
+		subtitle "neotrac runs in your browser, and on your computer too: as a desktop app, as a terminal app, and as the neotrac command, for people and for agents."
+		markdown "download/*.md"
+	}
+
+} // namespace download

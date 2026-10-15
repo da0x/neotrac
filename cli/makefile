@@ -33,6 +33,7 @@ header:
 
 install: neotrac
 	install -Dm755 neotrac $(DESTDIR)$(PREFIX)/bin/neotrac
+	install -Dm644 LICENSE $(DESTDIR)$(PREFIX)/share/licenses/neotrac/LICENSE
 
 clean:
 	rm -f neotrac
