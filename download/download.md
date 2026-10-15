@@ -1,6 +1,5 @@
-There are no ready-made packages yet, so each is built from its source, which takes a
-few minutes. These steps are for Linux, with Arch's package names; other
-distributions have the same libraries under their own names.
+These steps are for Linux, with Arch's package names; other distributions have the
+same libraries under their own names.
 
 ## The neotrac command
 
@@ -27,6 +26,27 @@ The same pages as here, the desktop app in a window of its own, and the terminal
 drawn in your terminal, as btop draws itself. Both read neotrac.org live, and sign you
 in through your browser the first time.
 
+### Download them
+
+Each release of them is a package for Linux on x86_64, unpacked into `~/.local`:
+
+```sh
+curl -fsSL https://github.com/da0x/neotrac/releases/latest/download/neotrac-desktop-linux-x86_64.tar.gz | tar -xz -C ~/.local
+curl -fsSL https://github.com/da0x/neotrac/releases/latest/download/neotrac-terminal-linux-x86_64.tar.gz | tar -xz -C ~/.local
+```
+
+That puts `neotrac-desktop` and `neotrac-terminal` in `~/.local/bin`, the desktop app
+among your system's apps with its icon, and each one's license beside it. They're
+built on Arch Linux, so they need a current distribution's libraries; on Arch:
+
+```sh
+sudo pacman -S --needed wayland vulkan-icd-loader harfbuzz freetype2 fontconfig libxkbcommon ncurses botan
+```
+
+Each package's checksum is beside it on the [release](https://github.com/da0x/neotrac/releases/latest).
+
+### Or build them
+
 They're written by the uione compiler, `one`, from neotrac's source. Install it at
 the version on the `one` line of `neotrac.one`, then the libraries the apps are drawn
 with:
@@ -37,7 +57,7 @@ sudo pacman -S --needed gcc cmake pkgconf wayland wayland-protocols vulkan-heade
   vulkan-icd-loader shaderc harfbuzz freetype2 fontconfig libxkbcommon ncurses botan
 ```
 
-Then build them from a clone of neotrac:
+Then build and install them from a clone of neotrac:
 
 ```sh
 git clone https://github.com/da0x/neotrac
@@ -46,14 +66,14 @@ one build .
 
 cmake -S build/desktop -B build/desktop/out
 cmake --build build/desktop/out
-build/desktop/out/neotrac
+cmake --install build/desktop/out --prefix ~/.local
 
 cmake -S build/terminal -B build/terminal/out
 cmake --build build/terminal/out
-build/terminal/out/neotrac
+cmake --install build/terminal/out --prefix ~/.local
 ```
 
-Each opens on the front page, or on an address: `neotrac /uione` opens uione's
+Each opens on the front page, or on an address: `neotrac-desktop /uione` opens uione's
 project. In the terminal app, Tab moves, Enter opens and q quits. [uione's page on
 its apps](https://uione.io/language/targets) says more.
 
