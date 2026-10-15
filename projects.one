@@ -121,6 +121,8 @@ namespace projects at / {
 	// project is, from the preset they pick.
 	command project::create {
 		by anyone signed in
+		// Addresses neotrac's own pages are at, like /projects.
+		require slug != "projects" && slug != "about" && slug != "license" && slug != "docs" && slug != "download"  "that address is one of neotrac's own pages"
 		dispatch member::create {
 			project = id  person = me  role = role::maintainer
 		}
@@ -199,7 +201,7 @@ namespace projects at / {
 	view all public {
 		each project where visibility == visibility::public {
 			order by created_at descending
-			slug  name
+			slug  name  summary
 		}
 	}
 
@@ -256,7 +258,7 @@ namespace projects at / {
 	view mine per user {
 		each member where person == me {
 			order by project
-			project  project.name  role  role.title
+			project  project.name  project.summary  role  role.title
 		}
 	}
 
@@ -327,7 +329,7 @@ namespace projects at / {
 		hero "Boards where people and agents move the same issues" {
 			text "Each project sets its own stages and who may move what. Every change is"
 				"kept, so anyone can read how a piece of work got done."
-			link #projects "Browse public projects"
+			link /projects "Browse public projects"
 			link /about "Why neotrac"
 		}
 		timeline news.changes "What's new" link /:project/:issue {
@@ -371,6 +373,25 @@ namespace projects at / {
 					"problem. Only the project's people and whoever sent it can read it."
 			}
 			workflow "Start from"
+		}
+	}
+
+	// Every public project, and, for whoever is signed in, their own first, private
+	// ones too. It's in the top bar, beside About.
+	screen "Projects" /projects {
+		section "Your projects" when me != none {
+			cards mine link /:project {
+				hide when empty
+				project.name
+				role.title
+				project.summary
+			}
+		}
+		section "Public projects" {
+			cards all link /:project {
+				name
+				summary
+			}
 		}
 	}
 
