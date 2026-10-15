@@ -1,0 +1,13 @@
+// Copyright 2026 Daher Alfawares
+// SPDX-License-Identifier: AGPL-3.0-only
+
+// How to use neotrac: a page for each part, from docs/. Every markdown file there is a
+// page, so docs/02-boards.md is /docs/boards, and the first is /docs.
+
+namespace docs {
+
+	screen "Docs" /:page {
+		markdown "docs/*.md"
+	}
+
+} // namespace docs
