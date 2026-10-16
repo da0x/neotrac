@@ -107,7 +107,7 @@ namespace projects {
 						"In a private project, every board is private."
 				}
 				style "Show issues as" {
-					hint "List: tickets one under another. Board: in columns by stage. Pipeline: a lane for each kind of issue, by its labels, along the stages it goes through. Whiteboard: placed anywhere, in a column for each stage. Switching keeps each where it was."
+					hint "List: tickets one under another. Board: in columns by stage. Pipeline: a lane for each kind of issue, by its labels, along the stages it goes through."
 				}
 			}
 			board::delete "Delete board" icon delete form "Delete it for good" {
@@ -134,7 +134,8 @@ namespace projects {
 			assignees
 			author "Opened by"
 		}
-		board board_page.issues by stage over board_page.stages link /:project/:issue when board_page.style == style::board {
+		// A board kept as a whiteboard opens as a board: the whiteboard is put away for now.
+		board board_page.issues by stage over board_page.stages link /:project/:issue when board_page.style == style::board || board_page.style == style::whiteboard {
 			search title labels stage.title priority
 			issue::create "New issue" icon add
 			move issue::move along board_page.steps
@@ -144,23 +145,6 @@ namespace projects {
 			tint by priority
 			title
 			number  labels  assignees
-		}
-		// The same issues placed anywhere, like ideas on a whiteboard, in a column for each
-		// stage: one let go in another column moves there, and a column's edge is dragged
-		// to make it wider. Those not placed yet start in their stage's column.
-		canvas board_page.issues by stage over board_page.stages link /:project/:issue when board_page.style == style::whiteboard {
-			place issue::place
-			move issue::move along board_page.steps
-			regions by width
-			resize stage::update
-			// An image pasted or dropped on it is an issue holding it, in the board's
-			// first stage, where it landed.
-			paste issue::create into attachments
-			picture attachments
-			kind kind
-			grid 160 from 40 40
-			title
-			number  labels
 		}
 		// A lane for each kind of issue, as its labels say, each a row of the stages its
 		// kind goes through, the one it's at marked: a release's packages, sites and apps.
