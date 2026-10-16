@@ -560,7 +560,9 @@ namespace projects at / {
 
 	// The project's people, and beside them its roles and its services.
 	screen "People" /:project/settings/people {
+		// People only: the services working beside them are on their own page.
 		table project_page.members {
+			only person.service != true
 			person "Name"
 			role.title "Role"
 			delete "Remove" when person != me
