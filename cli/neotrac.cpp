@@ -77,7 +77,7 @@ namespace {
 
 	// Flags that take a value, like --board main; any other is on or off.
 	const std::set<std::string> valued{"board", "project", "server", "message", "m", "note", "title", "body", "priority", "labels",
-	                                   "due", "name", "summary", "visibility", "workflow", "slug", "confirm", "run", "done", "failed",
+	                                   "due", "name", "summary", "visibility", "workflow", "slug", "confirm", "run", "done", "failed", "report",
 	                                   "milestone", "status", "notify", "from", "to", "position", "role", "worked-by", "roles", "stage", "label", "kinds", "into"};
 
 	asked read_arguments(int count, char** given) {
@@ -655,7 +655,36 @@ namespace {
 	// in a folder of its own, WORK_DIR, keeping its claim while it runs; then says
 	// what it wrote, and moves it on, or, when it fails, back or lets it go.
 	// Whether it waits: the program said it isn't ready yet.
-	bool work_on(session& s, const std::string& id, const std::string& program, const std::string& done_word, const std::string& failed_word) {
+	// How far a program says it's come, from the last line it wrote like
+	// "progress: 2/5 Uploading": its step, how many there are, and what it's doing.
+	struct progress_said {
+		int step = 0, steps = 0;
+		std::string doing;
+		bool operator==(const progress_said&) const = default;
+	};
+	std::optional<progress_said> progress_in(const std::vector<std::string>& paths) {
+		std::optional<progress_said> last;
+		for (const auto& path : paths) {
+			std::ifstream in(path);
+			std::string line;
+			while (std::getline(in, line)) {
+				if (!line.starts_with("progress: ")) continue;
+				progress_said p;
+				char rest[256] = {};
+				if (std::sscanf(line.c_str() + 10, "%d/%d %255[^\n]", &p.step, &p.steps, rest) < 2 || p.steps <= 0) continue;
+				p.step = std::clamp(p.step, 0, p.steps);
+				p.doing = rest;
+				last = p;
+			}
+		}
+		return last;
+	}
+
+	// Told what a worker is doing as it goes, like the card of the agent it is.
+	using on_progress = std::function<void(const std::string& issue, const std::optional<progress_said>&)>;
+
+	bool work_on(session& s, const std::string& id, const std::string& program, const std::string& done_word, const std::string& failed_word,
+	             const on_progress& told = {}) {
 		auto page = read_issue(s, id, id);
 		std::string number = "#" + std::to_string(static_cast<long long>(page.number));
 		std::string root = (env("TMPDIR").empty() ? std::string("/tmp") : env("TMPDIR")) + "/neotrac-work-XXXXXX";
@@ -699,7 +728,11 @@ namespace {
 		// A card already waiting is only looked at again, so it keeps saying it waits,
 		// and since when, rather than its timer starting over at each look.
 		bool waited = page.data["status"].as_string() == "waiting";
-		if (!waited) report(s, id, {{"status", "working"}, {"since", now_said()}});
+		std::string since = now_said();
+		if (!waited) report(s, id, {{"status", "working"}, {"since", since}});
+		std::string doing = number + " " + page.title;
+		if (told) told(doing, std::nullopt);
+		std::optional<progress_said> progress;
 		// Kept while it runs: renewed every five minutes, well inside any lease. What it
 		// writes goes in the issue's log every few seconds, so it's read as it grows.
 		auto renewed = std::chrono::steady_clock::now();
@@ -712,6 +745,14 @@ namespace {
 			if (std::chrono::steady_clock::now() - logged >= std::chrono::seconds(3)) {
 				follower.send(s, id, false);
 				logged = std::chrono::steady_clock::now();
+				// How far it's come, on its card and the agent's, when it says so.
+				if (auto now = progress_in({out_path, err_path}); now && now != progress) {
+					progress = now;
+					std::map<std::string, ember::value> data{{"status", "working"}, {"since", since}, {"step", now->step}, {"steps", now->steps}};
+					if (!now->doing.empty()) data["note"] = now->doing;
+					if (!waited) report(s, id, std::move(data));
+					if (told) told(doing, progress);
+				}
 			}
 			if (std::chrono::steady_clock::now() - renewed < std::chrono::minutes(5)) continue;
 			try {
@@ -801,6 +842,40 @@ namespace {
 		// --milestone: only its issues, as two releases worked on one board each have their own workers.
 		std::string only_milestone = a.flag("milestone").empty() ? "" : milestone_named(s, project_of(s), a.flag("milestone"));
 		bool once = a.has("once");
+		// --report 7: the card on the project's agents board that says how this worker is:
+		// held while it runs, and moved to Working, Standby, Idle, Offline or Stopped.
+		struct card_of_mine {
+			std::string id, stage = "", note = "";
+			std::optional<progress_said> progress = std::nullopt;
+			std::chrono::steady_clock::time_point renewed{};
+		};
+		std::optional<card_of_mine> mine;
+		if (a.has("report")) mine = card_of_mine{.id = projects::issue_id(s.project, issue_number(a.flag("report")))};
+		auto be = [&](const std::string& stage, const std::string& note, std::optional<progress_said> progress = std::nullopt) {
+			if (!mine || (mine->stage == stage && mine->note == note && mine->progress == progress)) return;
+			try {
+				auto page = read_issue(s, mine->id, a.flag("report"));
+				if (!(held(page) && page.held_by == s.who.id)) {
+					s.app->issue_claim({.id = mine->id});
+					mine->renewed = std::chrono::steady_clock::now();
+				}
+				std::map<std::string, ember::value> data{{"since", mine->stage == stage ? page.data["since"] : ember::value(now_said())}};
+				if (!note.empty()) data["note"] = note;
+				if (progress) data["step"] = progress->step, data["steps"] = progress->steps;
+				report(s, mine->id, std::move(data));
+				if (mine->stage != stage && lower(page.stage_title) != stage) {
+					projects::issue_move sent{.id = mine->id};
+					sent.stage = stage_named(s, page, stage);
+					s.app->issue_move(sent);
+				}
+				mine->stage = stage, mine->note = note, mine->progress = progress;
+			} catch (const std::exception& e) {
+				std::fprintf(stderr, "neotrac: couldn't move its agent's card: %s\n", e.what());
+				mine->stage = stage, mine->note = note, mine->progress = progress;  // said once, not every turn
+			}
+		};
+		std::string waits_for = "issues" + (only_label.empty() ? std::string() : " labelled " + only_label) + (only_stage.empty() ? std::string() : " in " + only_stage) +
+		                        (a.flag("milestone").empty() ? std::string() : " of " + a.flag("milestone"));
 		std::map<std::string, projects::issue_work> works;
 		std::vector<ember::database::registration> listening;
 		int failed = done;
@@ -853,7 +928,20 @@ namespace {
 				return std::ranges::none_of(q, [&](const waiting& w) { return w.id == f.first; }) || std::chrono::steady_clock::now() - f.second > std::chrono::seconds(30);
 			});
 			auto next = std::ranges::find_if(q, [&](const waiting& w) { return !tried.contains(w.id) && !parked.contains(w.id) && !finished.contains(w.id); });
-			if (next == q.end()) continue;
+			// Its card: idle with nothing to take; on standby while what it has waits.
+			if (mine && std::chrono::steady_clock::now() - mine->renewed > std::chrono::minutes(10) && !mine->stage.empty()) {
+				try {
+					s.app->issue_renew({.id = mine->id});
+				} catch (const refused&) {
+					mine->stage.clear();  // taken from it: claimed again at the next change
+				}
+				mine->renewed = std::chrono::steady_clock::now();
+			}
+			if (next == q.end()) {
+				if (q.empty()) be("idle", "waiting for " + waits_for);
+				else be("standby", "#" + std::to_string(static_cast<long long>(q.front().number)) + " " + q.front().title + " waits on others");
+				continue;
+			}
 			std::string id = next->id;
 			// Claimed even when the queue says it's held here already, since the queue
 			// can be a moment behind; refused, it's this worker's only if it really is,
@@ -884,7 +972,9 @@ namespace {
 					continue;
 				}
 			}
-			if (work_on(s, id, program, done_word, failed_word)) {
+			if (work_on(s, id, program, done_word, failed_word, [&](const std::string& doing, const std::optional<progress_said>& progress) {
+				    be("working", doing + (progress && !progress->doing.empty() ? ": " + progress->doing : ""), progress);
+			    })) {
 				parked.insert(id);
 				parked_with = ids;
 			} else {
@@ -892,6 +982,14 @@ namespace {
 			}
 			tried.insert(id);  // until the queue says it's gone, or changed
 			if (once) break;
+		}
+		// Stopped as it's asked, offline; ended by something wrong, stopped, saying what.
+		if (mine) {
+			be(failed == done ? "offline" : "stopped", failed == done ? "stopped " + now_said() : "ended: couldn't go on");
+			try {
+				s.app->issue_release({.id = mine->id});
+			} catch (const std::exception&) {
+			}
 		}
 		return failed;
 	}
