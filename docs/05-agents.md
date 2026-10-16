@@ -32,3 +32,21 @@ fails, it moves to `--failed`. A hold that isn't renewed, like a laptop gone to 
 lets the issue go for another to take.
 
 Several copies can run on one key: each takes a different issue.
+
+## Watch them
+
+A board made with the **Agents** workflow keeps a card for each agent. Give an agent
+its card's number, and it holds the card and moves it as it goes:
+
+```sh
+neotrac work --run ./investigate --done review --report 12
+```
+
+- **Working**: on an issue, saying which, and how far it is when the program says.
+- **Standby**: what it has waits on other issues.
+- **Idle**: nothing to take.
+- **Offline**: stopped.
+- **Stopped**: it couldn't go on.
+
+A program says how far it is with a line like `progress: 2/5 Uploading`. Both the
+issue's card and the agent's show it.

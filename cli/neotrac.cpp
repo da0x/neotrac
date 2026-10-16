@@ -1454,7 +1454,7 @@ namespace {
 	int new_project(const asked& a, session& s) {
 		terminal::document now{{{"Slug", ""}, {"Name", ""}, {"Visibility", "public"}, {"Workflow", "basic"}}, ""};
 		auto d = written_by(a, now,
-		                    "Slug is its address, like neotrac. Visibility is public or private. Workflow is basic, software, editorial, bugs, adr "
+		                    "Slug is its address, like neotrac. Visibility is public or private. Workflow is basic, software, editorial, bugs, adr, agents "
 		                    "or custom. The text is its summary.");
 		projects::project_create sent;
 		sent.slug = d.get("Slug");
@@ -1468,7 +1468,7 @@ namespace {
 		std::string preset = lower(d.get("Workflow"));
 		if (preset.starts_with("software")) preset = "agile";
 		projects::workflow workflow{};
-		if (!projects::from_string(preset, workflow)) throw stop(usage, "the workflow is basic, software, editorial, bugs, adr or custom");
+		if (!projects::from_string(preset, workflow)) throw stop(usage, "the workflow is basic, software, editorial, bugs, adr, agents or custom");
 		sent.workflow = workflow;
 		auto made = s.app->project_create(sent);
 		if (a.has("json")) std::printf("{\"project\":%s}\n", json(made).c_str());
@@ -1949,7 +1949,7 @@ namespace {
 		terminal::document now{{{"Title", ""}, {"Visibility", "public"}, {"Workflow", "basic"}}, ""};
 		auto d = written_by(a, now,
 		                    "Visibility is public, or private for the project's people alone. Workflow is basic, software, editorial, bugs, "
-		                    "adr or custom.");
+		                    "adr, agents or custom.");
 		if (d.get("Title").empty()) throw stop(usage, "a board needs a title");
 		projects::board_create sent;
 		sent.project = s.project;
@@ -1960,7 +1960,7 @@ namespace {
 		std::string preset = lower(d.get("Workflow"));
 		if (preset.starts_with("software")) preset = "agile";
 		projects::workflow workflow{};
-		if (!projects::from_string(preset, workflow)) throw stop(usage, "the workflow is basic, software, editorial, bugs, adr or custom");
+		if (!projects::from_string(preset, workflow)) throw stop(usage, "the workflow is basic, software, editorial, bugs, adr, agents or custom");
 		sent.workflow = workflow;
 		auto made = s.app->board_create(sent);
 		auto page = s.app->board_page(made).get();
