@@ -656,7 +656,7 @@ namespace {
 	// in a folder of its own, WORK_DIR, keeping its claim while it runs; then says
 	// what it wrote, and moves it on, or, when it fails, back or lets it go.
 	// Whether it waits: the program said it isn't ready yet.
-	// An agent saying how it is, on its project's Agents page: --agent npm-to-do, and
+	// An agent saying how it is, on its project's agents page: --agent npm-to-do, and
 	// --title for how it's shown. Its status as it changes, what it's doing and how
 	// far, at once; and every three seconds, what it and its machine are using.
 	class agent_reporter {
@@ -954,7 +954,7 @@ namespace {
 		// --milestone: only its issues, as two releases worked on one board each have their own workers.
 		std::string only_milestone = a.flag("milestone").empty() ? "" : milestone_named(s, project_of(s), a.flag("milestone"));
 		bool once = a.has("once");
-		// --agent npm-to-do: says how this worker is on its project's Agents page, as
+		// --agent npm-to-do: says how this worker is on its project's agents page, as
 		// --title says it, like "npm: To do".
 		std::optional<agent_reporter> me_agent;
 		if (a.has("agent")) {
@@ -2417,7 +2417,7 @@ Working an issue
                                  only what's in that stage and labelled so, as each kind of
                                  issue has a worker of its own; --milestone 1.0, only its issues
   neotrac work ... --agent npm-publishing [--title "npm: Publishing"]
-                                 says how it is on the project's Agents page as it goes:
+                                 says how it is on the project's agents page as it goes:
                                  working, standby, idle, offline or stopped, and what it
                                  and its machine use
   neotrac move 42 review         where the workflow lets your role

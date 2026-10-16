@@ -35,7 +35,7 @@ Several copies can run on one key: each takes a different issue.
 
 ## Watch them
 
-Each project has an **Agents** page, linked from the project's own, with a tile for
+Each project has an **agents** page, linked from the project's own, with a tile for
 each agent saying how it is now. Give an agent a name, a slug like `npm-publishing`,
 and it reports itself there as it works:
 

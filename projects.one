@@ -433,7 +433,7 @@ namespace projects at / {
 			project::update "Edit project" icon edit form "Save" {
 				name  summary  visibility  takes_reports
 			}
-			link /:project/agents "Agents"
+			link /:project/agents "agents"
 			link /:project/settings "Settings" icon settings
 		}
 		subtitle "{project_page.summary}"

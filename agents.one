@@ -69,7 +69,7 @@ namespace projects {
 		host  seen_at  stats  service  service.name  project.name
 	}
 
-	screen "Agents" /:project/agents {
+	screen "agents" /:project/agents {
 		under /:project "{agents.name}"
 		text "The programs working this project's issues, as they are now. Each reports"
 			"itself, with the neotrac command's work --agent."
@@ -85,7 +85,7 @@ namespace projects {
 	}
 
 	screen "{agent_page.title}" /:project/agents/:agent {
-		under /:project/agents "Agents"
+		under /:project/agents "agents"
 		heading {
 			agent::delete "Remove" icon delete
 		}
