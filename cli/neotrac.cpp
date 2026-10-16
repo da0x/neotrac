@@ -815,6 +815,7 @@ namespace {
 		std::signal(SIGINT, [](int) { stopping = 1; });
 		std::signal(SIGTERM, [](int) { stopping = 1; });
 		std::set<std::string> tried;  // taken by someone else as it was asked for; tried again once it changes
+		auto last_tried = std::chrono::steady_clock::now();
 		std::string seen;
 		// What waits, until an issue comes into the queue, leaves it, or moves within it,
 		// like the one it waits on moving on: its own let-go doesn't move it, so that doesn't count.
@@ -829,7 +830,13 @@ namespace {
 			if (works.size() != s.roles.size()) continue;
 			auto q = queue_of(s, works, titles, false);
 			std::string now = queue_json(q);
-			if (now != seen) tried.clear(), seen = now;
+			// What was turned down is tried again once the queue changes, and every 20
+			// seconds besides: one refused as it waited on others is taken once they're
+			// done, even when nothing it can see moves after that.
+			if (now != seen || std::chrono::steady_clock::now() - last_tried > std::chrono::seconds(20)) {
+				tried.clear(), seen = now;
+				last_tried = std::chrono::steady_clock::now();
+			}
 			// What's in the whole queue, and where: one waiting is tried again once
 			// anything moves, like what it waits on going from another stage to its end.
 			std::string ids;
