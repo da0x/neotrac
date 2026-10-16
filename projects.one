@@ -30,6 +30,7 @@ namespace projects at / {
 
 	// Runs the project and its settings.
 	define role maintainer "Maintainer" in project {
+		agent::delete
 		project::update
 		project::delete
 		member::create
@@ -108,6 +109,9 @@ namespace projects at / {
 	// works: it takes one, says what it found, and moves it on where the workflow lets
 	// it. It's given in Services, and signs in with its key.
 	define role agent "Agent" in project for services {
+		// Saying how it is, on the project's Agents page (agents.one).
+		agent::create
+		agent::update
 		issue::claim
 		issue::renew
 		issue::release
@@ -429,6 +433,7 @@ namespace projects at / {
 			project::update "Edit project" icon edit form "Save" {
 				name  summary  visibility  takes_reports
 			}
+			link /:project/agents "Agents"
 			link /:project/settings "Settings" icon settings
 		}
 		subtitle "{project_page.summary}"

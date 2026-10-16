@@ -82,6 +82,11 @@ namespace neotrac {
 				for (const auto& [name, item] : v.as_map()) out += (out.empty() ? "" : ",") + json(name) + ":" + json(item);
 				return "{" + out + "}";
 			}
+			if (v.is_array()) {
+				std::string out;
+				for (const auto& item : v.as_array()) out += (out.empty() ? "" : ",") + json(item);
+				return "[" + out + "]";
+			}
 			return "null";
 		}
 		inline std::string json(const std::vector<std::string>& list) {
@@ -293,7 +298,40 @@ namespace neotrac {
 
 	} // namespace about
 
+	namespace docs {
+
+	} // namespace docs
+
+	namespace download {
+
+	} // namespace download
+
+	namespace license {
+
+	} // namespace license
+
 	namespace projects {
+
+		enum class agent_status { working, standby, idle, offline, stopped };
+		inline const char* to_string(agent_status c) {
+			switch (c) {
+				case agent_status::working: return "working";
+				case agent_status::standby: return "standby";
+				case agent_status::idle: return "idle";
+				case agent_status::offline: return "offline";
+				case agent_status::stopped: return "stopped";
+			}
+			return "";
+		}
+		// Reads a choice by its name; one that isn't, like a choice added since, leaves it.
+		inline bool from_string(const std::string& text, agent_status& c) {
+			if (text == "working") return c = agent_status::working, true;
+			if (text == "standby") return c = agent_status::standby, true;
+			if (text == "idle") return c = agent_status::idle, true;
+			if (text == "offline") return c = agent_status::offline, true;
+			if (text == "stopped") return c = agent_status::stopped, true;
+			return false;
+		}
 
 		enum class priority { critical, high, normal, low, trivial };
 		inline const char* to_string(priority c) {
@@ -358,7 +396,7 @@ namespace neotrac {
 			return false;
 		}
 
-		enum class workflow { basic, agile, editorial, bugs, adr, custom };
+		enum class workflow { basic, agile, editorial, bugs, adr, agents, custom };
 		inline const char* to_string(workflow c) {
 			switch (c) {
 				case workflow::basic: return "basic";
@@ -366,6 +404,7 @@ namespace neotrac {
 				case workflow::editorial: return "editorial";
 				case workflow::bugs: return "bugs";
 				case workflow::adr: return "adr";
+				case workflow::agents: return "agents";
 				case workflow::custom: return "custom";
 			}
 			return "";
@@ -377,6 +416,7 @@ namespace neotrac {
 			if (text == "editorial") return c = workflow::editorial, true;
 			if (text == "bugs") return c = workflow::bugs, true;
 			if (text == "adr") return c = workflow::adr, true;
+			if (text == "agents") return c = workflow::agents, true;
 			if (text == "custom") return c = workflow::custom, true;
 			return false;
 		}
@@ -480,6 +520,49 @@ namespace neotrac {
 			if (text == "resolved") return c = report_status::resolved, true;
 			return false;
 		}
+
+		struct agent {
+			std::string id{};
+			time created_at{};
+			std::string created_by{};
+			time updated_at{};
+			std::string updated_by{};
+			std::string project{};
+			std::string name{};
+			std::string title{};
+			std::string service{};
+			::neotrac::projects::agent_status status{};
+			time since{};
+			std::string doing{};
+			double step{};
+			double steps{};
+			std::string host{};
+			time seen_at{};
+			ember::value stats{};
+
+			static agent from(const ember::value& v) {
+				agent out;
+				out.id = detail::text(v["id"]);
+				out.created_at = detail::when(v["created_at"]);
+				out.created_by = detail::text(v["created_by"]);
+				out.updated_at = detail::when(v["updated_at"]);
+				out.updated_by = detail::text(v["updated_by"]);
+				out.project = detail::text(v["project"]);
+				out.name = detail::text(v["name"]);
+				out.title = detail::text(v["title"]);
+				out.service = detail::text(v["service"]);
+				out.status = detail::choice<::neotrac::projects::agent_status>(v["status"]);
+				out.since = detail::when(v["since"]);
+				out.doing = detail::text(v["doing"]);
+				out.step = detail::number(v["step"]);
+				out.steps = detail::number(v["steps"]);
+				out.host = detail::text(v["host"]);
+				out.seen_at = detail::when(v["seen_at"]);
+				out.stats = detail::named(v["stats"]);
+				return out;
+			}
+		};
+		inline std::string agent_id(const std::string& project, const std::string& name) { return key({key_part(project), key_part(name)}); }
 
 		struct board {
 			std::string id{};
@@ -1010,6 +1093,112 @@ namespace neotrac {
 			}
 		};
 		inline std::string step_id(const std::string& board, const std::string& from_, const std::string& to) { return key({key_part(board), key_part(from_), key_part(to)}); }
+
+		// What agent::create is sent.
+		struct agent_create {
+			std::optional<std::string> project{};
+			std::optional<std::string> name{};
+			std::optional<std::string> title{};
+			std::optional<std::string> service{};
+			std::optional<::neotrac::projects::agent_status> status{};
+			std::optional<time> since{};
+			std::optional<std::string> doing{};
+			std::optional<double> step{};
+			std::optional<double> steps{};
+			std::optional<std::string> host{};
+			std::optional<time> seen_at{};
+			std::optional<ember::value> stats{};
+
+			std::string json() const {
+				std::string out = "{";
+				auto add = [&](const char* name, const std::string& value) { out += (out.size() > 1 ? "," : "") + detail::json(std::string(name)) + ":" + value; };
+				if (project) add("project", detail::json(*project));
+				if (name) add("name", detail::json(*name));
+				if (title) add("title", detail::json(*title));
+				if (service) add("service", detail::json(*service));
+				if (status) add("status", detail::json(std::string(to_string(*status))));
+				if (since) add("since", detail::json(*since));
+				if (doing) add("doing", detail::json(*doing));
+				if (step) add("step", detail::json(*step));
+				if (steps) add("steps", detail::json(*steps));
+				if (host) add("host", detail::json(*host));
+				if (seen_at) add("seen_at", detail::json(*seen_at));
+				if (stats) add("stats", detail::json(*stats));
+				return out + "}";
+			}
+		};
+
+		// What agent::update is sent.
+		struct agent_update {
+			std::string id{};
+			std::optional<std::string> project{};
+			std::optional<std::string> name{};
+			std::optional<std::string> title{};
+			std::optional<std::string> service{};
+			std::optional<::neotrac::projects::agent_status> status{};
+			std::optional<time> since{};
+			std::optional<std::string> doing{};
+			std::optional<double> step{};
+			std::optional<double> steps{};
+			std::optional<std::string> host{};
+			std::optional<time> seen_at{};
+			std::optional<ember::value> stats{};
+
+			std::string json() const {
+				std::string out = "{";
+				auto add = [&](const char* name, const std::string& value) { out += (out.size() > 1 ? "," : "") + detail::json(std::string(name)) + ":" + value; };
+				add("id", detail::json(id));
+				if (project) add("project", detail::json(*project));
+				if (name) add("name", detail::json(*name));
+				if (title) add("title", detail::json(*title));
+				if (service) add("service", detail::json(*service));
+				if (status) add("status", detail::json(std::string(to_string(*status))));
+				if (since) add("since", detail::json(*since));
+				if (doing) add("doing", detail::json(*doing));
+				if (step) add("step", detail::json(*step));
+				if (steps) add("steps", detail::json(*steps));
+				if (host) add("host", detail::json(*host));
+				if (seen_at) add("seen_at", detail::json(*seen_at));
+				if (stats) add("stats", detail::json(*stats));
+				return out + "}";
+			}
+		};
+
+		// What agent::delete is sent.
+		struct agent_delete {
+			std::string id{};
+			std::optional<std::string> project{};
+			std::optional<std::string> name{};
+			std::optional<std::string> title{};
+			std::optional<std::string> service{};
+			std::optional<::neotrac::projects::agent_status> status{};
+			std::optional<time> since{};
+			std::optional<std::string> doing{};
+			std::optional<double> step{};
+			std::optional<double> steps{};
+			std::optional<std::string> host{};
+			std::optional<time> seen_at{};
+			std::optional<ember::value> stats{};
+
+			std::string json() const {
+				std::string out = "{";
+				auto add = [&](const char* name, const std::string& value) { out += (out.size() > 1 ? "," : "") + detail::json(std::string(name)) + ":" + value; };
+				add("id", detail::json(id));
+				if (project) add("project", detail::json(*project));
+				if (name) add("name", detail::json(*name));
+				if (title) add("title", detail::json(*title));
+				if (service) add("service", detail::json(*service));
+				if (status) add("status", detail::json(std::string(to_string(*status))));
+				if (since) add("since", detail::json(*since));
+				if (doing) add("doing", detail::json(*doing));
+				if (step) add("step", detail::json(*step));
+				if (steps) add("steps", detail::json(*steps));
+				if (host) add("host", detail::json(*host));
+				if (seen_at) add("seen_at", detail::json(*seen_at));
+				if (stats) add("stats", detail::json(*stats));
+				return out + "}";
+			}
+		};
 
 		// What board::update is sent.
 		struct board_update {
@@ -2847,6 +3036,88 @@ namespace neotrac {
 			}
 		};
 
+		struct agents {
+			bool exists = false;  // whether it's been made, and may be read
+			struct agents_row {
+				std::string id{};
+				std::string title{};
+				std::string name{};
+				::neotrac::projects::agent_status status{};
+				time since{};
+				std::string doing{};
+				double step{};
+				double steps{};
+				time seen_at{};
+				ember::value stats{};
+				std::string host{};
+				static agents_row from(const ember::value& v) {
+					agents_row out;
+					out.id = detail::text(v["id"]);
+					out.title = detail::text(v["title"]);
+					out.name = detail::text(v["name"]);
+					out.status = detail::choice<::neotrac::projects::agent_status>(v["status"]);
+					out.since = detail::when(v["since"]);
+					out.doing = detail::text(v["doing"]);
+					out.step = detail::number(v["step"]);
+					out.steps = detail::number(v["steps"]);
+					out.seen_at = detail::when(v["seen_at"]);
+					out.stats = detail::named(v["stats"]);
+					out.host = detail::text(v["host"]);
+					return out;
+				}
+			};
+			std::vector<agents_row> agents{};
+
+			static struct agents from(const ember::snapshot& s) {
+				struct agents out;
+				out.exists = s.exists;
+				const ember::value& v = s.data;
+				if (v["agents"].is_array()) {
+					for (const auto& row : v["agents"].as_array()) out.agents.push_back(agents_row::from(row));
+				}
+				return out;
+			}
+			static std::string path(const std::string& of) { return "views/projects::agents:" + of; }
+		};
+
+		struct agent_page {
+			bool exists = false;  // whether it's been made, and may be read
+			std::string title{};
+			std::string name{};
+			::neotrac::projects::agent_status status{};
+			time since{};
+			std::string doing{};
+			double step{};
+			double steps{};
+			std::string host{};
+			time seen_at{};
+			ember::value stats{};
+			std::string service{};
+			std::string service_name{};
+			std::string project_name{};
+
+			static struct agent_page from(const ember::snapshot& s) {
+				struct agent_page out;
+				out.exists = s.exists;
+				const ember::value& v = s.data;
+				out.title = detail::text(v["title"]);
+				out.name = detail::text(v["name"]);
+				out.status = detail::choice<::neotrac::projects::agent_status>(v["status"]);
+				out.since = detail::when(v["since"]);
+				out.doing = detail::text(v["doing"]);
+				out.step = detail::number(v["step"]);
+				out.steps = detail::number(v["steps"]);
+				out.host = detail::text(v["host"]);
+				out.seen_at = detail::when(v["seen_at"]);
+				out.stats = detail::named(v["stats"]);
+				out.service = detail::text(v["service"]);
+				out.service_name = detail::text(v["service.name"]);
+				out.project_name = detail::text(v["project.name"]);
+				return out;
+			}
+			static std::string path(const std::string& of) { return "views/projects::agent_page:" + of; }
+		};
+
 		struct board_page {
 			bool exists = false;  // whether it's been made, and may be read
 			std::string title{};
@@ -2874,6 +3145,7 @@ namespace neotrac {
 				std::string milestone{};
 				ember::value data{};
 				std::string held_by{};
+				std::string held_by_name{};
 				time held_until{};
 				::neotrac::projects::issue_kind kind{};
 				double x{};
@@ -2881,6 +3153,7 @@ namespace neotrac {
 				double w{};
 				double h{};
 				std::vector<std::string> waits_on{};
+				std::vector<std::string> attachments{};
 				static issues_row from(const ember::value& v) {
 					issues_row out;
 					out.id = detail::text(v["id"]);
@@ -2901,6 +3174,7 @@ namespace neotrac {
 					out.milestone = detail::text(v["milestone"]);
 					out.data = detail::named(v["data"]);
 					out.held_by = detail::text(v["held_by"]);
+					out.held_by_name = detail::text(v["held_by.name"]);
 					out.held_until = detail::when(v["held_until"]);
 					out.kind = detail::choice<::neotrac::projects::issue_kind>(v["kind"]);
 					out.x = detail::number(v["x"]);
@@ -2908,6 +3182,7 @@ namespace neotrac {
 					out.w = detail::number(v["w"]);
 					out.h = detail::number(v["h"]);
 					out.waits_on = detail::texts(v["waits_on"]);
+					out.attachments = detail::texts(v["attachments"]);
 					return out;
 				}
 			};
@@ -3066,6 +3341,7 @@ namespace neotrac {
 			::neotrac::projects::resolution closed{};
 			std::string duplicate_of{};
 			double duplicate_of_number{};
+			ember::value logged{};
 			struct links_row {
 				std::string id{};
 				::neotrac::projects::relation relation{};
@@ -3183,6 +3459,7 @@ namespace neotrac {
 				out.closed = detail::choice<::neotrac::projects::resolution>(v["closed"]);
 				out.duplicate_of = detail::text(v["duplicate_of"]);
 				out.duplicate_of_number = detail::number(v["duplicate_of.number"]);
+				out.logged = v["logged"];
 				if (v["links"].is_array()) {
 					for (const auto& row : v["links"].as_array()) out.links.push_back(links_row::from(row));
 				}
@@ -3347,11 +3624,13 @@ namespace neotrac {
 				std::string id{};
 				std::string slug{};
 				std::string name{};
+				std::string summary{};
 				static rows_row from(const ember::value& v) {
 					rows_row out;
 					out.id = detail::text(v["id"]);
 					out.slug = detail::text(v["slug"]);
 					out.name = detail::text(v["name"]);
+					out.summary = detail::text(v["summary"]);
 					return out;
 				}
 			};
@@ -3495,6 +3774,7 @@ namespace neotrac {
 				std::string id{};
 				std::string project{};
 				std::string project_name{};
+				std::string project_summary{};
 				std::string role{};
 				std::string role_title{};
 				static rows_row from(const ember::value& v) {
@@ -3502,6 +3782,7 @@ namespace neotrac {
 					out.id = detail::text(v["id"]);
 					out.project = detail::text(v["project"]);
 					out.project_name = detail::text(v["project.name"]);
+					out.project_summary = detail::text(v["project.summary"]);
 					out.role = detail::text(v["role"]);
 					out.role_title = detail::text(v["role.title"]);
 					return out;
@@ -4193,6 +4474,18 @@ namespace neotrac {
 			return ember::parse_json(post(route, body));
 		}
 
+		// agent::create: the id of what it changed, or refused.
+		std::string agent_create(const projects::agent_create& sent) {
+			return detail::text(ember::parse_json(post("/api/projects/agent/create", sent.json()))["id"]);
+		}
+		// agent::update: the id of what it changed, or refused.
+		std::string agent_update(const projects::agent_update& sent) {
+			return detail::text(ember::parse_json(post("/api/projects/agent/update", sent.json()))["id"]);
+		}
+		// agent::delete: the id of what it changed, or refused.
+		std::string agent_delete(const projects::agent_delete& sent) {
+			return detail::text(ember::parse_json(post("/api/projects/agent/delete", sent.json()))["id"]);
+		}
 		// board::update: the id of what it changed, or refused.
 		std::string board_update(const projects::board_update& sent) {
 			return detail::text(ember::parse_json(post("/api/projects/board/update", sent.json()))["id"]);
@@ -4429,6 +4722,8 @@ namespace neotrac {
 		std::string board_create(const projects::board_create& sent) {
 			return detail::text(ember::parse_json(post("/api/projects/board/create", sent.json()))["id"]);
 		}
+		live<projects::agents> agents(const std::string& project) { connect(); return {*store_, projects::agents::path(project)}; }
+		live<projects::agent_page> agent_page(const std::string& agent) { connect(); return {*store_, projects::agent_page::path(agent)}; }
 		live<projects::board_page> board_page(const std::string& board) { connect(); return {*store_, projects::board_page::path(board)}; }
 		live<projects::issue_page> issue_page(const std::string& issue) { connect(); return {*store_, projects::issue_page::path(issue)}; }
 		live<projects::issue_work> issue_work(const std::string& role) { connect(); return {*store_, projects::issue_work::path(role)}; }

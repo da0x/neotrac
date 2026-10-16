@@ -15,9 +15,6 @@ progress and Done, or whatever the work needs. A new board starts from a workflo
 - **Bug & issue tracker**: reported to closed, with fixes that don't hold going back.
 - **Architecture decisions**: proposed, then accepted or rejected, and later
   deprecated or superseded.
-- **Agents**: a card for each agent, which it moves itself: Working, Standby while
-  what it has waits on others, Idle, Offline once stopped, and Stopped when it
-  couldn't go on. See [Agents](/docs/agents).
 - **Custom**: Open and Done, to make your own.
 
 ## Its workflow

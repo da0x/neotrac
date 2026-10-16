@@ -13,7 +13,6 @@ namespace projects {
 		editorial  "Editorial & content planning"
 		bugs       "Bug & issue tracker"
 		adr        "Architecture decisions (ADRs)"
-		agents     "Agents: what each agent is doing"
 		custom     "Custom: Open and Done, to make your own"
 	}
 
@@ -240,48 +239,6 @@ namespace projects {
 				from = stage::accepted  to = stage::superseded
 			}
 			start = stage::proposed
-		}
-		// A card for each agent, which it holds and moves itself as it goes: working a
-		// card, on standby while what it has waits on others, idle with nothing to take,
-		// offline once it's stopped, or stopped when it couldn't go on. A new card starts
-		// offline, and the project's people can put back one an agent left behind.
-		if workflow == workflow::agents {
-			dispatch stage::create {
-				board = id  name = "working"  title = "Working"  position = 1  status = status::working  worked_by = [role::agent]
-			}
-			dispatch stage::create {
-				board = id  name = "standby"  title = "Standby"  position = 2  status = status::waiting  worked_by = [role::agent]
-			}
-			dispatch stage::create {
-				board = id  name = "idle"  title = "Idle"  position = 3  status = status::success  worked_by = [role::agent]
-			}
-			dispatch stage::create {
-				board = id  name = "offline"  title = "Offline"  position = 4  status = status::inactive  worked_by = [role::agent]
-			}
-			dispatch stage::create {
-				board = id  name = "stopped"  title = "Stopped"  position = 5  status = status::failed  worked_by = [role::agent]
-			}
-			dispatch step::create { board = id  roles = [role::agent]  from = stage::working  to = stage::standby }
-			dispatch step::create { board = id  roles = [role::agent]  from = stage::working  to = stage::idle }
-			dispatch step::create { board = id  roles = [role::agent]  from = stage::working  to = stage::stopped }
-			dispatch step::create { board = id  roles = [role::agent]  from = stage::standby  to = stage::working }
-			dispatch step::create { board = id  roles = [role::agent]  from = stage::standby  to = stage::idle }
-			dispatch step::create { board = id  roles = [role::agent]  from = stage::standby  to = stage::stopped }
-			dispatch step::create { board = id  roles = [role::agent]  from = stage::idle  to = stage::working }
-			dispatch step::create { board = id  roles = [role::agent]  from = stage::idle  to = stage::standby }
-			dispatch step::create { board = id  roles = [role::agent]  from = stage::idle  to = stage::stopped }
-			dispatch step::create { board = id  roles = [role::agent]  from = stage::offline  to = stage::working }
-			dispatch step::create { board = id  roles = [role::agent]  from = stage::offline  to = stage::standby }
-			dispatch step::create { board = id  roles = [role::agent]  from = stage::offline  to = stage::idle }
-			dispatch step::create { board = id  roles = [role::agent]  from = stage::offline  to = stage::stopped }
-			dispatch step::create { board = id  roles = [role::agent]  from = stage::stopped  to = stage::working }
-			dispatch step::create { board = id  roles = [role::agent]  from = stage::stopped  to = stage::standby }
-			dispatch step::create { board = id  roles = [role::agent]  from = stage::stopped  to = stage::idle }
-			dispatch step::create { board = id  roles = [role::agent, role::maintainer, role::contributor]  from = stage::working  to = stage::offline }
-			dispatch step::create { board = id  roles = [role::agent, role::maintainer, role::contributor]  from = stage::standby  to = stage::offline }
-			dispatch step::create { board = id  roles = [role::agent, role::maintainer, role::contributor]  from = stage::idle  to = stage::offline }
-			dispatch step::create { board = id  roles = [role::agent, role::maintainer, role::contributor]  from = stage::stopped  to = stage::offline }
-			start = stage::offline
 		}
 		// Open and Done, each way, to rename, add to and rewire.
 		if workflow == workflow::custom {

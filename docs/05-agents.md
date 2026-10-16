@@ -35,18 +35,20 @@ Several copies can run on one key: each takes a different issue.
 
 ## Watch them
 
-A board made with the **Agents** workflow keeps a card for each agent. Give an agent
-its card's number, and it holds the card and moves it as it goes:
+Each project has an **Agents** page, linked from the project's own, with a tile for
+each agent saying how it is now. Give an agent a name, a slug like `npm-publishing`,
+and it reports itself there as it works:
 
 ```sh
-neotrac work --run ./investigate --done review --report 12
+neotrac work --run ./investigate --done review --agent investigator --title "Investigator"
 ```
 
 - **Working**: on an issue, saying which, and how far it is when the program says.
 - **Standby**: what it has waits on other issues.
 - **Idle**: nothing to take.
-- **Offline**: stopped.
+- **Offline**: stopped, or not heard from for half a minute.
 - **Stopped**: it couldn't go on.
 
-A program says how far it is with a line like `progress: 2/5 Uploading`. Both the
-issue's card and the agent's show it.
+A program says how far it is with a line like `progress: 2/5 Uploading`. Every few
+seconds the agent also reports the CPU and memory of what it runs, and its machine's
+CPU, memory, GPU, GPU memory and network, which its own page draws as charts.

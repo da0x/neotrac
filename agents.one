@@ -1,0 +1,118 @@
+// Copyright 2026 Daher Alfawares
+// SPDX-License-Identifier: AGPL-3.0-only
+
+// A project's agents: the programs working its issues, each a record of its own
+// rather than an issue, since nobody takes, moves or edits one. Each says how it is
+// as it goes: working an issue, and how far; on standby while what it has waits on
+// others; idle with nothing to take; offline once stopped; or stopped when it
+// couldn't go on. Every few seconds it also says what it's using, the CPU and memory
+// of what it runs and its machine's CPU, memory, GPU and network, which its page
+// draws as charts. One not heard from for a while shows as offline.
+
+namespace projects {
+
+	enum agent_status {
+		working  "Working"
+		standby  "Standby"
+		idle     "Idle"
+		offline  "Offline"
+		stopped  "Stopped"
+	}
+
+	entity agent {
+		project  project  required  key
+		// What it's called where it runs, like npm-to-do, and as it's shown.
+		name     slug     required  key
+		title    text     required
+		// The service it signs in as, which alone says how it is.
+		service  user     = me
+		status   agent_status  required = agent_status::offline
+		// When its status began, for how long it's been so.
+		since    date
+		// What it's doing now, like the issue it's working, and how far it is.
+		doing    text
+		step     number
+		steps    number
+		// Where it runs, and when it was last heard from.
+		host     text
+		seen_at  date
+		// Runs of numbers, newest last, a sample a second: cpu and memory for what it
+		// runs; machine_cpu, machine_memory, gpu, gpu_memory, received and sent for its
+		// machine.
+		stats    data
+	}
+
+	command agent::create {
+		require service == me  "an agent says how it is itself"
+		seen_at = now
+	}
+
+	command agent::update {
+		require service == me  "an agent says how it is itself"
+		seen_at = now
+	}
+
+	command agent::delete
+
+	view agents per project {
+		readers member
+		name
+		agents = each agent in project {
+			order by title
+			title  name  status  since  doing  step  steps  seen_at  stats  host
+		}
+	}
+
+	view agent_page per agent {
+		readers member
+		title  name  status  since  doing  step  steps
+		host  seen_at  stats  service  service.name  project.name
+	}
+
+	screen "Agents" /:project/agents {
+		under /:project "{agents.name}"
+		text "The programs working this project's issues, as they are now. Each reports"
+			"itself, with the neotrac command's work --agent."
+		monitor agents.agents link /:project/agents/:agent {
+			status status
+			since since
+			doing doing
+			progress step of steps
+			seen seen_at 30
+			chart stats.cpu "CPU" percent
+			chart stats.memory "Memory" bytes
+		}
+	}
+
+	screen "{agent_page.title}" /:project/agents/:agent {
+		under /:project/agents "Agents"
+		heading {
+			agent::delete "Remove" icon delete
+		}
+		details agent_page {
+			status "Status"
+			doing "Doing"
+			host "Machine"
+			service.name "Reports as"
+			seen_at "Last heard"
+		}
+		section "What it runs" {
+			charts agent_page {
+				stats.cpu "CPU" percent
+				stats.memory "Memory" bytes
+			}
+		}
+		section "Its machine" {
+			charts agent_page {
+				stats.machine_cpu "CPU" percent
+				stats.machine_memory "Memory" bytes
+				stats.gpu "GPU" percent
+				stats.gpu_memory "GPU memory" bytes
+				stats.received "Network in" rate
+				stats.sent "Network out" rate
+			}
+		}
+		confirm agent::delete "Remove this agent? It's made again the next time it reports."
+	}
+
+} // namespace projects

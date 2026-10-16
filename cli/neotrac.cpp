@@ -15,6 +15,7 @@
 
 #include <neotrac.hpp>
 
+#include "stats.hpp"
 #include "terminal.hpp"
 
 #include <algorithm>
@@ -77,7 +78,7 @@ namespace {
 
 	// Flags that take a value, like --board main; any other is on or off.
 	const std::set<std::string> valued{"board", "project", "server", "message", "m", "note", "title", "body", "priority", "labels",
-	                                   "due", "name", "summary", "visibility", "workflow", "slug", "confirm", "run", "done", "failed", "report",
+	                                   "due", "name", "summary", "visibility", "workflow", "slug", "confirm", "run", "done", "failed", "agent",
 	                                   "milestone", "status", "notify", "from", "to", "position", "role", "worked-by", "roles", "stage", "label", "kinds", "into"};
 
 	asked read_arguments(int count, char** given) {
@@ -655,6 +656,107 @@ namespace {
 	// in a folder of its own, WORK_DIR, keeping its claim while it runs; then says
 	// what it wrote, and moves it on, or, when it fails, back or lets it go.
 	// Whether it waits: the program said it isn't ready yet.
+	// An agent saying how it is, on its project's Agents page: --agent npm-to-do, and
+	// --title for how it's shown. Its status as it changes, what it's doing and how
+	// far, at once; and every three seconds, what it and its machine are using.
+	class agent_reporter {
+	public:
+		agent_reporter(session& s, std::string name, std::string title) : s_(s), name_(std::move(name)), title_(std::move(title)) {
+			id_ = projects::agent_id(s.project, name_);
+			char host[256] = {};
+			::gethostname(host, sizeof host - 1);
+			host_ = host;
+		}
+
+		// Its status, what it's doing and how far; sent at once when any changes.
+		void say(projects::agent_status status, const std::string& doing, std::optional<std::pair<int, int>> progress = std::nullopt) {
+			bool moved = !said_ || status != status_;
+			if (!moved && doing == doing_ && progress == progress_) return;
+			if (moved) since_ = std::chrono::system_clock::now();
+			status_ = status, doing_ = doing, progress_ = progress, said_ = true;
+			send(moved);
+		}
+
+		// What it runs now, whose process tree it reports, or none between runs.
+		void running(int pid) { sampler_.watch(pid); }
+
+		// Samples each second, and sends the last two minutes every three.
+		void tick() {
+			sampler_.tick();
+			if (said_ && std::chrono::steady_clock::now() - sent_ >= std::chrono::seconds(3)) send(false);
+		}
+
+	private:
+		void send(bool moved) {
+			sent_ = std::chrono::steady_clock::now();
+			std::map<std::string, ember::value> runs;
+			for (const auto& [name, values] : sampler_.runs()) {
+				std::vector<ember::value> numbers;
+				for (double v : values) numbers.emplace_back(v);
+				runs[name] = ember::value(std::move(numbers));
+			}
+			auto fill = [&](auto& sent) {
+				sent.status = status_;
+				sent.doing = doing_;
+				sent.step = progress_ ? progress_->first : 0;
+				sent.steps = progress_ ? progress_->second : 0;
+				sent.host = host_;
+				sent.stats = ember::value(runs);
+				if (moved || !made_) sent.since = std::chrono::time_point_cast<neotrac::time::duration>(since_);
+			};
+			try {
+				if (made_) {
+					projects::agent_update sent{.id = id_};
+					fill(sent);
+					s_.app->agent_update(sent);
+					return;
+				}
+			} catch (const refused& r) {
+				if (code_of(r.status) != not_found) {
+					complain(r.what());
+					return;
+				}
+			} catch (const std::exception& e) {
+				complain(e.what());
+				return;
+			}
+			// The first time, or once it was removed: made, then kept up to date.
+			try {
+				try {
+					projects::agent_update sent{.id = id_};
+					fill(sent);
+					s_.app->agent_update(sent);
+				} catch (const refused& r) {
+					if (code_of(r.status) != not_found) throw;
+					projects::agent_create sent;
+					sent.project = s_.project, sent.name = name_, sent.title = title_;
+					fill(sent);
+					s_.app->agent_create(sent);
+				}
+				made_ = true;
+			} catch (const std::exception& e) {
+				complain(e.what());
+			}
+		}
+
+		void complain(const std::string& why) {
+			if (why == complained_) return;  // said once, not every few seconds
+			complained_ = why;
+			std::fprintf(stderr, "neotrac: couldn't say how its agent is: %s\n", why.c_str());
+		}
+
+		session& s_;
+		std::string name_, title_, id_, host_;
+		bool said_ = false, made_ = false;
+		projects::agent_status status_{};
+		std::string doing_;
+		std::optional<std::pair<int, int>> progress_;
+		std::chrono::system_clock::time_point since_{};
+		std::chrono::steady_clock::time_point sent_{};
+		std::string complained_;
+		stats::sampler sampler_;
+	};
+
 	// How far a program says it's come, from the last line it wrote like
 	// "progress: 2/5 Uploading": its step, how many there are, and what it's doing.
 	struct progress_said {
@@ -684,7 +786,7 @@ namespace {
 	using on_progress = std::function<void(const std::string& issue, const std::optional<progress_said>&)>;
 
 	bool work_on(session& s, const std::string& id, const std::string& program, const std::string& done_word, const std::string& failed_word,
-	             const on_progress& told = {}) {
+	             const on_progress& told = {}, agent_reporter* agent = nullptr) {
 		auto page = read_issue(s, id, id);
 		std::string number = "#" + std::to_string(static_cast<long long>(page.number));
 		std::string root = (env("TMPDIR").empty() ? std::string("/tmp") : env("TMPDIR")) + "/neotrac-work-XXXXXX";
@@ -725,6 +827,7 @@ namespace {
 		(void)!::write(input[1], given.data(), given.size());
 		::close(input[1]);
 		std::fprintf(stderr, "%s %s: working\n", number.c_str(), page.title.c_str());
+		if (agent) agent->running(child);
 		// A card already waiting is only looked at again, so it keeps saying it waits,
 		// and since when, rather than its timer starting over at each look.
 		bool waited = page.data["status"].as_string() == "waiting";
@@ -742,6 +845,7 @@ namespace {
 		bool lost = false;
 		while (::waitpid(child, &status, WNOHANG) == 0) {
 			std::this_thread::sleep_for(std::chrono::milliseconds(200));
+			if (agent) agent->tick();
 			if (std::chrono::steady_clock::now() - logged >= std::chrono::seconds(3)) {
 				follower.send(s, id, false);
 				logged = std::chrono::steady_clock::now();
@@ -765,6 +869,7 @@ namespace {
 				lost = true;
 			}
 		}
+		if (agent) agent->running(0);
 		if (!lost) follower.send(s, id, true);
 		bool fine = !lost && WIFEXITED(status) && WEXITSTATUS(status) == 0;
 		// 75, EX_TEMPFAIL: it can't be done yet, like a deploy waiting on its packages.
@@ -834,6 +939,13 @@ namespace {
 	// Works the issues in stages a role of yours works, one at a time, as they come:
 	// takes one, runs the program on it, and moves it on. --once stops after one.
 	int work(const asked& a) {
+		// An agent's name is its address, a slug: lowercase letters, digits and dashes.
+		if (a.has("agent")) {
+			std::string name = a.flag("agent");
+			bool slug = !name.empty() && name.front() != '-' && name.back() != '-' &&
+			            std::ranges::all_of(name, [](char c) { return (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '-'; });
+			if (!slug) throw stop(usage, "an agent's name is lowercase letters, digits and dashes, like npm-publishing, and " + name + " isn't");
+		}
 		auto s = sign_in(a);
 		std::string program = a.flag("run"), done_word = a.flag("done"), failed_word = a.flag("failed");
 		std::string only_stage = a.flag("stage"), only_label = lower(a.flag("label"));
@@ -842,37 +954,16 @@ namespace {
 		// --milestone: only its issues, as two releases worked on one board each have their own workers.
 		std::string only_milestone = a.flag("milestone").empty() ? "" : milestone_named(s, project_of(s), a.flag("milestone"));
 		bool once = a.has("once");
-		// --report 7: the card on the project's agents board that says how this worker is:
-		// held while it runs, and moved to Working, Standby, Idle, Offline or Stopped.
-		struct card_of_mine {
-			std::string id, stage = "", note = "";
-			std::optional<progress_said> progress = std::nullopt;
-			std::chrono::steady_clock::time_point renewed{};
-		};
-		std::optional<card_of_mine> mine;
-		if (a.has("report")) mine = card_of_mine{.id = projects::issue_id(s.project, issue_number(a.flag("report")))};
-		auto be = [&](const std::string& stage, const std::string& note, std::optional<progress_said> progress = std::nullopt) {
-			if (!mine || (mine->stage == stage && mine->note == note && mine->progress == progress)) return;
-			try {
-				auto page = read_issue(s, mine->id, a.flag("report"));
-				if (!(held(page) && page.held_by == s.who.id)) {
-					s.app->issue_claim({.id = mine->id});
-					mine->renewed = std::chrono::steady_clock::now();
-				}
-				std::map<std::string, ember::value> data{{"since", mine->stage == stage ? page.data["since"] : ember::value(now_said())}};
-				if (!note.empty()) data["note"] = note;
-				if (progress) data["step"] = progress->step, data["steps"] = progress->steps;
-				report(s, mine->id, std::move(data));
-				if (mine->stage != stage && lower(page.stage_title) != stage) {
-					projects::issue_move sent{.id = mine->id};
-					sent.stage = stage_named(s, page, stage);
-					s.app->issue_move(sent);
-				}
-				mine->stage = stage, mine->note = note, mine->progress = progress;
-			} catch (const std::exception& e) {
-				std::fprintf(stderr, "neotrac: couldn't move its agent's card: %s\n", e.what());
-				mine->stage = stage, mine->note = note, mine->progress = progress;  // said once, not every turn
-			}
+		// --agent npm-to-do: says how this worker is on its project's Agents page, as
+		// --title says it, like "npm: To do".
+		std::optional<agent_reporter> me_agent;
+		if (a.has("agent")) {
+			std::string name = a.flag("agent");
+			me_agent.emplace(s, name, a.flag("title").empty() ? name : a.flag("title"));
+		}
+		auto be = [&](projects::agent_status status, const std::string& doing, std::optional<progress_said> progress = std::nullopt) {
+			if (!me_agent) return;
+			me_agent->say(status, doing, progress ? std::optional<std::pair<int, int>>({progress->step, progress->steps}) : std::nullopt);
 		};
 		std::string waits_for = "issues" + (only_label.empty() ? std::string() : " labelled " + only_label) + (only_stage.empty() ? std::string() : " in " + only_stage) +
 		                        (a.flag("milestone").empty() ? std::string() : " of " + a.flag("milestone"));
@@ -928,18 +1019,11 @@ namespace {
 				return std::ranges::none_of(q, [&](const waiting& w) { return w.id == f.first; }) || std::chrono::steady_clock::now() - f.second > std::chrono::seconds(30);
 			});
 			auto next = std::ranges::find_if(q, [&](const waiting& w) { return !tried.contains(w.id) && !parked.contains(w.id) && !finished.contains(w.id); });
-			// Its card: idle with nothing to take; on standby while what it has waits.
-			if (mine && std::chrono::steady_clock::now() - mine->renewed > std::chrono::minutes(10) && !mine->stage.empty()) {
-				try {
-					s.app->issue_renew({.id = mine->id});
-				} catch (const refused&) {
-					mine->stage.clear();  // taken from it: claimed again at the next change
-				}
-				mine->renewed = std::chrono::steady_clock::now();
-			}
+			// Its agent: idle with nothing to take; on standby while what it has waits.
+			if (me_agent) me_agent->tick();
 			if (next == q.end()) {
-				if (q.empty()) be("idle", "waiting for " + waits_for);
-				else be("standby", "#" + std::to_string(static_cast<long long>(q.front().number)) + " " + q.front().title + " waits on others");
+				if (q.empty()) be(projects::agent_status::idle, "waiting for " + waits_for);
+				else be(projects::agent_status::standby, "#" + std::to_string(static_cast<long long>(q.front().number)) + " " + q.front().title + " waits on others");
 				continue;
 			}
 			std::string id = next->id;
@@ -973,8 +1057,8 @@ namespace {
 				}
 			}
 			if (work_on(s, id, program, done_word, failed_word, [&](const std::string& doing, const std::optional<progress_said>& progress) {
-				    be("working", doing + (progress && !progress->doing.empty() ? ": " + progress->doing : ""), progress);
-			    })) {
+				    be(projects::agent_status::working, doing + (progress && !progress->doing.empty() ? ": " + progress->doing : ""), progress);
+			    }, me_agent ? &*me_agent : nullptr)) {
 				parked.insert(id);
 				parked_with = ids;
 			} else {
@@ -983,14 +1067,8 @@ namespace {
 			tried.insert(id);  // until the queue says it's gone, or changed
 			if (once) break;
 		}
-		// Stopped as it's asked, offline; ended by something wrong, stopped, saying what.
-		if (mine) {
-			be(failed == done ? "offline" : "stopped", failed == done ? "stopped " + now_said() : "ended: couldn't go on");
-			try {
-				s.app->issue_release({.id = mine->id});
-			} catch (const std::exception&) {
-			}
-		}
+		// Stopped as it's asked, offline; ended by something wrong, stopped, saying so.
+		be(failed == done ? projects::agent_status::offline : projects::agent_status::stopped, failed == done ? "" : "ended: couldn't go on");
 		return failed;
 	}
 
@@ -1454,7 +1532,7 @@ namespace {
 	int new_project(const asked& a, session& s) {
 		terminal::document now{{{"Slug", ""}, {"Name", ""}, {"Visibility", "public"}, {"Workflow", "basic"}}, ""};
 		auto d = written_by(a, now,
-		                    "Slug is its address, like neotrac. Visibility is public or private. Workflow is basic, software, editorial, bugs, adr, agents "
+		                    "Slug is its address, like neotrac. Visibility is public or private. Workflow is basic, software, editorial, bugs, adr "
 		                    "or custom. The text is its summary.");
 		projects::project_create sent;
 		sent.slug = d.get("Slug");
@@ -1468,7 +1546,7 @@ namespace {
 		std::string preset = lower(d.get("Workflow"));
 		if (preset.starts_with("software")) preset = "agile";
 		projects::workflow workflow{};
-		if (!projects::from_string(preset, workflow)) throw stop(usage, "the workflow is basic, software, editorial, bugs, adr, agents or custom");
+		if (!projects::from_string(preset, workflow)) throw stop(usage, "the workflow is basic, software, editorial, bugs, adr or custom");
 		sent.workflow = workflow;
 		auto made = s.app->project_create(sent);
 		if (a.has("json")) std::printf("{\"project\":%s}\n", json(made).c_str());
@@ -1949,7 +2027,7 @@ namespace {
 		terminal::document now{{{"Title", ""}, {"Visibility", "public"}, {"Workflow", "basic"}}, ""};
 		auto d = written_by(a, now,
 		                    "Visibility is public, or private for the project's people alone. Workflow is basic, software, editorial, bugs, "
-		                    "adr, agents or custom.");
+		                    "adr or custom.");
 		if (d.get("Title").empty()) throw stop(usage, "a board needs a title");
 		projects::board_create sent;
 		sent.project = s.project;
@@ -1960,7 +2038,7 @@ namespace {
 		std::string preset = lower(d.get("Workflow"));
 		if (preset.starts_with("software")) preset = "agile";
 		projects::workflow workflow{};
-		if (!projects::from_string(preset, workflow)) throw stop(usage, "the workflow is basic, software, editorial, bugs, adr, agents or custom");
+		if (!projects::from_string(preset, workflow)) throw stop(usage, "the workflow is basic, software, editorial, bugs, adr or custom");
 		sent.workflow = workflow;
 		auto made = s.app->board_create(sent);
 		auto page = s.app->board_page(made).get();
@@ -2338,6 +2416,10 @@ Working an issue
   neotrac work ... --stage to_do --label package
                                  only what's in that stage and labelled so, as each kind of
                                  issue has a worker of its own; --milestone 1.0, only its issues
+  neotrac work ... --agent npm-publishing [--title "npm: Publishing"]
+                                 says how it is on the project's Agents page as it goes:
+                                 working, standby, idle, offline or stopped, and what it
+                                 and its machine use
   neotrac move 42 review         where the workflow lets your role
   neotrac transfer 42 main       to another of the project's boards, with its history
   neotrac close 42 done          or wont_do, or duplicate 9, from any stage
