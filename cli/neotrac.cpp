@@ -1837,6 +1837,28 @@ namespace {
 		return done;
 	}
 
+	// The project's agents, as its agents page shows them: each by its name, how it is,
+	// and the service it reports as.
+	int list_agents(const asked& a, session& s) {
+		auto page = s.app->agents(s.project).get();
+		if (a.has("json")) {
+			std::string out = "[";
+			for (std::size_t i = 0; i < page.agents.size(); ++i) {
+				const auto& g = page.agents[i];
+				out += (i ? "," : "") + std::string("{\"name\":") + json(g.name) + ",\"title\":" + json(g.title) + ",\"status\":" + json(std::string(to_string(g.status))) +
+				       ",\"service\":" + json(g.service_name) + "}";
+			}
+			std::puts((out + "]").c_str());
+			return done;
+		}
+		if (page.agents.empty()) std::puts("No agents yet.");
+		for (const auto& g : page.agents) {
+			std::printf("  %s %s %s %s\n", padded(g.name, 16).c_str(), padded(g.title, 16).c_str(), padded(std::string(to_string(g.status)), 10).c_str(),
+			            g.service_name.empty() ? "" : ("as " + g.service_name).c_str());
+		}
+		return done;
+	}
+
 	int list_people(const asked& a, session& s) {
 		auto page = project_of(s);
 		if (a.has("json")) {
@@ -2344,7 +2366,7 @@ namespace {
 
 	int list(const asked& a) {
 		std::string noun = a.words.empty() ? "" : noun_of(a.words[0]);
-		if (noun.empty()) throw stop(usage, "say what to list: projects, boards, issues, pages, milestones, stages or people");
+		if (noun.empty()) throw stop(usage, "say what to list: projects, boards, issues, pages, milestones, stages, people or agents");
 		auto s = sign_in(a, noun != "project");
 		if (noun == "project") return list_projects(a, s);
 		if (noun == "board") return list_boards(a, s);
@@ -2352,6 +2374,7 @@ namespace {
 		if (noun == "page") return list_pages(a, s);
 		if (noun == "milestone") return list_milestones(a, s);
 		if (noun == "stage") return list_stages(a, s);
+		if (noun == "agent") return list_agents(a, s);
 		return list_people(a, s);
 	}
 
@@ -2520,7 +2543,7 @@ What you work in, kept until you change it
   neotrac unselect project|board
 
 Reading
-  neotrac list projects|boards|issues|pages|milestones|stages|people
+  neotrac list projects|boards|issues|pages|milestones|stages|people|agents
   neotrac show project|board|issue|page|milestone [which]
   neotrac show 42 [--history] [--watch]
   neotrac queue [--all] [--watch]  the issues in stages your roles work

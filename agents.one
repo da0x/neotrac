@@ -59,7 +59,7 @@ namespace projects {
 		name
 		agents = each agent in project {
 			order by title
-			title  name  status  since  doing  step  steps  seen_at  stats  host
+			title  name  status  since  doing  step  steps  seen_at  stats  host  service  service.name
 		}
 	}
 

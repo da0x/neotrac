@@ -396,7 +396,7 @@ namespace neotrac {
 			return false;
 		}
 
-		enum class workflow { basic, agile, editorial, bugs, adr, agents, custom };
+		enum class workflow { basic, agile, editorial, bugs, adr, custom };
 		inline const char* to_string(workflow c) {
 			switch (c) {
 				case workflow::basic: return "basic";
@@ -404,7 +404,6 @@ namespace neotrac {
 				case workflow::editorial: return "editorial";
 				case workflow::bugs: return "bugs";
 				case workflow::adr: return "adr";
-				case workflow::agents: return "agents";
 				case workflow::custom: return "custom";
 			}
 			return "";
@@ -416,7 +415,6 @@ namespace neotrac {
 			if (text == "editorial") return c = workflow::editorial, true;
 			if (text == "bugs") return c = workflow::bugs, true;
 			if (text == "adr") return c = workflow::adr, true;
-			if (text == "agents") return c = workflow::agents, true;
 			if (text == "custom") return c = workflow::custom, true;
 			return false;
 		}
@@ -3038,6 +3036,7 @@ namespace neotrac {
 
 		struct agents {
 			bool exists = false;  // whether it's been made, and may be read
+			std::string name{};
 			struct agents_row {
 				std::string id{};
 				std::string title{};
@@ -3050,6 +3049,8 @@ namespace neotrac {
 				time seen_at{};
 				ember::value stats{};
 				std::string host{};
+				std::string service{};
+				std::string service_name{};
 				static agents_row from(const ember::value& v) {
 					agents_row out;
 					out.id = detail::text(v["id"]);
@@ -3063,6 +3064,8 @@ namespace neotrac {
 					out.seen_at = detail::when(v["seen_at"]);
 					out.stats = detail::named(v["stats"]);
 					out.host = detail::text(v["host"]);
+					out.service = detail::text(v["service"]);
+					out.service_name = detail::text(v["service.name"]);
 					return out;
 				}
 			};
@@ -3072,6 +3075,7 @@ namespace neotrac {
 				struct agents out;
 				out.exists = s.exists;
 				const ember::value& v = s.data;
+				out.name = detail::text(v["name"]);
 				if (v["agents"].is_array()) {
 					for (const auto& row : v["agents"].as_array()) out.agents.push_back(agents_row::from(row));
 				}
@@ -3825,6 +3829,7 @@ namespace neotrac {
 				std::string stage{};
 				std::string stage_title{};
 				double stage_position{};
+				::neotrac::projects::status stage_status{};
 				std::string held_by{};
 				time held_until{};
 				ember::value data{};
@@ -3835,6 +3840,7 @@ namespace neotrac {
 					out.stage = detail::text(v["stage"]);
 					out.stage_title = detail::text(v["stage.title"]);
 					out.stage_position = detail::number(v["stage.position"]);
+					out.stage_status = detail::choice<::neotrac::projects::status>(v["stage.status"]);
 					out.held_by = detail::text(v["held_by"]);
 					out.held_until = detail::when(v["held_until"]);
 					out.data = detail::named(v["data"]);
@@ -3889,6 +3895,7 @@ namespace neotrac {
 				std::string stage{};
 				std::string stage_title{};
 				double stage_position{};
+				::neotrac::projects::status stage_status{};
 				std::string held_by{};
 				time held_until{};
 				ember::value data{};
@@ -3903,6 +3910,7 @@ namespace neotrac {
 					out.stage = detail::text(v["stage"]);
 					out.stage_title = detail::text(v["stage.title"]);
 					out.stage_position = detail::number(v["stage.position"]);
+					out.stage_status = detail::choice<::neotrac::projects::status>(v["stage.status"]);
 					out.held_by = detail::text(v["held_by"]);
 					out.held_until = detail::when(v["held_until"]);
 					out.data = detail::named(v["data"]);
