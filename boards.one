@@ -72,7 +72,7 @@ namespace projects {
 			order by position
 			number  title  labels  stage  stage.title  priority  updated_at  position
 			author  author.picture  author.name  assignees  assignees.name  assignees.picture
-			milestone  data  held_by  held_until  kind  x  y  w  h  waits_on  attachments
+			milestone  data  held_by  held_by.name  held_until  kind  x  y  w  h  waits_on  attachments
 		}
 		// What was closed, the last closed first, and why.
 		closed = each issue in board where closed != none {
