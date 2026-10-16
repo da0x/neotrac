@@ -49,6 +49,20 @@ neotrac work --run ./investigate --done review --agent investigator --title "Inv
 - **Offline**: stopped, or not heard from for half a minute.
 - **Stopped**: it couldn't go on.
 
+An agent that works several stages works them all at once, a line each in a rules
+file: the label of what it takes, the stage, what it runs, where it goes when it's
+done, and where when it fails. Its row says Working while any stage works, and what
+each is working on:
+
+```sh
+neotrac work --rules publisher.rules --agent publisher --title "Publisher"
+```
+
+```
+packages|to_do|./take|publishing_to_npm|failed
+packages|publishing_to_npm|./publish|waiting_for_npm|failed
+```
+
 A program says how far it is with a line like `progress: 2/5 Uploading`. Every few
 seconds the agent also reports the CPU and memory of what it runs, and its machine's
 CPU, memory, GPU, GPU memory and network, which its own page draws as charts.

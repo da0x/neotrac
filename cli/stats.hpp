@@ -190,8 +190,10 @@ namespace stats {
 	public:
 		static constexpr std::size_t kept = 120;
 
-		// The process whose tree is what it runs now, or none between runs.
-		void watch(int pid) { watched_ = pid; }
+		// The processes whose trees are what it runs now: each program a stage of its
+		// runs, added as it starts and taken away as it ends.
+		void watch(int pid) { watched_.insert(pid); }
+		void unwatch(int pid) { watched_.erase(pid); }
 
 		// Samples when a second has passed since the last; whether it did.
 		bool tick() {
@@ -203,19 +205,16 @@ namespace stats {
 			auto [received, sent] = detail::network_bytes();
 			auto tree = detail::processes();
 			std::uint64_t mine_ticks = 0, mine_pages = 0;
-			if (watched_ > 0) {
-				// Its descendants: each process whose parents lead back to it.
-				std::set<int> under{watched_};
-				bool grew = true;
-				while (grew) {
-					grew = false;
-					for (const auto& [pid, p] : tree) {
-						if (!under.contains(pid) && under.contains(p.parent)) under.insert(pid), grew = true;
-					}
+			// Its descendants: each process whose parents lead back to one it watches.
+			std::set<int> under(watched_.begin(), watched_.end());
+			for (bool grew = !under.empty(); grew;) {
+				grew = false;
+				for (const auto& [pid, p] : tree) {
+					if (!under.contains(pid) && under.contains(p.parent)) under.insert(pid), grew = true;
 				}
-				for (int pid : under) {
-					if (auto found = tree.find(pid); found != tree.end()) mine_ticks += found->second.ticks, mine_pages += found->second.pages;
-				}
+			}
+			for (int pid : under) {
+				if (auto found = tree.find(pid); found != tree.end()) mine_ticks += found->second.ticks, mine_pages += found->second.pages;
 			}
 			if (sampled_ && all > all_) {
 				double span = static_cast<double>(all - all_);
@@ -225,7 +224,7 @@ namespace stats {
 				for (const auto& [pid, t] : ticks_) {
 					if (tree.contains(pid)) mine_was += t;
 				}
-				push("cpu", watched_ > 0 ? std::min(100.0, 100.0 * static_cast<double>(mine_ticks > mine_was ? mine_ticks - mine_was : 0) / span) : 0.0);
+				push("cpu", !watched_.empty() ? std::min(100.0, 100.0 * static_cast<double>(mine_ticks > mine_was ? mine_ticks - mine_was : 0) / span) : 0.0);
 				if (seconds > 0) {
 					push("received", static_cast<double>(received - received_) / seconds);
 					push("sent", static_cast<double>(sent - sent_) / seconds);
@@ -238,19 +237,10 @@ namespace stats {
 			if (!gpu) gpu = detail::kernel_gpu();
 			if (gpu) push("gpu", gpu->first), push("gpu_memory", gpu->second);
 			busy_ = busy, all_ = all, received_ = received, sent_ = sent, sampled_ = true;
+			// Only its trees' are kept: what's counted next is how much they grew.
 			ticks_.clear();
-			if (watched_ > 0) {
-				for (const auto& [pid, p] : tree) ticks_[pid] = p.ticks;
-				// Only its tree's are kept: what's counted next is how much they grew.
-				std::set<int> under{watched_};
-				bool grew = true;
-				while (grew) {
-					grew = false;
-					for (const auto& [pid, p] : tree) {
-						if (!under.contains(pid) && under.contains(p.parent)) under.insert(pid), grew = true;
-					}
-				}
-				std::erase_if(ticks_, [&](const auto& t) { return !under.contains(t.first); });
+			for (int pid : under) {
+				if (auto found = tree.find(pid); found != tree.end()) ticks_[pid] = found->second.ticks;
 			}
 			return true;
 		}
@@ -272,7 +262,7 @@ namespace stats {
 			while (run.size() > kept) run.pop_front();
 		}
 
-		int watched_ = 0;
+		std::set<int> watched_;
 		bool sampled_ = false;
 		std::chrono::steady_clock::time_point last_{};
 		std::uint64_t busy_ = 0, all_ = 0, received_ = 0, sent_ = 0;

@@ -30,6 +30,7 @@
 #include <fstream>
 #include <iostream>
 #include <map>
+#include <mutex>
 #include <set>
 #include <sstream>
 #include <string>
@@ -78,7 +79,7 @@ namespace {
 
 	// Flags that take a value, like --board main; any other is on or off.
 	const std::set<std::string> valued{"board", "project", "server", "message", "m", "note", "title", "body", "priority", "labels",
-	                                   "due", "name", "summary", "visibility", "workflow", "slug", "confirm", "run", "done", "failed", "agent",
+	                                   "due", "name", "summary", "visibility", "workflow", "slug", "confirm", "run", "done", "failed", "agent", "rules",
 	                                   "milestone", "status", "notify", "from", "to", "position", "role", "worked-by", "roles", "stage", "label", "kinds", "into"};
 
 	asked read_arguments(int count, char** given) {
@@ -668,25 +669,82 @@ namespace {
 			host_ = host;
 		}
 
-		// Its status, what it's doing and how far; sent at once when any changes.
-		void say(projects::agent_status status, const std::string& doing, std::optional<std::pair<int, int>> progress = std::nullopt) {
-			bool moved = !said_ || status != status_;
-			if (!moved && doing == doing_ && progress == progress_) return;
+		// How one of its stages is, by the stage's name: what it's doing and how far.
+		// It's said as a whole at once when that changes it: working while any stage
+		// works, on standby while any waits, else idle; doing what each is working on.
+		void say(const std::string& part, projects::agent_status status, const std::string& doing, std::optional<std::pair<int, int>> progress = std::nullopt) {
+			std::lock_guard hold(lock_);
+			auto& now = parts_[part];
+			if (now.said && now.status == status && now.doing == doing && now.progress == progress) return;
+			now = {true, status, doing, progress};
+			auto [all_status, all_doing, all_progress] = whole();
+			bool moved = !said_ || all_status != status_;
+			if (!moved && all_doing == doing_ && all_progress == progress_) return;
 			if (moved) since_ = std::chrono::system_clock::now();
-			status_ = status, doing_ = doing, progress_ = progress, said_ = true;
+			status_ = all_status, doing_ = all_doing, progress_ = all_progress, said_ = true;
 			send(moved);
 		}
 
-		// What it runs now, whose process tree it reports, or none between runs.
-		void running(int pid) { sampler_.watch(pid); }
+		// Stopped: offline as it's asked, or stopped when it couldn't go on.
+		void end(bool failed) {
+			std::lock_guard hold(lock_);
+			status_ = failed ? projects::agent_status::stopped : projects::agent_status::offline;
+			doing_ = failed ? "ended: couldn't go on" : "";
+			progress_ = std::nullopt;
+			since_ = std::chrono::system_clock::now();
+			said_ = true;
+			send(true);
+		}
+
+		// A program one of its stages runs, whose process tree it reports while it runs.
+		void running(int pid) {
+			std::lock_guard hold(lock_);
+			sampler_.watch(pid);
+		}
+		void finished(int pid) {
+			std::lock_guard hold(lock_);
+			sampler_.unwatch(pid);
+		}
 
 		// Samples each second, and sends the last two minutes every three.
 		void tick() {
+			std::lock_guard hold(lock_);
 			sampler_.tick();
 			if (said_ && std::chrono::steady_clock::now() - sent_ >= std::chrono::seconds(3)) send(false);
 		}
 
 	private:
+		struct part {
+			bool said = false;
+			projects::agent_status status{};
+			std::string doing;
+			std::optional<std::pair<int, int>> progress;
+		};
+
+		// The whole of its stages: working while any works, on standby while any
+		// waits, else idle; what each working one does, joined; and how far, while one
+		// alone says.
+		std::tuple<projects::agent_status, std::string, std::optional<std::pair<int, int>>> whole() const {
+			auto any = [&](projects::agent_status wanted) {
+				return std::ranges::any_of(parts_, [&](const auto& p) { return p.second.status == wanted; });
+			};
+			projects::agent_status status = any(projects::agent_status::working) ? projects::agent_status::working
+			                              : any(projects::agent_status::standby) ? projects::agent_status::standby
+			                                                                     : projects::agent_status::idle;
+			std::string doing;
+			std::optional<std::pair<int, int>> progress;
+			int working = 0;
+			for (const auto& [_, p] : parts_) {
+				if (p.status != status) continue;
+				if (status == projects::agent_status::idle) continue;
+				if (!p.doing.empty() && doing.find(p.doing) == std::string::npos) doing += (doing.empty() ? "" : " · ") + p.doing;
+				if (status == projects::agent_status::working) ++working, progress = p.progress;
+			}
+			if (working > 1) progress = std::nullopt;
+			if (status == projects::agent_status::idle) doing = "waiting for issues";
+			return {status, doing, progress};
+		}
+
 		void send(bool moved) {
 			sent_ = std::chrono::steady_clock::now();
 			std::map<std::string, ember::value> runs;
@@ -745,8 +803,10 @@ namespace {
 			std::fprintf(stderr, "neotrac: couldn't say how its agent is: %s\n", why.c_str());
 		}
 
+		std::mutex lock_;
 		session& s_;
 		std::string name_, title_, id_, host_;
+		std::map<std::string, part> parts_;
 		bool said_ = false, made_ = false;
 		projects::agent_status status_{};
 		std::string doing_;
@@ -808,13 +868,23 @@ namespace {
 		posix_spawn_file_actions_addclose(&files, input[1]);
 		posix_spawn_file_actions_addopen(&files, STDOUT_FILENO, out_path.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0600);
 		posix_spawn_file_actions_addopen(&files, STDERR_FILENO, err_path.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0600);
-		::setenv("WORK_DIR", folder.c_str(), 1);
-		::setenv("NEOTRAC_ISSUE", std::to_string(static_cast<long long>(page.number)).c_str(), 1);
+		// Its own environment, with its folder and issue: several stages of one agent
+		// start programs at once, each in a thread, so the process's own isn't changed.
+		std::vector<std::string> given_env;
+		for (char** e = environ; *e; ++e) {
+			std::string_view v(*e);
+			if (!v.starts_with("WORK_DIR=") && !v.starts_with("NEOTRAC_ISSUE=")) given_env.emplace_back(v);
+		}
+		given_env.push_back("WORK_DIR=" + folder);
+		given_env.push_back("NEOTRAC_ISSUE=" + std::to_string(static_cast<long long>(page.number)));
+		std::vector<char*> envp;
+		for (auto& v : given_env) envp.push_back(v.data());
+		envp.push_back(nullptr);
 		std::string script = program;
 		char sh[] = "/bin/sh", c[] = "-c";
 		char* argv[] = {sh, c, script.data(), nullptr};
 		pid_t child;
-		int started = ::posix_spawn(&child, "/bin/sh", &files, nullptr, argv, environ);
+		int started = ::posix_spawn(&child, "/bin/sh", &files, nullptr, argv, envp.data());
 		posix_spawn_file_actions_destroy(&files);
 		::close(input[0]);
 		if (started != 0) {
@@ -869,7 +939,7 @@ namespace {
 				lost = true;
 			}
 		}
-		if (agent) agent->running(0);
+		if (agent) agent->finished(child);
 		if (!lost) follower.send(s, id, true);
 		bool fine = !lost && WIFEXITED(status) && WEXITSTATUS(status) == 0;
 		// 75, EX_TEMPFAIL: it can't be done yet, like a deploy waiting on its packages.
@@ -938,32 +1008,25 @@ namespace {
 
 	// Works the issues in stages a role of yours works, one at a time, as they come:
 	// takes one, runs the program on it, and moves it on. --once stops after one.
-	int work(const asked& a) {
-		// An agent's name is its address, a slug: lowercase letters, digits and dashes.
-		if (a.has("agent")) {
-			std::string name = a.flag("agent");
-			bool slug = !name.empty() && name.front() != '-' && name.back() != '-' &&
-			            std::ranges::all_of(name, [](char c) { return (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '-'; });
-			if (!slug) throw stop(usage, "an agent's name is lowercase letters, digits and dashes, like npm-publishing, and " + name + " isn't");
-		}
+	// One stage an agent works: the label of what it takes, the stage, what it runs,
+	// and where it goes when it's done or fails.
+	struct work_rule {
+		std::string label, stage, run, done, failed;
+	};
+
+	int work_stage(const asked& a, const work_rule& rule, agent_reporter* me_agent) {
 		auto s = sign_in(a);
-		std::string program = a.flag("run"), done_word = a.flag("done"), failed_word = a.flag("failed");
-		std::string only_stage = a.flag("stage"), only_label = lower(a.flag("label"));
-		if (program.empty() || done_word.empty()) throw stop(usage, "say what to run and where it goes when it's done, like neotrac work --run ./fix --done review");
+		std::string program = rule.run, done_word = rule.done, failed_word = rule.failed;
+		std::string only_stage = rule.stage, only_label = lower(rule.label);
 		auto titles = boards_worked(s);
 		// --milestone: only its issues, as two releases worked on one board each have their own workers.
 		std::string only_milestone = a.flag("milestone").empty() ? "" : milestone_named(s, project_of(s), a.flag("milestone"));
 		bool once = a.has("once");
-		// --agent npm-to-do: says how this worker is on its project's agents page, as
-		// --title says it, like "npm: To do".
-		std::optional<agent_reporter> me_agent;
-		if (a.has("agent")) {
-			std::string name = a.flag("agent");
-			me_agent.emplace(s, name, a.flag("title").empty() ? name : a.flag("title"));
-		}
+		// How this stage is, on its agent's row, by the stage it works.
+		std::string part = rule.label + "|" + rule.stage;
 		auto be = [&](projects::agent_status status, const std::string& doing, std::optional<progress_said> progress = std::nullopt) {
 			if (!me_agent) return;
-			me_agent->say(status, doing, progress ? std::optional<std::pair<int, int>>({progress->step, progress->steps}) : std::nullopt);
+			me_agent->say(part, status, doing, progress ? std::optional<std::pair<int, int>>({progress->step, progress->steps}) : std::nullopt);
 		};
 		std::string waits_for = "issues" + (only_label.empty() ? std::string() : " labelled " + only_label) + (only_stage.empty() ? std::string() : " in " + only_stage) +
 		                        (a.flag("milestone").empty() ? std::string() : " of " + a.flag("milestone"));
@@ -978,8 +1041,6 @@ namespace {
 				                                                     stopping = 1;
 			                                                     }));
 		}
-		std::signal(SIGINT, [](int) { stopping = 1; });
-		std::signal(SIGTERM, [](int) { stopping = 1; });
 		std::set<std::string> tried;  // taken by someone else as it was asked for; tried again once it changes
 		auto last_tried = std::chrono::steady_clock::now();
 		std::string seen;
@@ -1058,7 +1119,7 @@ namespace {
 			}
 			if (work_on(s, id, program, done_word, failed_word, [&](const std::string& doing, const std::optional<progress_said>& progress) {
 				    be(projects::agent_status::working, doing + (progress && !progress->doing.empty() ? ": " + progress->doing : ""), progress);
-			    }, me_agent ? &*me_agent : nullptr)) {
+			    }, me_agent)) {
 				parked.insert(id);
 				parked_with = ids;
 			} else {
@@ -1067,8 +1128,75 @@ namespace {
 			tried.insert(id);  // until the queue says it's gone, or changed
 			if (once) break;
 		}
-		// Stopped as it's asked, offline; ended by something wrong, stopped, saying so.
-		be(failed == done ? projects::agent_status::offline : projects::agent_status::stopped, failed == done ? "" : "ended: couldn't go on");
+		return failed;
+	}
+
+	// Works the issues in stages a role of yours works, one at a time, as they come.
+	// --rules gives several stages, a line each, like
+	// "packages|to_do|./take|waiting_for_npm|failed": the label, the stage, what to run,
+	// where it goes when it's done, and where when it fails. Each is worked at once, in
+	// a thread of its own, and --agent says how they are, together, as one agent.
+	int work(const asked& a) {
+		// An agent's name is its address, a slug: lowercase letters, digits and dashes.
+		if (a.has("agent")) {
+			std::string name = a.flag("agent");
+			bool slug = !name.empty() && name.front() != '-' && name.back() != '-' &&
+			            std::ranges::all_of(name, [](char c) { return (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '-'; });
+			if (!slug) throw stop(usage, "an agent's name is lowercase letters, digits and dashes, like publisher, and " + name + " isn't");
+		}
+		std::vector<work_rule> rules;
+		if (a.has("rules")) {
+			std::ifstream in(a.flag("rules"));
+			if (!in) throw stop(usage, "there's no rules file " + a.flag("rules"));
+			for (std::string line; std::getline(in, line);) {
+				if (line.empty() || line.starts_with("#")) continue;
+				std::vector<std::string> said;
+				std::stringstream parts(line);
+				for (std::string piece; std::getline(parts, piece, '|');) said.push_back(terminal::trimmed(piece));
+				if (said.size() < 4 || said[2].empty() || said[3].empty()) throw stop(usage, "a rule is label|stage|what it runs|where it goes when done|where when it fails, and " + line + " isn't");
+				rules.push_back({said[0], said[1], said[2], said[3], said.size() > 4 ? said[4] : ""});
+			}
+			if (rules.empty()) throw stop(usage, a.flag("rules") + " has no rules");
+		} else {
+			if (a.flag("run").empty() || a.flag("done").empty()) throw stop(usage, "say what to run and where it goes when it's done, like neotrac work --run ./fix --done review");
+			rules.push_back({a.flag("label"), a.flag("stage"), a.flag("run"), a.flag("done"), a.flag("failed")});
+		}
+		std::signal(SIGINT, [](int) { stopping = 1; });
+		std::signal(SIGTERM, [](int) { stopping = 1; });
+		// --agent publisher: says how it is on its project's agents page, as --title says
+		// it, through a session of its own, which its stages' threads share.
+		std::optional<session> reporting;
+		std::optional<agent_reporter> me_agent;
+		if (a.has("agent")) {
+			reporting.emplace(sign_in(a));
+			me_agent.emplace(*reporting, a.flag("agent"), a.flag("title").empty() ? a.flag("agent") : a.flag("title"));
+		}
+		agent_reporter* agent = me_agent ? &*me_agent : nullptr;
+		if (rules.size() == 1) {
+			int failed = work_stage(a, rules.front(), agent);
+			if (agent) agent->end(failed != done);
+			return failed;
+		}
+		std::vector<int> ended(rules.size(), done);
+		std::vector<std::thread> threads;
+		for (std::size_t i = 0; i < rules.size(); ++i) {
+			threads.emplace_back([&, i] {
+				try {
+					ended[i] = work_stage(a, rules[i], agent);
+				} catch (const stop& e) {
+					std::fprintf(stderr, "neotrac: %s\n", e.what());
+					ended[i] = e.code;
+				} catch (const std::exception& e) {
+					std::fprintf(stderr, "neotrac: %s\n", e.what());
+					ended[i] = other;
+				}
+				stopping = 1;  // one stage ending ends them all, as the agent does
+			});
+		}
+		for (auto& t : threads) t.join();
+		int failed = done;
+		for (int e : ended) failed = std::max(failed, e);
+		if (agent) agent->end(failed != done);
 		return failed;
 	}
 
@@ -1358,7 +1486,7 @@ namespace {
 		    {"project", "project"}, {"projects", "project"}, {"board", "board"}, {"boards", "board"}, {"issue", "issue"},
 		    {"issues", "issue"}, {"page", "page"}, {"pages", "page"}, {"wiki", "page"}, {"milestone", "milestone"},
 		    {"milestones", "milestone"}, {"stage", "stage"}, {"stages", "stage"}, {"step", "step"}, {"steps", "step"}, {"service", "service"}, {"services", "service"}, {"people", "person"}, {"person", "person"},
-		    {"members", "person"}, {"comment", "comment"}, {"comments", "comment"}};
+		    {"members", "person"}, {"comment", "comment"}, {"comments", "comment"}, {"agent", "agent"}, {"agents", "agent"}};
 		auto it = nouns.find(lower(word));
 		return it == nouns.end() ? "" : it->second;
 	}
@@ -2294,7 +2422,17 @@ namespace {
 			if (!a.has("json")) std::printf("Deleted the comment.\n");
 			return 0;
 		}
-		if (noun != "project") throw stop(usage, "a project, a board, a milestone or a comment is deleted; an issue goes with its board or project");
+		// An agent by its name, which it says again how it is the next time it reports.
+		if (noun == "agent") {
+			if (a.words.size() < 2) throw stop(usage, "say which agent, by its name, like neotrac delete agent publisher");
+			auto s = sign_in(a);
+			for (std::size_t i = 1; i < a.words.size(); ++i) {
+				s.app->agent_delete({.id = projects::agent_id(s.project, a.words[i])});
+				if (!a.has("json")) std::printf("Removed the agent %s.\n", a.words[i].c_str());
+			}
+			return 0;
+		}
+		if (noun != "project") throw stop(usage, "a project, a board, a milestone, a comment or an agent is deleted; an issue goes with its board or project");
 		auto s = sign_in(a, false);
 		if (s.who.service) throw stop(said_no, "a service doesn't delete projects");
 		return delete_project(a, s);
@@ -2403,6 +2541,7 @@ Writing, in your editor ($VISUAL, $EDITOR or vi)
   neotrac delete board|milestone b   asks you to type its title
   neotrac delete stage done --into published   its issues moved into another
   neotrac delete comment c       by its id, from neotrac show 42 --json
+  neotrac delete agent publisher  takes it off the agents page, till it reports again
 
 Working an issue
   neotrac claim 42, neotrac release 42
