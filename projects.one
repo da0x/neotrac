@@ -284,7 +284,7 @@ namespace projects at / {
 		}
 		// Their open issues, counted on their cards by stage.
 		issues = each issue in project where closed == none && board.visibility == visibility::private {
-			board  stage  stage.title  stage.position
+			board  stage  stage.title  stage.position  stage.status
 		}
 	}
 
@@ -296,7 +296,7 @@ namespace projects at / {
 		}
 		// What's open, counted by board and stage, and by milestone on the roadmap.
 		issues = each issue in project where closed == none && board.visibility == visibility::public {
-			number  title  labels  board  milestone  stage  stage.title  stage.position
+			number  title  labels  board  milestone  stage  stage.title  stage.position  stage.status
 		}
 		// Its milestones at work, and those archived once they're finished.
 		milestones = each milestone in project where archived != true {
