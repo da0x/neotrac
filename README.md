@@ -111,3 +111,9 @@ neotrac.org is deployed from the uione studio, at [uione.io](https://uione.io), 
 builds what's pushed here in neotrac's own Google Cloud project.
 
 See `AGENTS.md` for how the code is written here.
+
+## Support
+
+neotrac is made with uione, and both are supported through
+[uione's Open Collective](https://opencollective.com/uione), where every donation and
+every expense is public.
