@@ -659,7 +659,10 @@ namespace {
 	// Whether it waits: the program said it isn't ready yet.
 	// An agent saying how it is, on its project's agents page: --agent npm-to-do, and
 	// --title for how it's shown. Its status as it changes, what it's doing and how
-	// far, at once; and every three seconds, what it and its machine are using.
+	// far, at once; and every fifteen seconds, what it and its machine are using, each
+	// second of the last two minutes. Each report rebuilds the pages showing it, so
+	// they come no more often than that, well inside the half minute after which the
+	// agents page says it hasn't been heard from.
 	class agent_reporter {
 	public:
 		agent_reporter(session& s, std::string name, std::string title) : s_(s), name_(std::move(name)), title_(std::move(title)) {
@@ -706,11 +709,11 @@ namespace {
 			sampler_.unwatch(pid);
 		}
 
-		// Samples each second, and sends the last two minutes every three.
+		// Samples each second, and sends the last two minutes every fifteen.
 		void tick() {
 			std::lock_guard hold(lock_);
 			sampler_.tick();
-			if (said_ && std::chrono::steady_clock::now() - sent_ >= std::chrono::seconds(3)) send(false);
+			if (said_ && std::chrono::steady_clock::now() - sent_ >= std::chrono::seconds(15)) send(false);
 		}
 
 	private:

@@ -63,6 +63,8 @@ packages|to_do|./take|publishing_to_npm|failed
 packages|publishing_to_npm|./publish|waiting_for_npm|failed
 ```
 
-A program says how far it is with a line like `progress: 2/5 Uploading`. Every few
-seconds the agent also reports the CPU and memory of what it runs, and its machine's
-CPU, memory, GPU, GPU memory and network, which its own page draws as charts.
+A program says how far it is with a line like `progress: 2/5 Uploading`, which the
+agent reports at once, as it does a change of status. Every 15 seconds it also
+reports the CPU and memory of what it runs, and its machine's CPU, memory, GPU, GPU
+memory and network, each second of the last two minutes, which its own page draws as
+charts.
