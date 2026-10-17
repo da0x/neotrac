@@ -1,0 +1,126 @@
+// Copyright 2026 Daher Alfawares
+// SPDX-License-Identifier: AGPL-3.0-only
+
+// Organizations, above projects: a team, a company, or one person's own. Its owners
+// maintain each of its projects, which the language gives them as each project joins
+// and takes away as it leaves. Its people are asked in by email, as a project's are.
+
+namespace organizations at / {
+
+	entity organization {
+		readers member
+		slug  text  required  unique  key  "Address"
+		name  text  required
+	}
+
+	// Runs the organization: its name, its people, and each of its projects, as
+	// their maintainer.
+	define role owner "Owner" in organization {
+		organization::update
+		member::create
+		member::delete
+		invitation::create
+		invitation::delete
+		holds projects::maintainer in each projects::project
+	}
+
+	command organization::create {
+		by anyone signed in
+		// Addresses neotrac's own pages are at, like /orgs.
+		require slug != "projects" && slug != "about" && slug != "license" && slug != "docs" && slug != "download" && slug != "orgs"  "that address is one of neotrac's own pages"
+		dispatch member::create {
+			organization = id  person = me  role = role::owner
+		}
+	}
+
+	command organization::update
+
+	command member::create
+	command member::delete {
+		require person != me  "you can't remove yourself from an organization"
+	}
+
+	// Someone asked to join by email, who joins once they sign in with it.
+	entity invitation invites member {
+		organization  organization  required  key
+		email         email         required  key
+		role          role          required
+	}
+
+	command invitation::create
+	command invitation::delete
+
+	view organization_page per organization {
+		slug  name
+		projects = each projects::project where organization == organization.id {
+			order by name
+			slug  name  summary  visibility
+		}
+		people = each member in organization {
+			order by role
+			person  person.name  person.picture  role.title
+		}
+	}
+
+	view organization_invitations per organization {
+		invited = each invitation in organization {
+			order by created_at
+			email  role.title
+		}
+	}
+
+	// The organizations a person is in, and what they are there.
+	view my_organizations per user {
+		each member where person == me {
+			order by organization
+			organization  organization.name  organization.slug  role.title
+		}
+	}
+
+	screen "Organizations" /orgs {
+		text "An organization holds projects, and whoever owns it maintains each of them."
+		table my_organizations link /orgs/:organization {
+			hide when empty
+			organization.name "Organization"
+			role.title "You are"
+		}
+		organization::create "New organization" icon add form "Create organization" {
+			slug  name
+		}
+	}
+
+	screen "{organization_page.name}" /orgs/:organization {
+		under /orgs "Organizations"
+		heading {
+			organization::update "Edit organization" icon edit form "Save" {
+				name
+			}
+		}
+		section "Projects" {
+			table organization_page.projects link /:project {
+				hide when empty
+				name "Project"
+				summary "About"
+			}
+			text "A project joins in its settings, by saying its organization."
+		}
+		section "People" {
+			table organization_page.people {
+				person "Name"
+				role.title "Role"
+				delete "Remove" when person != me
+			}
+			confirm member::delete "Take this role away from them?"
+			invitation::create "Add someone" form "Invite" {
+				email "Email"  role
+			}
+			table organization_invitations.invited {
+				hide when empty
+				email "Invited"
+				role.title "Role"
+				delete "Withdraw"
+			}
+		}
+	}
+
+} // namespace organizations

@@ -20,6 +20,8 @@ namespace projects at / {
 		// issues started before projects had boards, which its first board took.
 		workflow       workflow = workflow::basic
 		start          stage
+		// The organization it's in, whose owners maintain it (organizations.one).
+		organization   organizations::organization
 	}
 
 	// Each project has its own roles, which it changes, or adds to, in its settings,
@@ -126,7 +128,7 @@ namespace projects at / {
 	command project::create {
 		by anyone signed in
 		// Addresses neotrac's own pages are at, like /projects.
-		require slug != "projects" && slug != "about" && slug != "license" && slug != "docs" && slug != "download"  "that address is one of neotrac's own pages"
+		require slug != "projects" && slug != "about" && slug != "license" && slug != "docs" && slug != "download" && slug != "orgs"  "that address is one of neotrac's own pages"
 		dispatch member::create {
 			project = id  person = me  role = role::maintainer
 		}
@@ -289,7 +291,7 @@ namespace projects at / {
 	}
 
 	view project_page per project {
-		name  summary  visibility  takes_reports
+		name  summary  visibility  takes_reports  organization  organization.name
 		boards = each board in project where visibility == visibility::public {
 			order by position
 			name  title  visibility
@@ -400,6 +402,7 @@ namespace projects at / {
 				}
 				workflow "Start from"
 			}
+			link /orgs "Organizations"
 		}
 		find "Search projects" {
 			mine "Your projects" link /:project by project
@@ -522,6 +525,10 @@ namespace projects at / {
 				takes_reports {
 					hint "Anyone signed in can send this project a private report, like a security"
 						"problem. Only the project's people and whoever sent it can read it."
+				}
+				organization "Organization" {
+					hint "Its address, like acme, from your organizations. Its owners maintain the project;"
+						"only an owner brings a project in."
 				}
 			}
 		}
