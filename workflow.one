@@ -275,7 +275,7 @@ namespace projects {
 			notify "When an issue arrives" {
 				hint "chime rings for everyone watching the board; email and text are to come."
 			}
-			kinds "For issues labelled" {
+			kinds "For issues labeled" {
 				hint "On a board shown as a pipeline, the kinds of issue that go through this stage, by their labels; none, every kind."
 			}
 		}
@@ -287,7 +287,7 @@ namespace projects {
 			notify "When an issue arrives" {
 				hint "chime rings for everyone watching the board; email and text are to come."
 			}
-			kinds "For issues labelled" {
+			kinds "For issues labeled" {
 				hint "On a board shown as a pipeline, the kinds of issue that go through this stage, by their labels; none, every kind."
 			}
 		}

@@ -1028,7 +1028,7 @@ namespace {
 			if (!me_agent) return;
 			me_agent->say(part, status, doing, progress ? std::optional<std::pair<int, int>>({progress->step, progress->steps}) : std::nullopt);
 		};
-		std::string waits_for = "issues" + (only_label.empty() ? std::string() : " labelled " + only_label) + (only_stage.empty() ? std::string() : " in " + only_stage) +
+		std::string waits_for = "issues" + (only_label.empty() ? std::string() : " labeled " + only_label) + (only_stage.empty() ? std::string() : " in " + only_stage) +
 		                        (a.flag("milestone").empty() ? std::string() : " of " + a.flag("milestone"));
 		std::map<std::string, projects::issue_work> works;
 		std::vector<ember::database::registration> listening;
@@ -2576,7 +2576,7 @@ Working an issue
                                  attaches what it writes to out/, and moves it on;
                                  a program that exits 75 isn't ready, and lets it wait
   neotrac work ... --stage to_do --label package
-                                 only what's in that stage and labelled so, as each kind of
+                                 only what's in that stage and labeled so, as each kind of
                                  issue has a worker of its own; --milestone 1.0, only its issues
   neotrac work ... --agent npm-publishing [--title "npm: Publishing"]
                                  says how it is on the project's agents page as it goes:

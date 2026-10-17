@@ -115,7 +115,7 @@ namespace terminal {
 	}
 
 	// Opens text in the person's editor, $VISUAL, $EDITOR or vi, and gives back what
-	// they saved. The file ends in .md, so the editor colours its markdown.
+	// they saved. The file ends in .md, so the editor colors its markdown.
 	inline std::string edit(const std::string& text) {
 		const char* dir = std::getenv("TMPDIR");
 		std::string path = std::string(dir && *dir ? dir : "/tmp") + "/neotrac-XXXXXX.md";
