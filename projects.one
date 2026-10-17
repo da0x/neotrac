@@ -128,7 +128,7 @@ namespace projects at / {
 	command project::create {
 		by anyone signed in
 		// Addresses neotrac's own pages are at, like /projects.
-		require slug != "projects" && slug != "about" && slug != "license" && slug != "docs" && slug != "download" && slug != "orgs"  "that address is one of neotrac's own pages"
+		require slug != "projects" && slug != "about" && slug != "license" && slug != "docs" && slug != "download" && slug != "organizations"  "that address is one of neotrac's own pages"
 		dispatch member::create {
 			project = id  person = me  role = role::maintainer
 		}
@@ -402,7 +402,7 @@ namespace projects at / {
 				}
 				workflow "Start from"
 			}
-			link /orgs "Organizations"
+			link /organizations "Organizations"
 		}
 		find "Search projects" {
 			mine "Your projects" link /:project by project

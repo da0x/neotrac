@@ -26,8 +26,8 @@ namespace organizations at / {
 
 	command organization::create {
 		by anyone signed in
-		// Addresses neotrac's own pages are at, like /orgs.
-		require slug != "projects" && slug != "about" && slug != "license" && slug != "docs" && slug != "download" && slug != "orgs"  "that address is one of neotrac's own pages"
+		// Addresses neotrac's own pages are at, like /organizations.
+		require slug != "projects" && slug != "about" && slug != "license" && slug != "docs" && slug != "download" && slug != "organizations"  "that address is one of neotrac's own pages"
 		dispatch member::create {
 			organization = id  person = me  role = role::owner
 		}
@@ -77,9 +77,9 @@ namespace organizations at / {
 		}
 	}
 
-	screen "Organizations" /orgs {
+	screen "Organizations" /organizations {
 		text "An organization holds projects, and whoever owns it maintains each of them."
-		table my_organizations link /orgs/:organization {
+		table my_organizations link /organizations/:organization {
 			hide when empty
 			organization.name "Organization"
 			role.title "You are"
@@ -89,8 +89,8 @@ namespace organizations at / {
 		}
 	}
 
-	screen "{organization_page.name}" /orgs/:organization {
-		under /orgs "Organizations"
+	screen "{organization_page.name}" /organizations/:organization {
+		under /organizations "Organizations"
 		heading {
 			organization::update "Edit organization" icon edit form "Save" {
 				name
