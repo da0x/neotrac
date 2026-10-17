@@ -386,6 +386,9 @@ namespace projects at / {
 				hint "Anyone signed in can send this project a private report, like a security"
 					"problem. Only the project's people and whoever sent it can read it."
 			}
+			organization "Organization" {
+				hint "One of your organizations, or none. Its owners maintain the project too."
+			}
 			workflow "Start from"
 		}
 	}
@@ -399,6 +402,9 @@ namespace projects at / {
 				takes_reports {
 					hint "Anyone signed in can send this project a private report, like a security"
 						"problem. Only the project's people and whoever sent it can read it."
+				}
+				organization "Organization" {
+					hint "One of your organizations, or none. Its owners maintain the project too."
 				}
 				workflow "Start from"
 			}
@@ -471,6 +477,8 @@ namespace projects at / {
 		}
 		// What's in each part of the project, a glance at a time, and the way in.
 		side {
+			// The organization it's in, whose owners maintain it.
+			text "Part of [{project_page.organization.name}](/organizations/{project_page.organization})" when project_page.organization != none
 			// What's due in the next two weeks, or overdue: the last 5% to finish.
 			section "Due soon" {
 				table project_page.milestones link /:project/milestones/:milestone {
@@ -527,8 +535,8 @@ namespace projects at / {
 						"problem. Only the project's people and whoever sent it can read it."
 				}
 				organization "Organization" {
-					hint "Its address, like acme, from your organizations. Its owners maintain the project;"
-						"only an owner brings a project in."
+					hint "One of your organizations. Its owners maintain the project; only an owner"
+						"brings a project in."
 				}
 			}
 		}
