@@ -22,6 +22,8 @@ namespace organizations at / {
 		invitation::create
 		invitation::delete
 		holds projects::maintainer in each projects::project
+		// An organization always has someone to run it.
+		keep at least 1 owner
 	}
 
 	command organization::create {
