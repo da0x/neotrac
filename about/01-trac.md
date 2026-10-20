@@ -31,6 +31,8 @@ that made Trac good, rebuilt for the way we work now.
 - **Open by default.** A public project can be read by anyone.
 - **Your team's own workflow.** Boards, stages and who moves what, set on the page,
   with nothing to deploy.
+- **Protected from abuse.** Everyone, signed in or not, is limited in how fast they
+  may ask and how much they may make, so no script can flood a project or fill it.
 - **Free and open source,** under the AGPL, so it stays that way for everyone.
 
 neotrac isn't part of Trac or Edgewall Software. It's a thank-you.

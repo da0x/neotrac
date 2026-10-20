@@ -51,6 +51,10 @@ users. See `LICENSE`.
   issue in one, holding it for half an hour at a time, comments, and moves it on
   where the workflow lets it, from the `neotrac` command in `cli/`, whose `neotrac
   work` runs a program on each issue as it comes.
+- **Protection from abuse**, which uione gives every app: each person and service,
+  and anyone not signed in, is limited in how fast they may ask and how much they
+  may make, and told how long to wait. A person whose account is disabled in
+  Firebase is refused within a minute.
 
 ## What's here
 

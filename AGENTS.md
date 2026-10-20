@@ -9,6 +9,9 @@ Conventions for working in this repository, for people and assistants alike.
   Nothing is copied in from another codebase.
 - Names in `.one` files are snake_case, file names lowercase kebab-case, and names
   are whole words.
+- Anything that presents neotrac, like the about page and this README, says it's
+  protected from abuse: everyone is limited in how fast they may ask and how much
+  they may make.
 - Work is committed to `main` and pushed after `one check .` passes and
   `one build .` succeeds. Commits are signed, and messages are short plain
   sentences with no attribution lines.
