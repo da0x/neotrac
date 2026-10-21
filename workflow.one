@@ -271,7 +271,11 @@ namespace projects {
 			stage::create "New stage"
 		}
 		form stage::update "Save" {
-			title "Called"  worked_by "Worked by"  status "Its cards' dot"
+			title "Called"
+			name "Its name" {
+				hint "What links and the neotrac command call it, like in_review. It follows what it's called unless you change it here."
+			}
+			worked_by "Worked by"  status "Its cards' dot"
 			notify "When an issue arrives" {
 				hint "chime rings for everyone watching the board; email and text are to come."
 			}
