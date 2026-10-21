@@ -449,10 +449,11 @@ namespace projects at / {
 		// Each board as a card: how its issues stand, stage by stage, and the two
 		// ways it's most often looked at.
 		main {
-			// Every issue by its number, title or labels, and every wiki page by its title.
+			// Every issue by its number, title or labels, and every wiki page by its title
+			// or the words in it, which the server finds.
 			find "Search this project" {
 				project_page.issues "Issues" link /:project/:issue by number title labels
-				project_page.pages "Wiki" link /:project/wiki/:page by title
+				project_page.pages "Wiki" link /:project/wiki/:page by title body
 			}
 			cards project_page.boards link /:project/boards/:board {
 				title

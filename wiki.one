@@ -10,7 +10,7 @@ namespace projects {
 		project  project   required  key
 		name     text      required  key = slug(title)
 		title    text      required
-		body     markdown
+		body     markdown  searchable
 		// Where it's listed among the wiki's pages, as they're arranged by dragging.
 		position number
 	}
