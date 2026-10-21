@@ -9,6 +9,7 @@
 
 #include <cctype>
 #include <chrono>
+#include <cstdint>
 #include <cstdio>
 #include <format>
 #include <functional>
@@ -17,6 +18,7 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
+#include <thread>
 #include <utility>
 #include <vector>
 #if defined(__unix__) || defined(__APPLE__)
@@ -309,6 +311,387 @@ namespace neotrac {
 	namespace license {
 
 	} // namespace license
+
+	namespace organizations {
+
+		struct organization {
+			std::string id{};
+			time created_at{};
+			std::string created_by{};
+			time updated_at{};
+			std::string updated_by{};
+			std::string slug{};
+			std::string name{};
+
+			static organization from(const ember::value& v) {
+				organization out;
+				out.id = detail::text(v["id"]);
+				out.created_at = detail::when(v["created_at"]);
+				out.created_by = detail::text(v["created_by"]);
+				out.updated_at = detail::when(v["updated_at"]);
+				out.updated_by = detail::text(v["updated_by"]);
+				out.slug = detail::text(v["slug"]);
+				out.name = detail::text(v["name"]);
+				return out;
+			}
+		};
+		inline std::string organization_id(const std::string& slug) { return key({key_part(slug)}); }
+
+		struct invitation {
+			std::string id{};
+			time created_at{};
+			std::string created_by{};
+			time updated_at{};
+			std::string updated_by{};
+			std::string organization{};
+			std::string email{};
+			std::string role{};
+
+			static invitation from(const ember::value& v) {
+				invitation out;
+				out.id = detail::text(v["id"]);
+				out.created_at = detail::when(v["created_at"]);
+				out.created_by = detail::text(v["created_by"]);
+				out.updated_at = detail::when(v["updated_at"]);
+				out.updated_by = detail::text(v["updated_by"]);
+				out.organization = detail::text(v["organization"]);
+				out.email = detail::text(v["email"]);
+				out.role = detail::text(v["role"]);
+				return out;
+			}
+		};
+		inline std::string invitation_id(const std::string& organization, const std::string& email) { return key({key_part(organization), key_part(email)}); }
+
+		struct role {
+			std::string id{};
+			time created_at{};
+			std::string created_by{};
+			time updated_at{};
+			std::string updated_by{};
+			std::string organization{};
+			std::string name{};
+			std::string title{};
+			std::vector<std::string> may{};
+
+			static role from(const ember::value& v) {
+				role out;
+				out.id = detail::text(v["id"]);
+				out.created_at = detail::when(v["created_at"]);
+				out.created_by = detail::text(v["created_by"]);
+				out.updated_at = detail::when(v["updated_at"]);
+				out.updated_by = detail::text(v["updated_by"]);
+				out.organization = detail::text(v["organization"]);
+				out.name = detail::text(v["name"]);
+				out.title = detail::text(v["title"]);
+				out.may = detail::texts(v["may"]);
+				return out;
+			}
+		};
+		inline std::string role_id(const std::string& organization, const std::string& name) { return key({key_part(organization), key_part(name)}); }
+
+		struct member {
+			std::string id{};
+			time created_at{};
+			std::string created_by{};
+			time updated_at{};
+			std::string updated_by{};
+			std::string organization{};
+			std::string person{};
+			std::string role{};
+			std::string through{};
+
+			static member from(const ember::value& v) {
+				member out;
+				out.id = detail::text(v["id"]);
+				out.created_at = detail::when(v["created_at"]);
+				out.created_by = detail::text(v["created_by"]);
+				out.updated_at = detail::when(v["updated_at"]);
+				out.updated_by = detail::text(v["updated_by"]);
+				out.organization = detail::text(v["organization"]);
+				out.person = detail::text(v["person"]);
+				out.role = detail::text(v["role"]);
+				out.through = detail::text(v["through"]);
+				return out;
+			}
+		};
+		inline std::string member_id(const std::string& organization, const std::string& person, const std::string& role) { return key({key_part(organization), key_part(person), key_part(role)}); }
+
+		struct suspension {
+			std::string id{};
+			time created_at{};
+			std::string created_by{};
+			time updated_at{};
+			std::string updated_by{};
+			std::string organization{};
+			std::string person{};
+			time until{};
+			std::vector<std::string> held{};
+
+			static suspension from(const ember::value& v) {
+				suspension out;
+				out.id = detail::text(v["id"]);
+				out.created_at = detail::when(v["created_at"]);
+				out.created_by = detail::text(v["created_by"]);
+				out.updated_at = detail::when(v["updated_at"]);
+				out.updated_by = detail::text(v["updated_by"]);
+				out.organization = detail::text(v["organization"]);
+				out.person = detail::text(v["person"]);
+				out.until = detail::when(v["until"]);
+				out.held = detail::texts(v["held"]);
+				return out;
+			}
+		};
+		inline std::string suspension_id(const std::string& organization, const std::string& person) { return key({key_part(organization), key_part(person)}); }
+
+		// What organization::create is sent.
+		struct organization_create {
+			std::optional<std::string> slug{};
+			std::optional<std::string> name{};
+
+			std::string json() const {
+				std::string out = "{";
+				auto add = [&](const char* name, const std::string& value) { out += (out.size() > 1 ? "," : "") + detail::json(std::string(name)) + ":" + value; };
+				if (slug) add("slug", detail::json(*slug));
+				if (name) add("name", detail::json(*name));
+				return out + "}";
+			}
+		};
+
+		// What organization::update is sent.
+		struct organization_update {
+			std::string id{};
+			std::optional<std::string> slug{};
+			std::optional<std::string> name{};
+
+			std::string json() const {
+				std::string out = "{";
+				auto add = [&](const char* name, const std::string& value) { out += (out.size() > 1 ? "," : "") + detail::json(std::string(name)) + ":" + value; };
+				add("id", detail::json(id));
+				if (slug) add("slug", detail::json(*slug));
+				if (name) add("name", detail::json(*name));
+				return out + "}";
+			}
+		};
+
+		// What member::create is sent.
+		struct member_create {
+			std::optional<std::string> organization{};
+			std::optional<std::string> person{};
+			std::optional<std::string> role{};
+			std::optional<std::string> through{};
+
+			std::string json() const {
+				std::string out = "{";
+				auto add = [&](const char* name, const std::string& value) { out += (out.size() > 1 ? "," : "") + detail::json(std::string(name)) + ":" + value; };
+				if (organization) add("organization", detail::json(*organization));
+				if (person) add("person", detail::json(*person));
+				if (role) add("role", detail::json(*role));
+				if (through) add("through", detail::json(*through));
+				return out + "}";
+			}
+		};
+
+		// What member::delete is sent.
+		struct member_delete {
+			std::string id{};
+			std::optional<std::string> organization{};
+			std::optional<std::string> person{};
+			std::optional<std::string> role{};
+			std::optional<std::string> through{};
+
+			std::string json() const {
+				std::string out = "{";
+				auto add = [&](const char* name, const std::string& value) { out += (out.size() > 1 ? "," : "") + detail::json(std::string(name)) + ":" + value; };
+				add("id", detail::json(id));
+				if (organization) add("organization", detail::json(*organization));
+				if (person) add("person", detail::json(*person));
+				if (role) add("role", detail::json(*role));
+				if (through) add("through", detail::json(*through));
+				return out + "}";
+			}
+		};
+
+		// What invitation::create is sent.
+		struct invitation_create {
+			std::optional<std::string> organization{};
+			std::optional<std::string> email{};
+			std::optional<std::string> role{};
+
+			std::string json() const {
+				std::string out = "{";
+				auto add = [&](const char* name, const std::string& value) { out += (out.size() > 1 ? "," : "") + detail::json(std::string(name)) + ":" + value; };
+				if (organization) add("organization", detail::json(*organization));
+				if (email) add("email", detail::json(*email));
+				if (role) add("role", detail::json(*role));
+				return out + "}";
+			}
+		};
+
+		// What invitation::delete is sent.
+		struct invitation_delete {
+			std::string id{};
+			std::optional<std::string> organization{};
+			std::optional<std::string> email{};
+			std::optional<std::string> role{};
+
+			std::string json() const {
+				std::string out = "{";
+				auto add = [&](const char* name, const std::string& value) { out += (out.size() > 1 ? "," : "") + detail::json(std::string(name)) + ":" + value; };
+				add("id", detail::json(id));
+				if (organization) add("organization", detail::json(*organization));
+				if (email) add("email", detail::json(*email));
+				if (role) add("role", detail::json(*role));
+				return out + "}";
+			}
+		};
+
+		struct organization_page {
+			bool exists = false;  // whether it's been made, and may be read
+			std::string slug{};
+			std::string name{};
+			struct projects_row {
+				std::string id{};
+				ember::value slug{};
+				ember::value name{};
+				ember::value summary{};
+				ember::value visibility{};
+				static projects_row from(const ember::value& v) {
+					projects_row out;
+					out.id = detail::text(v["id"]);
+					out.slug = v["slug"];
+					out.name = v["name"];
+					out.summary = v["summary"];
+					out.visibility = v["visibility"];
+					return out;
+				}
+			};
+			std::vector<projects_row> projects{};
+			struct people_row {
+				std::string id{};
+				std::string person{};
+				std::string person_name{};
+				std::string person_picture{};
+				std::string role_title{};
+				static people_row from(const ember::value& v) {
+					people_row out;
+					out.id = detail::text(v["id"]);
+					out.person = detail::text(v["person"]);
+					out.person_name = detail::text(v["person.name"]);
+					out.person_picture = detail::text(v["person.picture"]);
+					out.role_title = detail::text(v["role.title"]);
+					return out;
+				}
+			};
+			std::vector<people_row> people{};
+
+			static struct organization_page from(const ember::snapshot& s) {
+				struct organization_page out;
+				out.exists = s.exists;
+				const ember::value& v = s.data;
+				out.slug = detail::text(v["slug"]);
+				out.name = detail::text(v["name"]);
+				if (v["projects"].is_array()) {
+					for (const auto& row : v["projects"].as_array()) out.projects.push_back(projects_row::from(row));
+				}
+				if (v["people"].is_array()) {
+					for (const auto& row : v["people"].as_array()) out.people.push_back(people_row::from(row));
+				}
+				return out;
+			}
+			static std::string path(const std::string& of) { return "views/organizations::organization_page:" + of; }
+		};
+
+		struct organization_invitations {
+			bool exists = false;  // whether it's been made, and may be read
+			struct invited_row {
+				std::string id{};
+				std::string email{};
+				std::string role_title{};
+				static invited_row from(const ember::value& v) {
+					invited_row out;
+					out.id = detail::text(v["id"]);
+					out.email = detail::text(v["email"]);
+					out.role_title = detail::text(v["role.title"]);
+					return out;
+				}
+			};
+			std::vector<invited_row> invited{};
+
+			static struct organization_invitations from(const ember::snapshot& s) {
+				struct organization_invitations out;
+				out.exists = s.exists;
+				const ember::value& v = s.data;
+				if (v["invited"].is_array()) {
+					for (const auto& row : v["invited"].as_array()) out.invited.push_back(invited_row::from(row));
+				}
+				return out;
+			}
+			static std::string path(const std::string& of) { return "views/organizations::organization_invitations:" + of; }
+		};
+
+		struct my_organizations {
+			bool exists = false;  // whether it's been made, and may be read
+			struct rows_row {
+				std::string id{};
+				std::string organization{};
+				std::string organization_name{};
+				std::string organization_slug{};
+				std::string role_title{};
+				static rows_row from(const ember::value& v) {
+					rows_row out;
+					out.id = detail::text(v["id"]);
+					out.organization = detail::text(v["organization"]);
+					out.organization_name = detail::text(v["organization.name"]);
+					out.organization_slug = detail::text(v["organization.slug"]);
+					out.role_title = detail::text(v["role.title"]);
+					return out;
+				}
+			};
+			std::vector<rows_row> rows{};
+
+			static struct my_organizations from(const ember::snapshot& s) {
+				struct my_organizations out;
+				out.exists = s.exists;
+				const ember::value& v = s.data;
+				if (v["rows"].is_array()) {
+					for (const auto& row : v["rows"].as_array()) out.rows.push_back(rows_row::from(row));
+				}
+				return out;
+			}
+			static std::string path(const std::string& of) { return "views/organizations::my_organizations:" + of; }
+		};
+
+		struct member_roles {
+			bool exists = false;  // whether it's been made, and may be read
+			struct rows_row {
+				std::string id{};
+				std::string organization{};
+				std::string role{};
+				std::vector<std::string> role_may{};
+				static rows_row from(const ember::value& v) {
+					rows_row out;
+					out.id = detail::text(v["id"]);
+					out.organization = detail::text(v["organization"]);
+					out.role = detail::text(v["role"]);
+					out.role_may = detail::texts(v["role.may"]);
+					return out;
+				}
+			};
+			std::vector<rows_row> rows{};
+
+			static struct member_roles from(const ember::snapshot& s) {
+				struct member_roles out;
+				out.exists = s.exists;
+				const ember::value& v = s.data;
+				if (v["rows"].is_array()) {
+					for (const auto& row : v["rows"].as_array()) out.rows.push_back(rows_row::from(row));
+				}
+				return out;
+			}
+			static std::string path(const std::string& of) { return "views/organizations::member_roles:" + of; }
+		};
+
+	} // namespace organizations
 
 	namespace projects {
 
@@ -925,6 +1308,7 @@ namespace neotrac {
 			std::string project{};
 			std::string person{};
 			std::string role{};
+			std::string through{};
 
 			static member from(const ember::value& v) {
 				member out;
@@ -936,10 +1320,38 @@ namespace neotrac {
 				out.project = detail::text(v["project"]);
 				out.person = detail::text(v["person"]);
 				out.role = detail::text(v["role"]);
+				out.through = detail::text(v["through"]);
 				return out;
 			}
 		};
 		inline std::string member_id(const std::string& project, const std::string& person, const std::string& role) { return key({key_part(project), key_part(person), key_part(role)}); }
+
+		struct suspension {
+			std::string id{};
+			time created_at{};
+			std::string created_by{};
+			time updated_at{};
+			std::string updated_by{};
+			std::string project{};
+			std::string person{};
+			time until{};
+			std::vector<std::string> held{};
+
+			static suspension from(const ember::value& v) {
+				suspension out;
+				out.id = detail::text(v["id"]);
+				out.created_at = detail::when(v["created_at"]);
+				out.created_by = detail::text(v["created_by"]);
+				out.updated_at = detail::when(v["updated_at"]);
+				out.updated_by = detail::text(v["updated_by"]);
+				out.project = detail::text(v["project"]);
+				out.person = detail::text(v["person"]);
+				out.until = detail::when(v["until"]);
+				out.held = detail::texts(v["held"]);
+				return out;
+			}
+		};
+		inline std::string suspension_id(const std::string& project, const std::string& person) { return key({key_part(project), key_part(person)}); }
 
 		struct report {
 			std::string id{};
@@ -2415,6 +2827,7 @@ namespace neotrac {
 			std::optional<std::string> project{};
 			std::optional<std::string> person{};
 			std::optional<std::string> role{};
+			std::optional<std::string> through{};
 
 			std::string json() const {
 				std::string out = "{";
@@ -2422,6 +2835,7 @@ namespace neotrac {
 				if (project) add("project", detail::json(*project));
 				if (person) add("person", detail::json(*person));
 				if (role) add("role", detail::json(*role));
+				if (through) add("through", detail::json(*through));
 				return out + "}";
 			}
 		};
@@ -2432,6 +2846,7 @@ namespace neotrac {
 			std::optional<std::string> project{};
 			std::optional<std::string> person{};
 			std::optional<std::string> role{};
+			std::optional<std::string> through{};
 
 			std::string json() const {
 				std::string out = "{";
@@ -2440,6 +2855,7 @@ namespace neotrac {
 				if (project) add("project", detail::json(*project));
 				if (person) add("person", detail::json(*person));
 				if (role) add("role", detail::json(*role));
+				if (through) add("through", detail::json(*through));
 				return out + "}";
 			}
 		};
@@ -3870,6 +4286,8 @@ namespace neotrac {
 			std::string summary{};
 			::neotrac::projects::project_visibility visibility{};
 			bool takes_reports{};
+			ember::value organization{};
+			ember::value organization_name{};
 			struct boards_row {
 				std::string id{};
 				std::string name{};
@@ -4062,6 +4480,8 @@ namespace neotrac {
 				out.summary = detail::text(v["summary"]);
 				out.visibility = detail::choice<::neotrac::projects::project_visibility>(v["visibility"]);
 				out.takes_reports = detail::flag(v["takes_reports"]);
+				out.organization = v["organization"];
+				out.organization_name = v["organization.name"];
 				if (v["boards"].is_array()) {
 					for (const auto& row : v["boards"].as_array()) out.boards.push_back(boards_row::from(row));
 				}
@@ -4482,6 +4902,36 @@ namespace neotrac {
 			return ember::parse_json(post(route, body));
 		}
 
+		// organization::create: the id of what it changed, or refused.
+		std::string organization_create(const organizations::organization_create& sent) {
+			return detail::text(ember::parse_json(post("/api/organizations/organization/create", sent.json()))["id"]);
+		}
+		// organization::update: the id of what it changed, or refused.
+		std::string organization_update(const organizations::organization_update& sent) {
+			return detail::text(ember::parse_json(post("/api/organizations/organization/update", sent.json()))["id"]);
+		}
+		// member::create: the id of what it changed, or refused.
+		std::string member_create(const organizations::member_create& sent) {
+			return detail::text(ember::parse_json(post("/api/organizations/member/create", sent.json()))["id"]);
+		}
+		// member::delete: the id of what it changed, or refused.
+		std::string member_delete(const organizations::member_delete& sent) {
+			return detail::text(ember::parse_json(post("/api/organizations/member/delete", sent.json()))["id"]);
+		}
+		// invitation::create: the id of what it changed, or refused.
+		std::string invitation_create(const organizations::invitation_create& sent) {
+			return detail::text(ember::parse_json(post("/api/organizations/invitation/create", sent.json()))["id"]);
+		}
+		// invitation::delete: the id of what it changed, or refused.
+		std::string invitation_delete(const organizations::invitation_delete& sent) {
+			return detail::text(ember::parse_json(post("/api/organizations/invitation/delete", sent.json()))["id"]);
+		}
+		live<organizations::organization_page> organization_page(const std::string& organization) { connect(); return {*store_, organizations::organization_page::path(organization)}; }
+		live<organizations::organization_invitations> organization_invitations(const std::string& organization) { connect(); return {*store_, organizations::organization_invitations::path(organization)}; }
+		// What it shows the one signed in.
+		live<organizations::my_organizations> my_organizations() { connect(); return {*store_, organizations::my_organizations::path(auth_->current_user().value().uid)}; }
+		// What it shows the one signed in.
+		live<organizations::member_roles> organizations_member_roles() { connect(); return {*store_, organizations::member_roles::path(auth_->current_user().value().uid)}; }
 		// agent::create: the id of what it changed, or refused.
 		std::string agent_create(const projects::agent_create& sent) {
 			return detail::text(ember::parse_json(post("/api/projects/agent/create", sent.json()))["id"]);
@@ -4756,7 +5206,7 @@ namespace neotrac {
 		live<projects::services> services(const std::string& project) { connect(); return {*store_, projects::services::path(project)}; }
 		live<projects::wiki_page> wiki_page(const std::string& page) { connect(); return {*store_, projects::wiki_page::path(page)}; }
 		// What it shows the one signed in.
-		live<projects::member_roles> member_roles() { connect(); return {*store_, projects::member_roles::path(auth_->current_user().value().uid)}; }
+		live<projects::member_roles> projects_member_roles() { connect(); return {*store_, projects::member_roles::path(auth_->current_user().value().uid)}; }
 
 		private:
 		options options_;
@@ -4792,14 +5242,33 @@ namespace neotrac {
 			return headers;
 		}
 
+		// An app that says to slow down is asked again once the wait it gives is over,
+		// up to five times, so a program sending many commands slows down rather than
+		// stopping partway. A request turned down this way was never run, so sending it
+		// again is safe. A wait of more than a minute, like a day's most being made, is
+		// passed on rather than waited out.
+		template <class Ask>
+		static ember::response patiently(Ask ask) {
+			for (int tries = 1;; ++tries) {
+				auto answer = ask();
+				if (answer.status != 429 || tries == 5) return answer;
+				std::int64_t wait = 1;
+				try {
+					wait = ember::parse_json(answer.body)["retry_after"].as_integer();
+				} catch (...) {}
+				if (wait > 60) return answer;
+				std::this_thread::sleep_for(std::chrono::seconds(wait < 1 ? 1 : wait));
+			}
+		}
+
 		std::string post(const std::string& route, const std::string& body) {
-			auto answer = ember::https_post(options_.server + route, credentials(), body);
+			auto answer = patiently([&] { return ember::https_post(options_.server + route, credentials(), body); });
 			if (answer.status != 200) throw refused(answer.status, why(answer));
 			return answer.body;
 		}
 
 		std::string get(const std::string& route) {
-			auto answer = ember::https_get(options_.server + route, credentials());
+			auto answer = patiently([&] { return ember::https_get(options_.server + route, credentials()); });
 			if (answer.status != 200) throw refused(answer.status, why(answer));
 			return answer.body;
 		}

@@ -53,8 +53,8 @@ users. See `LICENSE`.
   work` runs a program on each issue as it comes.
 - **Protection from abuse**, which uione gives every app: each person and service,
   and anyone not signed in, is limited in how fast they may ask and how much they
-  may make, and told how long to wait. A person whose account is disabled in
-  Firebase is refused within a minute.
+  may make, and told how long to wait, which the `neotrac` command waits out by
+  itself. A person whose account is disabled in Firebase is refused within a minute.
 
 ## What's here
 
