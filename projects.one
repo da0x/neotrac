@@ -34,6 +34,7 @@ namespace projects at / {
 	define role maintainer "Maintainer" in project {
 		agent::delete
 		project::update
+		project::move
 		project::delete
 		member::create
 		member::delete
@@ -135,6 +136,14 @@ namespace projects at / {
 		dispatch board::create {
 			project = id  name = "main"  title = name  workflow = workflow  position = 1
 		}
+	}
+
+	// A project's address, changed in its settings. Everything in it moves with it,
+	// and links to the old address lead to the new. Nothing in it changes while it
+	// moves, which for a large project takes a moment.
+	command project::move {
+		changes slug
+		require slug != "projects" && slug != "about" && slug != "license" && slug != "docs" && slug != "download" && slug != "organizations"  "that address is one of neotrac's own pages"
 	}
 
 	// A project made private takes its boards with it. Made public again, its boards
@@ -291,7 +300,7 @@ namespace projects at / {
 	}
 
 	view project_page per project {
-		name  summary  visibility  takes_reports  organization  organization.name
+		slug  name  summary  visibility  takes_reports  organization  organization.name
 		boards = each board in project where visibility == visibility::public {
 			order by position
 			name  title  visibility
@@ -539,6 +548,12 @@ namespace projects at / {
 					hint "One of your organizations. Its owners maintain the project; only an owner"
 						"brings a project in."
 				}
+			}
+		}
+		section "Address" {
+			text "Everything in the project moves to its new address, and links to the old one lead there."
+			form project::move "Change address" {
+				slug "New address"
 			}
 		}
 		section "Delete this project" color red {

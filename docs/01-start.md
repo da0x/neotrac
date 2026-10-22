@@ -17,6 +17,12 @@ Sign in with Google or GitHub, then on the front page fill in **Create project**
 
 You maintain the project you make, and it starts with one board, named after it.
 
+Renaming a project changes its name, not its address. To change the address, use
+**Address** in its **Settings**. Everything in the project moves with it: its boards,
+issues, comments, wiki and people. Links to the old address, and to its issues,
+still open them. A large project takes a moment to move, and nothing in it can be
+changed until it's done.
+
 ## Bring people in
 
 In the project's **Settings**, **People** invites someone by email, with a role:
