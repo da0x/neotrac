@@ -7,7 +7,7 @@
 import one
 
 project neotrac {
-	one             "0.16.1"
+	one             "0.17.0"
 	target          web desktop terminal
 	region          "us-east4"
 	ui              radix
