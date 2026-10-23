@@ -1923,20 +1923,33 @@ namespace {
 
 	// ---- Issues ------------------------------------------------------------------------
 
-	int list_issues(const asked& a, session& s) {
-		auto project = project_of(s);
-		struct row {
-			double number;
-			std::string title, stage;
-		};
-		std::vector<row> rows;
-		if (!s.board.empty()) {
-			auto page = s.app->board_page(board_of(a, s, project)).get();
-			for (const auto& i : page.issues) rows.push_back({i.number, i.title, i.stage_title});
-		} else {
-			for (const auto& i : project.issues) rows.push_back({i.number, i.title, i.stage_title});
+	// An issue, as a list shows it.
+	struct issue_row {
+		double number;
+		std::string title, stage;
+	};
+
+	// The open issues of the selected board, or with none selected, of every board of
+	// the project its reader may open, private ones included, newest first. Each is
+	// read from its board's page, since the project's page lists only the issues on
+	// its public boards.
+	std::vector<issue_row> issues_of(const asked& a, session& s, const projects::project_page& project) {
+		std::vector<std::string> boards;
+		if (!s.board.empty()) boards.push_back(board_of(a, s, project));
+		else {
+			for (const auto& b : project.boards) boards.push_back(b.id);
 		}
-		std::ranges::sort(rows, [](const row& x, const row& y) { return x.number > y.number; });
+		std::vector<issue_row> rows;
+		for (const auto& board : boards) {
+			auto page = s.app->board_page(board).get();
+			for (const auto& i : page.issues) rows.push_back({i.number, i.title, i.stage_title});
+		}
+		std::ranges::sort(rows, [](const issue_row& x, const issue_row& y) { return x.number > y.number; });
+		return rows;
+	}
+
+	int list_issues(const asked& a, session& s) {
+		auto rows = issues_of(a, s, project_of(s));
 		if (a.has("json")) {
 			std::string out = "[";
 			for (std::size_t i = 0; i < rows.size(); ++i) {
@@ -1953,16 +1966,10 @@ namespace {
 	// An issue named by its number, or picked from the project's at the terminal.
 	std::string issue_word(const asked& a, session& s, std::size_t word) {
 		if (a.words.size() > word) return a.words[word];
-		auto project = project_of(s);
 		std::vector<std::pair<std::string, std::string>> choices;
-		std::vector<const projects::project_page::issues_row*> sorted;
-		for (const auto& i : project.issues) {
-			if (s.board.empty() || i.board == projects::board_id(s.project, s.board)) sorted.push_back(&i);
-		}
-		std::ranges::sort(sorted, [](const auto* x, const auto* y) { return x->number > y->number; });
-		for (const auto* i : sorted) {
-			std::string number = std::format("{:.0f}", i->number);
-			choices.emplace_back(number, "#" + padded(number, 5) + " " + padded(i->stage_title, 14) + " " + i->title);
+		for (const auto& i : issues_of(a, s, project_of(s))) {
+			std::string number = std::format("{:.0f}", i.number);
+			choices.emplace_back(number, "#" + padded(number, 5) + " " + padded(i.stage, 14) + " " + i.title);
 		}
 		return chosen(a, word, "issue", choices);
 	}
